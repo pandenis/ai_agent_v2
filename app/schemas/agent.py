@@ -37,3 +37,22 @@ class SessionResponse(BaseModel):
     
     class Config:
         from_attributes = True  # Enable ORM mode
+
+
+class DocumentUpload(BaseModel):
+    """Request schema for document upload"""
+    text: str = Field(..., description="Document text content")
+    filename: Optional[str] = Field(None, description="Original filename")
+    metadata: Optional[dict] = Field(default_factory=dict, description="Additional metadata")
+
+
+class DocumentSearchRequest(BaseModel):
+    """Request schema for document search"""
+    query: str = Field(..., min_length=1, max_length=500)
+    max_results: int = Field(default=5, ge=1, le=20)
+
+
+class WebSearchRequest(BaseModel):
+    """Request schema for web search"""
+    query: str = Field(..., min_length=1, max_length=500)
+    max_results: int = Field(default=5, ge=1, le=10)

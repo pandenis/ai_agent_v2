@@ -169,3 +169,85 @@ async def health_check(
         "ollama": "connected" if ollama_status else "unavailable",
         "timestamp": datetime.utcnow()
     }
+
+
+from app.services.document_service import DocumentService
+from app.services.web_search_service import WebSearchService
+from app.api.deps import get_document_service, get_web_search_service
+from app.schemas.agent import DocumentUpload, DocumentSearchRequest, WebSearchRequest
+
+
+@router.post("/documents/upload")
+async def upload_document(
+    request: DocumentUpload,
+    doc_service: DocumentService = Depends(get_document_service)
+):
+    """Upload and index a document"""
+    import uuid
+    
+    # Generate doc ID
+    doc_id = str(uuid.uuid4())
+    
+    # Add metadata
+    metadata = request.metadata or {}
+    if request.filename:
+        metadata["filename"] = request.filename
+    
+    # Add to vector store
+    await doc_service.add_document(
+        doc_id=doc_id,
+        text=request.text,
+        metadata=metadata
+    )
+    
+    return {
+        "doc_id": doc_id,
+        "filename": request.filename,
+        "status": "indexed",
+        "text_length": len(request.text)
+    }
+
+
+@router.post("/documents/search")
+async def search_documents(
+    request: DocumentSearchRequest,
+    doc_service: DocumentService = Depends(get_document_service)
+):
+    """Search documents by semantic similarity"""
+    results = await doc_service.search_documents(
+        request.query,
+        request.max_results
+    )
+    
+    return {
+        "query": request.query,
+        "results": results,
+        "count": len(results)
+    }
+
+
+@router.get("/documents/count")
+async def get_document_count(
+    doc_service: DocumentService = Depends(get_document_service)
+):
+    """Get total document count"""
+    count = await doc_service.get_document_count()
+    return {"count": count}
+
+
+@router.post("/search/web")
+async def web_search(
+    request: WebSearchRequest,
+    web_service: WebSearchService = Depends(get_web_search_service)
+):
+    """Search the web"""
+    results = await web_service.search(
+        request.query,
+        request.max_results
+    )
+    
+    return {
+        "query": request.query,
+        "results": results,
+        "count": len(results)
+    }

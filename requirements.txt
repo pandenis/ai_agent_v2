@@ -16,3 +16,10 @@ httpx==0.27.0
 python-dotenv==1.0.0
 loguru==0.7.2
 python-multipart==0.0.6
+
+# Vector DB & Embeddings
+chromadb==0.4.18
+sentence-transformers==2.2.2
+
+# Web search
+duckduckgo-search==4.0.0
