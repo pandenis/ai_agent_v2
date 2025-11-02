@@ -9,6 +9,10 @@ from typing import Optional
 class Settings(BaseSettings):
     """Application settings with environment variable support"""
     
+    # ============================================================================
+    # EXISTING CONFIGURATION
+    # ============================================================================
+    
     # Application
     app_name: str = "AI Agent System"
     debug: bool = False
@@ -27,7 +31,7 @@ class Settings(BaseSettings):
     )
     api_key_groq: Optional[str] = None
     
-    # Ollama
+    # Ollama (legacy single model)
     ollama_host: str = "http://localhost:11434"
     ollama_model: str = "mistral:latest"
     
@@ -36,6 +40,29 @@ class Settings(BaseSettings):
     session_timeout_minutes: int = 30
     max_prompt_length: int = 3500
     max_response_length: int = 2000
+    
+    # ============================================================================
+    # NEW: MULTI-MODEL AGENT CONFIGURATION
+    # ============================================================================
+    
+    # Ollama base configuration (for all Ollama models)
+    ollama_base_url: str = "http://localhost:11434"
+    
+    # Groq cloud API
+    groq_api_key: str = ""
+    groq_api_base: str = "https://api.groq.com/openai/v1"
+    
+    # DeepSeek llama.cpp
+    deepseek_model_path: str = "models/deepseek-coder-7b.gguf"
+    deepseek_n_ctx: int = 4096
+    deepseek_n_threads: int = 4
+    
+    # Agent availability flags
+    enable_mistral: bool = True
+    enable_deepseek: bool = False  # Requires model download
+    enable_llama3: bool = True
+    enable_groq: bool = False  # Requires API key
+    enable_medical: bool = False  # Requires medical model
     
     model_config = SettingsConfigDict(
         env_file=".env",
