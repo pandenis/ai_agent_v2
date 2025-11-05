@@ -1,137 +1,176 @@
 """
-Agent service for handling AI agent interactions
+Enhanced Agent Service with multi-model support via AgentFactory
 """
-from typing import List, Dict, Optional
-import httpx
+from typing import Optional, Dict, Any
 from app.core.config import settings
-from app.core.security import SecurityValidator
+from app.services.agent_factory import agent_factory
+from app.core.agent_config import agent_registry, TaskType
 
 
 class AgentService:
-    """Service for interacting with Ollama-based AI agents"""
+    """
+    Service for interacting with AI agents
+    Now supports multiple models via AgentFactory
+    """
     
     def __init__(self):
-        self.ollama_host = settings.ollama_host
-        self.model = settings.ollama_model
-        self.validator = SecurityValidator()
+        self.factory = agent_factory
+        self.default_agent = "mistral"  # Fallback agent
     
     async def generate_response(
         self,
         prompt: str,
+        agent_name: Optional[str] = None,
         system_prompt: Optional[str] = None,
-        conversation_history: Optional[List[Dict[str, str]]] = None
-    ) -> Dict[str, any]:
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None
+    ) -> Dict[str, Any]:
         """
-        Generate AI response using Ollama (with fallback to mock mode)
+        Generate response from specified agent (or default)
         
         Args:
-            prompt: User's message
-            system_prompt: Optional system instructions
-            conversation_history: Previous messages for context
+            prompt: User prompt
+            agent_name: Specific agent to use (optional)
+            system_prompt: System prompt (optional)
+            temperature: Override temperature (optional)
+            max_tokens: Override max tokens (optional)
             
         Returns:
-            Dictionary with response and metadata
+            Dict with response, status, and metadata
         """
-        # Validate input
-        validated_prompt = self.validator.validate_prompt(prompt)
+        # Use specified agent or default
+        agent_name = agent_name or self.default_agent
         
-        # Build messages for Ollama
-        messages = []
+        # Create/get agent
+        agent = self.factory.create_agent(agent_name)
         
-        if system_prompt:
-            messages.append({
-                "role": "system",
-                "content": system_prompt
-            })
+        if not agent:
+            # Agent not available, try fallback
+            return await self._fallback_response(prompt, agent_name)
         
-        # Add conversation history
-        if conversation_history:
-            for msg in conversation_history:
-                messages.append({
-                    "role": msg["role"],
-                    "content": msg["content"]
-                })
+        # Check if agent is healthy
+        is_healthy = await agent.health_check()
+        if not is_healthy:
+            return await self._fallback_response(
+                prompt, 
+                agent_name,
+                reason="Agent health check failed"
+            )
         
-        # Add current prompt
-        messages.append({
-            "role": "user",
-            "content": validated_prompt
-        })
+        # Generate response
+        result = await agent.generate(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
         
-        # Try Ollama API
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            try:
-                response = await client.post(
-                    f"{self.ollama_host}/api/chat",
-                    json={
-                        "model": self.model,
-                        "messages": messages,
-                        "stream": False
-                    }
-                )
-                
-                response.raise_for_status()
-                result = response.json()
-                
-                return {
-                    "status": "success",
-                    "response": result["message"]["content"],
-                    "model": self.model,
-                    "tokens": result.get("eval_count", 0)
-                }
-                
-            except (httpx.HTTPError, httpx.ConnectError, httpx.TimeoutException) as e:
-                # Ollama unavailable - use mock mode for demo
-                return self._generate_mock_response(validated_prompt, system_prompt)
+        # Add agent metadata
+        result["agent_name"] = agent_name
+        result["agent_config"] = {
+            "type": agent.config.agent_type.value,
+            "capabilities": [c.name for c in agent.config.capabilities]
+        }
+        
+        return result
     
-    def _generate_mock_response(
-        self, 
-        prompt: str, 
-        system_prompt: Optional[str] = None
-    ) -> Dict[str, any]:
+    async def select_best_agent_for_task(
+        self,
+        prompt: str,
+        task_type: Optional[TaskType] = None
+    ) -> str:
         """
-        Generate a mock response when Ollama is unavailable
-        This allows testing the system without a running LLM
+        Automatically select the best agent for a task
+        
+        Args:
+            prompt: User prompt (for future ML-based selection)
+            task_type: Explicit task type (optional)
+            
+        Returns:
+            Name of best agent for the task
         """
-        # Extract context from system prompt
-        has_documents = system_prompt and "Relevant documents:" in system_prompt
-        has_web_search = system_prompt and "Web search results:" in system_prompt
-        has_facts = system_prompt and "Known facts about the user:" in system_prompt
+        if task_type:
+            best_agent = agent_registry.find_best_agent_for_task(task_type)
+            if best_agent:
+                return best_agent
         
-        # Build intelligent mock response
-        response_parts = []
+        # TODO: In future, use ML to classify task type from prompt
+        # For now, return default
+        return self.default_agent
+    
+    async def _fallback_response(
+        self,
+        prompt: str,
+        failed_agent: str,
+        reason: str = "Agent not available"
+    ) -> Dict[str, Any]:
+        """
+        Provide fallback response when agent fails
+        """
+        # Try to find alternative agent
+        available_agents = await self.factory.get_available_agents()
         
-        # Acknowledge the question
-        if "?" in prompt:
-            response_parts.append(f"Regarding your question about '{prompt[:50]}...'")
-        else:
-            response_parts.append(f"I understand you mentioned: '{prompt[:50]}...'")
+        for agent_name, is_available in available_agents.items():
+            if is_available and agent_name != failed_agent:
+                # Try this agent
+                agent = self.factory.create_agent(agent_name)
+                if agent:
+                    result = await agent.generate(prompt)
+                    result["fallback"] = True
+                    result["original_agent"] = failed_agent
+                    result["fallback_reason"] = reason
+                    return result
         
-        # Mention sources if available
-        if has_documents:
-            response_parts.append("\n\nBased on the documents you provided, I can see relevant information about your topic.")
-        
-        if has_web_search:
-            response_parts.append("\n\nAccording to recent web search results, there is current information available on this subject.")
-        
-        if has_facts:
-            response_parts.append("\n\nI also remember our previous conversations and your preferences.")
-        
-        # Add demo notice
-        response_parts.append("\n\n[DEMO MODE: Ollama not running - this is a mock response demonstrating the multi-source intelligence system. Install and run Ollama to get real AI responses.]")
-        
+        # No agents available - return mock response
         return {
-            "status": "success",
-            "response": "".join(response_parts),
-            "model": "mock-demo",
-            "tokens": 0
+            "status": "error",
+            "response": f"[DEMO MODE: No AI agents available. {reason}]\n\nTo enable AI responses:\n1. Install Ollama: https://ollama.ai\n2. Run: ollama pull mistral\n3. Start server: ollama serve",
+            "agent_name": "mock",
+            "fallback": True,
+            "original_agent": failed_agent,
+            "fallback_reason": reason
         }
     
-    async def check_health(self) -> bool:
-        """Check if Ollama service is available"""
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            try:
-                response = await client.get(f"{self.ollama_host}/api/tags")
-                return response.status_code == 200
-            except:
-                return False
+    async def get_agent_status(self) -> Dict[str, Any]:
+        """
+        Get status of all configured agents
+        
+        Returns:
+            Dict with agent availability and configuration
+        """
+        available = await self.factory.get_available_agents()
+        
+        status = {
+            "agents": {},
+            "default_agent": self.default_agent,
+            "total_agents": len(agent_registry.list_agents(enabled_only=False)),
+            "enabled_agents": len(agent_registry.list_agents(enabled_only=True)),
+            "available_agents": sum(1 for v in available.values() if v)
+        }
+        
+        for agent_name in agent_registry.list_agents(enabled_only=False):
+            config = agent_registry.get_agent_config(agent_name)
+            status["agents"][agent_name] = {
+                "enabled": config.enabled,
+                "available": available.get(agent_name, False),
+                "type": config.agent_type.value,
+                "description": config.description,
+                "capabilities": [
+                    {"name": c.name, "confidence": c.confidence}
+                    for c in config.capabilities
+                ]
+            }
+        
+        return status
+    
+    async def generate_mock_response(self, prompt: str) -> Dict[str, Any]:
+        """
+        Generate a mock response (for testing without models)
+        """
+        return {
+            "status": "success",
+            "response": f"[MOCK RESPONSE] You asked: {prompt[:100]}...",
+            "agent_name": "mock",
+            "model": "mock",
+            "tokens": 0
+        }
