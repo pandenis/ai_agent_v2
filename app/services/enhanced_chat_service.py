@@ -1,164 +1,215 @@
 """
-Enhanced chat service with intelligent context retrieval
+Enhanced chat service with multi-source intelligence and agent selection
 """
-from typing import List, Dict, Optional
-from app.services.memory_service import MemoryService
+from typing import Dict, Any, List, Optional
+from datetime import datetime
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.services.agent_service import AgentService
+from app.services.memory_service import MemoryService
 from app.services.document_service import DocumentService
 from app.services.web_search_service import WebSearchService
+from app.core.agent_config import TaskType
 
 
 class EnhancedChatService:
-    """Service for intelligent multi-source chat"""
+    """
+    Enhanced chat service with:
+    - Multi-source context retrieval
+    - Intelligent agent selection
+    - Source tracking
+    """
+    
+    # Keywords that trigger document search
+    DOCUMENT_KEYWORDS = [
+        "document", "file", "wrote", "write", "писал", "документ", 
+        "uploaded", "saved", "записал", "сохранил"
+    ]
+    
+    # Keywords that trigger web search
+    WEB_KEYWORDS = [
+        "latest", "current", "news", "today", "2025",
+        "последние", "новости", "сегодня", "актуальное"
+    ]
     
     def __init__(
         self,
-        memory_service: MemoryService,
         agent_service: AgentService,
+        memory_service: MemoryService,
         document_service: DocumentService,
         web_search_service: WebSearchService
     ):
-        self.memory_service = memory_service
         self.agent_service = agent_service
+        self.memory_service = memory_service
         self.document_service = document_service
         self.web_search_service = web_search_service
-    
-    def _should_search_documents(self, message: str) -> bool:
-        """Determine if document search is needed"""
-        message_lower = message.lower()
-        
-        doc_keywords = [
-            # English
-            "document", "file", "uploaded", "wrote", "saved",
-            "in my notes", "previously", "earlier",
-            # Russian
-            "документ", "файл", "писал", "написал", "сохранил",
-            "в моих заметках", "ранее", "раньше", "загрузил",
-            # Chinese
-            "文档", "文件", "记得"
-        ]
-        
-        return any(keyword in message_lower for keyword in doc_keywords)
-    
-    def _should_search_web(self, message: str) -> bool:
-        """Determine if web search is needed"""
-        message_lower = message.lower()
-        
-        web_keywords = [
-            # English
-            "latest", "current", "recent", "today", "now",
-            "news", "weather", "price", "stock", "update",
-            "2024", "2025", "this year", "this month",
-            # Russian
-            "последн", "текущ", "сегодня", "сейчас", "новост",
-            "погода", "цена", "обновл", "этом году", "этом месяце"
-        ]
-        
-        question_words = [
-            # English
-            "what is", "who is", "when", "where", "how",
-            # Russian
-            "что такое", "кто такой", "когда", "где", "как"
-        ]
-        
-        has_web_keyword = any(keyword in message_lower for keyword in web_keywords)
-        has_question = any(q in message_lower for q in question_words)
-        
-        return has_web_keyword or (has_question and len(message.split()) > 3)
     
     async def process_message(
         self,
         session_id: str,
         message: str,
-        include_memory: bool = True
-    ) -> Dict:
+        agent_name: Optional[str] = None,  # NEW: Agent selection
+        include_memory: bool = True,
+        db: Optional[AsyncSession] = None
+    ) -> Dict[str, Any]:
         """
-        Process message with intelligent context retrieval
+        Process message with multi-source intelligence and agent selection
         
+        Args:
+            session_id: Chat session ID
+            message: User message
+            agent_name: Specific agent (or None for auto-select)  # NEW
+            include_memory: Include conversation history
+            db: Database session
+            
         Returns:
-            Dict with response, sources, and metadata
+            Dict with response, agent used, sources, etc.
         """
+        sources = []
         context_parts = []
-        sources_used = []
         
-        # 1. Get conversation history
-        conversation_history = []
-        if include_memory:
-            recent_messages = await self.memory_service.get_conversation_history(
-                session_id, limit=5
-            )
-            conversation_history = [
-                {"role": msg.role, "content": msg.content}
-                for msg in recent_messages
-            ]
-            
-            if conversation_history:
-                context_parts.append("Recent conversation context available.")
-                sources_used.append("conversation_history")
-        
-        # 2. Get user facts from memory
-        if include_memory:
-            important_facts = await self.memory_service.get_important_facts(
-                min_importance=0.6, limit=5
-            )
-            
-            if important_facts:
-                facts_text = "\n".join([f"- {f.text}" for f in important_facts])
-                context_parts.append(f"Known facts about the user:\n{facts_text}")
-                sources_used.append("user_facts")
-        
-        # 3. Search documents if relevant
-        should_search_docs = self._should_search_documents(message)
-        if should_search_docs:
+        # 1. Check if we should search documents
+        if self._should_search_documents(message):
             doc_results = await self.document_service.search_documents(
-                message, n_results=3
+                query=message,
+                n_results=3
             )
-            
             if doc_results:
-                docs_text = "\n\n".join([
-                    f"Document: {r['metadata'].get('filename', 'Unknown')}\n{r['text'][:300]}..."
-                    for r in doc_results
-                ])
-                context_parts.append(f"Relevant documents:\n{docs_text}")
-                sources_used.append("documents")
+                sources.append("documents")
+                context_parts.append(
+                    f"Relevant documents:\n" + 
+                    "\n".join([f"- {r['text'][:200]}..." for r in doc_results])
+                )
         
-        # 4. Search web if needed
-        should_search_web = self._should_search_web(message)
-        if should_search_web:
+        # 2. Check if we should search web
+        if self._should_search_web(message):
             web_results = await self.web_search_service.search(
-                message, max_results=3
+                query=message,
+                max_results=3
             )
+            if web_results:
+                sources.append("web_search")
+                context_parts.append(
+                    f"Web search results:\n" +
+                    "\n".join([f"- {r['title']}: {r['snippet']}" for r in web_results])
+                )
+        
+        # 3. Get conversation history and facts
+        if include_memory:
+            sources.append("conversation_history")
             
-            if web_results and "error" not in web_results[0]:
-                web_text = "\n\n".join([
-                    f"{r['title']}\n{r['snippet']}\nSource: {r['url']}"
-                    for r in web_results[:3]
-                ])
-                context_parts.append(f"Web search results:\n{web_text}")
-                sources_used.append("web_search")
+            # Get recent conversation
+            history = await self.memory_service.get_conversation_history(
+                session_id=session_id,
+                limit=5
+            )
+            if history:
+                context_parts.append(
+                    f"Recent conversation:\n" +
+                    "\n".join([f"{m['role']}: {m['content'][:100]}..." for m in history])
+                )
+            
+            # Get relevant facts
+            facts = await self.memory_service.search_facts(
+                query=message,
+                limit=3
+            )
+            if facts:
+                sources.append("user_facts")
+                context_parts.append(
+                    f"Relevant facts:\n" +
+                    "\n".join([f"- {f['text']}" for f in facts])
+                )
         
-        # 5. Build enhanced system prompt
-        system_prompt = "You are a helpful AI assistant."
-        
+        # 4. Build enhanced prompt with context
+        enhanced_prompt = message
         if context_parts:
-            system_prompt += "\n\nYou have access to the following context:\n\n"
-            system_prompt += "\n\n---\n\n".join(context_parts)
-            system_prompt += "\n\n---\n\n"
-            system_prompt += "Use this context to provide accurate, well-sourced answers. "
-            system_prompt += "When citing information, mention the source (e.g., 'According to the document...', 'Based on recent web search...')."
+            enhanced_prompt = (
+                f"Context:\n{chr(10).join(context_parts)}\n\n"
+                f"User question: {message}"
+            )
         
-        # 6. Generate AI response
-        ai_result = await self.agent_service.generate_response(
-            prompt=message,
-            system_prompt=system_prompt,
-            conversation_history=conversation_history
+        # 5. NEW: Auto-select agent if not specified
+        if not agent_name:
+            # Infer task type from keywords
+            task_type = self._infer_task_type(message)
+            agent_name = await self.agent_service.select_best_agent_for_task(
+                message,
+                task_type=task_type
+            )
+        
+        # 6. Generate response using selected agent
+        result = await self.agent_service.generate_response(
+            prompt=enhanced_prompt,
+            agent_name=agent_name  # NEW: Pass selected agent
         )
         
-        # 7. Return enhanced response
+        # 7. Add source attribution to response
+        response_text = result.get("response", "")
+        if sources:
+            response_text += f"\n\n[Sources: {', '.join(sources)}]"
+        
+        # 8. Save to memory if db provided
+        if db and include_memory:
+            await self.memory_service.add_message(
+                session_id=session_id,
+                role="user",
+                content=message,
+                db=db
+            )
+            await self.memory_service.add_message(
+                session_id=session_id,
+                role="assistant",
+                content=response_text,
+                db=db
+            )
+        
+        # 9. NEW: Return with agent info
         return {
-            "response": ai_result["response"],
-            "status": ai_result["status"],
-            "sources_used": sources_used,
-            "tokens": ai_result.get("tokens", 0),
-            "model": ai_result.get("model", "unknown")
+            "response": response_text,
+            "agent_used": agent_name,  # NEW
+            "sources": sources,  # NEW
+            "tokens": result.get("tokens", 0),
+            "timestamp": datetime.utcnow().isoformat()
         }
+    
+    def _should_search_documents(self, message: str) -> bool:
+        """Check if message should trigger document search"""
+        message_lower = message.lower()
+        return any(keyword in message_lower for keyword in self.DOCUMENT_KEYWORDS)
+    
+    def _should_search_web(self, message: str) -> bool:
+        """Check if message should trigger web search"""
+        message_lower = message.lower()
+        return any(keyword in message_lower for keyword in self.WEB_KEYWORDS)
+    
+    def _infer_task_type(self, message: str) -> Optional[TaskType]:
+        """
+        NEW METHOD: Infer task type from message keywords
+        
+        In future, this could use ML classification
+        """
+        message_lower = message.lower()
+        
+        # Code-related keywords
+        if any(word in message_lower for word in [
+            "code", "python", "javascript", "function", "class",
+            "bug", "error", "программ", "код", "функция"
+        ]):
+            return TaskType.CODE_ANALYSIS
+        
+        # Medical keywords
+        if any(word in message_lower for word in [
+            "health", "medical", "symptom", "doctor", "medicine",
+            "здоровье", "симптом", "лекарство"
+        ]):
+            return TaskType.MEDICAL_QUERY
+        
+        # Creative writing
+        if any(word in message_lower for word in [
+            "write", "story", "poem", "creative", "напиши", "история"
+        ]):
+            return TaskType.CREATIVE_WRITING
+        
+        # Default to general chat
+        return TaskType.GENERAL_CHAT

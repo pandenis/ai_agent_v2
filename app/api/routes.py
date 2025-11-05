@@ -1,346 +1,243 @@
 """
-FastAPI routes for agent API
+API routes for AI Agent System with multi-model support
 """
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.database import get_db
-from app.api.deps import (
-    get_memory_service, 
-    get_agent_service,
-    get_document_service,
-    get_web_search_service,
-    get_enhanced_chat_service
-)
+from typing import Optional
+
+from app.api.deps import get_db, get_agent_service, get_memory_service
 from app.schemas.agent import (
-    ChatRequest,
-    ChatResponse,
     SessionCreate,
     SessionResponse,
+    EnhancedChatRequest,
+    EnhancedChatResponse,
     DocumentUpload,
+    DocumentResponse,
     DocumentSearchRequest,
-    WebSearchRequest
+    DocumentSearchResponse,
+    WebSearchRequest,
+    WebSearchResponse,
+    AgentStatusResponse,
+    AgentSelectionRequest,
+    AgentSelectionResponse,
 )
-from app.services.memory_service import MemoryService
 from app.services.agent_service import AgentService
+from app.services.memory_service import MemoryService
 from app.services.document_service import DocumentService
 from app.services.web_search_service import WebSearchService
 from app.services.enhanced_chat_service import EnhancedChatService
-from app.models.session import Session
-from datetime import datetime
-import uuid
+from app.core.agent_config import TaskType
 
-
-router = APIRouter(prefix="/api/v1", tags=["agent"])
+router = APIRouter()
 
 
 # ============================================================================
-# SESSION ENDPOINTS
+# NEW: AGENT MANAGEMENT ENDPOINTS
 # ============================================================================
 
-@router.post("/sessions", response_model=SessionResponse)
-async def create_session(
-    request: SessionCreate,
-    db: AsyncSession = Depends(get_db)
+@router.get(
+    "/agents/status",
+    response_model=AgentStatusResponse,
+    summary="Get status of all AI agents",
+    description="Returns availability and configuration of all registered agents"
+)
+async def get_agents_status(
+    agent_service: AgentService = Depends(get_agent_service)
 ):
-    """Create a new conversation session"""
-    session = Session(
-        session_id=str(uuid.uuid4()),
-        agent_name=request.agent_name,
-        user_id=request.user_id
+    """Get comprehensive status of all AI agents"""
+    status = await agent_service.get_agent_status()
+    return status
+
+
+@router.post(
+    "/agents/select",
+    response_model=AgentSelectionResponse,
+    summary="Select best agent for task",
+    description="Automatically select the most suitable agent for a given task"
+)
+async def select_best_agent(
+    request: AgentSelectionRequest,
+    agent_service: AgentService = Depends(get_agent_service)
+):
+    """Intelligently select the best agent for a task"""
+    # Parse task_type if provided
+    task_type = None
+    if request.task_type:
+        try:
+            task_type = TaskType(request.task_type)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid task_type. Must be one of: {[t.value for t in TaskType]}"
+            )
+    
+    # Select best agent
+    selected_agent = await agent_service.select_best_agent_for_task(
+        request.prompt,
+        task_type=task_type
     )
     
+    # Get agent config for details
+    from app.core.agent_config import agent_registry
+    config = agent_registry.get_agent_config(selected_agent)
+    
+    if not config:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No suitable agent found"
+        )
+    
+    # Calculate confidence score
+    confidence = 0.8
+    if task_type:
+        confidence = config.get_capability_score(task_type)
+    
+    return {
+        "selected_agent": selected_agent,
+        "confidence": confidence,
+        "reasoning": f"Best match for {task_type.value if task_type else 'general task'}",
+        "agent_capabilities": [
+            {"name": c.name, "confidence": c.confidence}
+            for c in config.capabilities
+        ]
+    }
+
+
+# ============================================================================
+# EXISTING ENDPOINTS
+# ============================================================================
+
+@router.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy"}
+
+
+@router.post(
+    "/sessions",
+    response_model=SessionResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create new chat session"
+)
+async def create_session(
+    session_data: SessionCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a new chat session"""
+    from app.models.session import Session
+    
+    session = Session(agent_name=session_data.agent_name)
     db.add(session)
     await db.commit()
     await db.refresh(session)
     
-    return session
-
-
-@router.get("/sessions/{session_id}", response_model=SessionResponse)
-async def get_session(
-    session_id: str,
-    db: AsyncSession = Depends(get_db)
-):
-    """Get session information"""
-    result = await db.execute(
-        select(Session).where(Session.session_id == session_id)
-    )
-    session = result.scalar_one_or_none()
-    
-    if not session:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Session not found"
-        )
-    
-    return session
-
-
-# ============================================================================
-# CHAT ENDPOINTS
-# ============================================================================
-
-@router.post("/chat", response_model=ChatResponse)
-async def chat(
-    request: ChatRequest,
-    memory_service: MemoryService = Depends(get_memory_service),
-    agent_service: AgentService = Depends(get_agent_service),
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Basic chat endpoint (legacy)
-    
-    For enhanced chat with automatic document/web search, use /chat/enhanced
-    """
-    # Check session exists
-    result = await db.execute(
-        select(Session).where(Session.session_id == request.session_id)
-    )
-    session = result.scalar_one_or_none()
-    
-    if not session:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Session not found"
-        )
-    
-    # Get conversation context
-    conversation_history = []
-    system_context = "You are a helpful AI assistant."
-    
-    if request.include_memory:
-        # Get recent conversation
-        recent_messages = await memory_service.get_conversation_history(
-            request.session_id,
-            limit=5
-        )
-        
-        conversation_history = [
-            {"role": msg.role, "content": msg.content}
-            for msg in recent_messages
-        ]
-        
-        # Get important facts
-        important_facts = await memory_service.get_important_facts(
-            min_importance=0.7,
-            limit=5
-        )
-        
-        if important_facts:
-            facts_text = "\n".join([f"- {f.text}" for f in important_facts])
-            system_context += f"\n\nKnown facts about the user:\n{facts_text}"
-    
-    # Generate AI response
-    ai_result = await agent_service.generate_response(
-        prompt=request.message,
-        system_prompt=system_context,
-        conversation_history=conversation_history
-    )
-    
-    if ai_result["status"] == "error":
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ai_result["error"]
-        )
-    
-    # Save messages
-    await memory_service.add_message(
-        session_id=request.session_id,
-        role="user",
-        content=request.message
-    )
-    
-    await memory_service.add_message(
-        session_id=request.session_id,
-        role="assistant",
-        content=ai_result["response"],
-        tokens_used=ai_result.get("tokens")
-    )
-    
-    # Update session stats
-    session.message_count += 2
-    session.last_activity = datetime.utcnow()
-    await db.commit()
-    
-    return ChatResponse(
-        response=ai_result["response"],
-        session_id=request.session_id,
-        tokens_used=ai_result.get("tokens"),
-        timestamp=datetime.utcnow()
+    return SessionResponse(
+        session_id=str(session.id),
+        agent_name=session.agent_name,
+        created_at=session.created_at
     )
 
 
-@router.post("/chat/enhanced", response_model=ChatResponse)
+@router.post(
+    "/chat/enhanced",
+    response_model=EnhancedChatResponse,
+    summary="Enhanced chat with multi-source intelligence and agent selection"
+)
 async def enhanced_chat(
-        request: ChatRequest,
-        enhanced_chat_service: EnhancedChatService = Depends(get_enhanced_chat_service),
-        memory_service: MemoryService = Depends(get_memory_service),
-        db: AsyncSession = Depends(get_db)
+    request: EnhancedChatRequest,
+    db: AsyncSession = Depends(get_db),
+    agent_service: AgentService = Depends(get_agent_service),
+    memory_service: MemoryService = Depends(get_memory_service)
 ):
-    """
-    Enhanced chat with intelligent context retrieval
-
-    Automatically:
-    - Searches documents when relevant keywords detected
-    - Searches web for current information
-    - Uses conversation history
-    - Remembers user facts
-    - Cites sources in responses
-    """
-    # Check session exists
-    result = await db.execute(
-        select(Session).where(Session.session_id == request.session_id)
+    """Enhanced chat with multi-source intelligence and agent selection"""
+    document_service = DocumentService()
+    web_search_service = WebSearchService()
+    
+    enhanced_service = EnhancedChatService(
+        agent_service=agent_service,
+        memory_service=memory_service,
+        document_service=document_service,
+        web_search_service=web_search_service
     )
-    session = result.scalar_one_or_none()
-
-    if not session:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Session not found"
-        )
-
-    # Process message with enhanced service
-    enhanced_result = await enhanced_chat_service.process_message(
+    
+    result = await enhanced_service.process_message(
         session_id=request.session_id,
         message=request.message,
-        include_memory=request.include_memory
+        agent_name=request.agent_name,
+        include_memory=request.include_memory,
+        db=db
     )
-
-    if enhanced_result["status"] == "error":
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to generate response"
-        )
-
-    # Save user message
-    await memory_service.add_message(
+    
+    return EnhancedChatResponse(
+        response=result["response"],
         session_id=request.session_id,
-        role="user",
-        content=request.message
+        agent_used=result.get("agent_used", "unknown"),
+        sources_used=result.get("sources", []),
+        tokens_used=result.get("tokens", 0),
+        timestamp=result.get("timestamp")
     )
 
-    # Build response WITH sources
-    response_text = enhanced_result["response"]
-    if enhanced_result["sources_used"]:
-        response_text += f"\n\n[Sources: {', '.join(enhanced_result['sources_used'])}]"
 
-    # Save AI response
-    await memory_service.add_message(
-        session_id=request.session_id,
-        role="assistant",
-        content=response_text,
-        tokens_used=enhanced_result.get("tokens")
-    )
-
-    # Update session stats
-    session.message_count += 2
-    session.last_activity = datetime.utcnow()
-    await db.commit()
-
-    # Return response WITH sources (FIXED!)
-    return ChatResponse(
-        response=response_text,  # ✅ Теперь с источниками!
-        session_id=request.session_id,
-        tokens_used=enhanced_result.get("tokens"),
-        timestamp=datetime.utcnow()
-    )
-
-# ============================================================================
-# DOCUMENT ENDPOINTS
-# ============================================================================
-
-@router.post("/documents/upload")
-async def upload_document(
-    request: DocumentUpload,
-    doc_service: DocumentService = Depends(get_document_service)
-):
-    """Upload and index a document"""
-    # Generate doc ID
-    doc_id = str(uuid.uuid4())
+@router.post(
+    "/documents/upload",
+    response_model=DocumentResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload and index document"
+)
+async def upload_document(document: DocumentUpload):
+    """Upload and index a document for semantic search"""
+    document_service = DocumentService()
     
-    # Add metadata
-    metadata = request.metadata or {}
-    if request.filename:
-        metadata["filename"] = request.filename
-    
-    # Add to vector store
-    await doc_service.add_document(
-        doc_id=doc_id,
-        text=request.text,
-        metadata=metadata
+    doc_id = await document_service.add_document(
+        text=document.text,
+        metadata={
+            "filename": document.filename,
+            "source": document.source
+        }
     )
     
-    return {
-        "doc_id": doc_id,
-        "filename": request.filename,
-        "status": "indexed",
-        "text_length": len(request.text)
-    }
+    return DocumentResponse(
+        document_id=doc_id,
+        filename=document.filename,
+        message="Document uploaded and indexed successfully"
+    )
 
 
-@router.post("/documents/search")
-async def search_documents(
-    request: DocumentSearchRequest,
-    doc_service: DocumentService = Depends(get_document_service)
-):
-    """Search documents by semantic similarity"""
-    results = await doc_service.search_documents(
-        request.query,
-        request.max_results
+@router.post(
+    "/documents/search",
+    response_model=DocumentSearchResponse,
+    summary="Search documents"
+)
+async def search_documents(request: DocumentSearchRequest):
+    """Search indexed documents using semantic similarity"""
+    document_service = DocumentService()
+    
+    results = await document_service.search_documents(
+        query=request.query,
+        n_results=request.n_results
     )
     
-    return {
-        "query": request.query,
-        "results": results,
-        "count": len(results)
-    }
+    return DocumentSearchResponse(
+        results=results,
+        total_found=len(results)
+    )
 
 
-@router.get("/documents/count")
-async def get_document_count(
-    doc_service: DocumentService = Depends(get_document_service)
-):
-    """Get total document count"""
-    count = await doc_service.get_document_count()
-    return {"count": count}
-
-
-# ============================================================================
-# WEB SEARCH ENDPOINT
-# ============================================================================
-
-@router.post("/search/web")
-async def web_search(
-    request: WebSearchRequest,
-    web_service: WebSearchService = Depends(get_web_search_service)
-):
-    """Search the web"""
-    results = await web_service.search(
-        request.query,
-        request.max_results
+@router.post(
+    "/search/web",
+    response_model=WebSearchResponse,
+    summary="Web search"
+)
+async def web_search(request: WebSearchRequest):
+    """Perform web search and get results"""
+    web_search_service = WebSearchService()
+    
+    results = await web_search_service.search(
+        query=request.query,
+        max_results=request.max_results
     )
     
-    return {
-        "query": request.query,
-        "results": results,
-        "count": len(results)
-    }
-
-
-# ============================================================================
-# HEALTH CHECK
-# ============================================================================
-
-@router.get("/health")
-async def health_check(
-    agent_service: AgentService = Depends(get_agent_service)
-):
-    """Health check endpoint"""
-    ollama_status = await agent_service.check_health()
-    
-    return {
-        "status": "healthy" if ollama_status else "degraded",
-        "ollama": "connected" if ollama_status else "unavailable",
-        "timestamp": datetime.utcnow()
-    }
+    return WebSearchResponse(
+        results=results,
+        total_found=len(results)
+    )
