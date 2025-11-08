@@ -1,41 +1,29 @@
 """
-Session model for managing conversation sessions
+Session model for storing chat sessions
 """
-from datetime import datetime
-from typing import Optional
-from sqlalchemy import String, DateTime, Integer, Boolean
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Column, String, DateTime, Boolean, Integer
+from sqlalchemy.sql import func
 from app.core.database import Base
+import uuid
 
 
 class Session(Base):
+    """Chat session model"""
     __tablename__ = "sessions"
-
-    # Primary key
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-
-    # Session identifier (UUID-like)
-    session_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
-
-    # User identifier (for future multi-user support)
-    user_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
-
-    # Agent used in this session
-    agent_name: Mapped[str] = mapped_column(String(50), default="mistral")
-
-    # Session metadata
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    last_activity: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow
+    
+    # Primary key с auto-generate UUID
+    session_id = Column(
+        String, 
+        primary_key=True, 
+        default=lambda: str(uuid.uuid4()),
+        nullable=False
     )
-
-    # Session status
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-
-    # Statistics
-    message_count: Mapped[int] = mapped_column(Integer, default=0)
-
-    def __repr__(self) -> str:
-        return f"<Session(id={self.id}, session_id={self.session_id}, agent={self.agent_name})>"
+    user_id = Column(String, nullable=True)
+    agent_name = Column(String, nullable=False)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    last_activity = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    is_active = Column(Boolean, default=True)
+    message_count = Column(Integer, default=0)
+    
+    def __repr__(self):
+        return f"<Session(id={self.session_id}, agent={self.agent_name})>"

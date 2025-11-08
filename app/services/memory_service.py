@@ -92,7 +92,8 @@ class MemoryService:
     async def search_facts(
         self,
         query: str,
-        min_importance: float = 0.3
+        min_importance: float = 0.3,
+        limit: int = 10
     ) -> List[UserFact]:
         """Search facts by text content"""
         result = await self.db.execute(
@@ -104,6 +105,7 @@ class MemoryService:
                 )
             )
             .order_by(UserFact.importance.desc())
+            .limit(limit)
         )
         
         return result.scalars().all()

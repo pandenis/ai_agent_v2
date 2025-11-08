@@ -1,4 +1,5 @@
 """
+import app.core.agent_config_local
 FastAPI application entry point
 """
 from fastapi import FastAPI

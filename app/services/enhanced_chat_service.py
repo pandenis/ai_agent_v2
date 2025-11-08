@@ -154,14 +154,12 @@ class EnhancedChatService:
             await self.memory_service.add_message(
                 session_id=session_id,
                 role="user",
-                content=message,
-                db=db
+                content=message
             )
             await self.memory_service.add_message(
                 session_id=session_id,
                 role="assistant",
-                content=response_text,
-                db=db
+                content=response_text
             )
         
         # 9. NEW: Return with agent info

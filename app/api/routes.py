@@ -132,7 +132,7 @@ async def create_session(
     await db.refresh(session)
     
     return SessionResponse(
-        session_id=str(session.id),
+        session_id=str(session.session_id),
         agent_name=session.agent_name,
         created_at=session.created_at
     )
