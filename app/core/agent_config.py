@@ -256,6 +256,31 @@ MEDICAL_CONFIG = OllamaAgentConfig(
     }
 )
 
+GPT_OSS_CONFIG = OllamaAgentConfig(
+    name="GPT-OSS",
+    description="OpenAI's open-weight model with advanced reasoning for memory analysis",
+    base_url="http://localhost:11434",
+    model_name="gpt-oss:20b",
+    capabilities=[
+        AgentCapability("fact_extraction", 1.0, "Superior fact extraction with chain-of-thought"),
+        AgentCapability("memory_analysis", 1.0, "Deep memory analysis and reasoning"),
+        AgentCapability("general_chat", 0.85, "Strong general conversation"),
+        AgentCapability("code_analysis", 0.8, "Good code understanding"),
+        AgentCapability("document_analysis", 0.9, "Excellent document comprehension"),
+    ],
+    max_tokens=2000,
+    temperature=0.3,  # Lower temperature for more deterministic fact extraction
+    languages=["en", "ru"],
+    metadata={
+        "reasoning_levels": ["low", "medium", "high"],
+        "supports_structured_output": True,
+        "supports_function_calling": True,
+        "memory_usage": "16GB",
+        "specialty": "memory_management",
+        "chain_of_thought": True
+    }
+)
+
 
 class AgentRegistry:
     """Central registry for all available agents"""
@@ -267,6 +292,7 @@ class AgentRegistry:
             "llama3": LLAMA3_CONFIG,
             "groq": GROQ_CONFIG,
             "medical": MEDICAL_CONFIG,
+            "gpt-oss": GPT_OSS_CONFIG,
         }
     
     def get_agent_config(self, name: str) -> Optional[AgentConfig]:
