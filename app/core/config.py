@@ -64,6 +64,27 @@ class Settings(BaseSettings):
     enable_groq: bool = False  # Requires API key
     enable_medical: bool = False  # Requires medical model
     
+    # ============================================================================
+    # NEW: MEMORISATOR CONFIGURATION
+    # ============================================================================
+
+    # Enable/disable automatic fact extraction
+    memorisator_enabled: bool = False
+
+    # Model to use for fact extraction (should be gpt-oss for best results)
+    memorisator_model: str = "gpt-oss"
+
+    # Fact filtering thresholds
+    fact_importance_threshold: float = 0.5  # Only save facts with importance >= this
+    fact_confidence_threshold: float = 0.7  # Only save facts with confidence >= this
+
+    # Fact extraction settings
+    fact_extraction_temperature: float = 0.3  # Lower = more deterministic
+    fact_extraction_max_tokens: int = 2000
+
+    # Background processing
+    memorisator_async: bool = True  # Extract facts asynchronously (non-blocking)
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
