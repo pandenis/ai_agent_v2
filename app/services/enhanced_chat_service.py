@@ -124,7 +124,7 @@ class EnhancedChatService:
             # Get relevant facts
             facts = await self.memory_service.search_facts(
                 query=message,
-                limit=3
+                min_importance=0.5
             )
             if facts:
                 sources.append("user_facts")
@@ -166,29 +166,27 @@ class EnhancedChatService:
             await self.memory_service.add_message(
                 session_id=session_id,
                 role="user",
-                content=message,
-                db=db
+                content=message
             )
             await self.memory_service.add_message(
                 session_id=session_id,
                 role="assistant",
-                content=response_text,
-                db=db
+                content=response_text
             )
 
 
-            # 8.5. NEW: Extract facts (non-blocking, errors don't affect response)
-            facts_extracted = 0
-            if self.memorisator_enabled and db:
-                try:
-                    facts_extracted = await self._extract_and_save_facts(
-                        session_id=session_id,
-                        user_message=message,
-                        assistant_message=response_text
-                    )
-                except Exception as e:
-                    # Log but don't break the chat
-                    logger.error(f"Fact extraction failed: {e}")
+        # 8.5. NEW: Extract facts (non-blocking, errors don't affect response)
+        facts_extracted = 0
+        if self.memorisator_enabled and db:
+            try:
+                facts_extracted = await self._extract_and_save_facts(
+                    session_id=session_id,
+                    user_message=message,
+                    assistant_message=response_text
+                )
+            except Exception as e:
+                # Log but don't break the chat
+                logger.error(f"Fact extraction failed: {e}")
 
 
         # 9. NEW: Return with agent info
