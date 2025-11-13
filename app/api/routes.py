@@ -241,3 +241,162 @@ async def web_search(request: WebSearchRequest):
         results=results,
         total_found=len(results)
     )
+
+
+# ============================================================================
+# MEMORY/MEMORISATOR ENDPOINTS
+# ============================================================================
+
+from app.schemas.memory import (
+    FactResponse,
+    FactListRequest,
+    FactListResponse,
+    FactStatsResponse,
+    FactDeleteResponse
+)
+
+
+@router.get(
+    "/memory/facts",
+    response_model=FactListResponse,
+    summary="Get facts with filters",
+    description="Retrieve facts with optional filtering by importance, type, and tags"
+)
+async def get_facts(
+        min_importance: float = 0.5,
+        fact_type: Optional[str] = None,
+        tags: Optional[str] = None,  # Comma-separated
+        limit: int = 100,
+        offset: int = 0,
+        memory_service: MemoryService = Depends(get_memory_service),
+        db: AsyncSession = Depends(get_db)
+):
+    """Get list of facts with filtering and pagination"""
+
+    # Parse tags if provided
+    tag_list = tags.split(",") if tags else None
+
+    # Get facts from database
+    facts = await memory_service.get_facts(
+        min_importance=min_importance,
+        fact_type=fact_type,
+        tags=tag_list,
+        limit=limit,
+        offset=offset
+    )
+
+    # Convert to response models
+    fact_responses = [
+        FactResponse(
+            fact_id=f.fact_id,
+            text=f.text,
+            importance=f.importance,
+            confidence=f.confidence,
+            tags=f.tags or [],
+            fact_type=f.fact_type,
+            source=f.source,
+            created=f.created,
+            updated=f.updated,
+            last_accessed=f.last_accessed,
+            usage_count=f.usage_count,
+            needs_update=f.needs_update
+        )
+        for f in facts
+    ]
+
+    # Check if more facts available
+    has_more = len(facts) == limit
+
+    return FactListResponse(
+        facts=fact_responses,
+        total=len(facts),
+        limit=limit,
+        offset=offset,
+        has_more=has_more
+    )
+
+
+@router.get(
+    "/memory/facts/{fact_id}",
+    response_model=FactResponse,
+    summary="Get a specific fact by ID",
+    description="Retrieve a single fact by its unique identifier"
+)
+async def get_fact_by_id(
+        fact_id: str,
+        memory_service: MemoryService = Depends(get_memory_service),
+        db: AsyncSession = Depends(get_db)
+):
+    """Get a specific fact by ID"""
+
+    fact = await memory_service.get_fact_by_id(fact_id)
+
+    if not fact:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Fact with ID {fact_id} not found"
+        )
+
+    return FactResponse(
+        fact_id=fact.fact_id,
+        text=fact.text,
+        importance=fact.importance,
+        confidence=fact.confidence,
+        tags=fact.tags or [],
+        fact_type=fact.fact_type,
+        source=fact.source,
+        created=fact.created,
+        updated=fact.updated,
+        last_accessed=fact.last_accessed,
+        usage_count=fact.usage_count,
+        needs_update=fact.needs_update
+    )
+
+
+@router.delete(
+    "/memory/facts/{fact_id}",
+    response_model=FactDeleteResponse,
+    summary="Delete a fact",
+    description="Delete a fact by its ID"
+)
+async def delete_fact(
+        fact_id: str,
+        memory_service: MemoryService = Depends(get_memory_service),
+        db: AsyncSession = Depends(get_db)
+):
+    """Delete a fact by ID"""
+
+    success = await memory_service.delete_fact(fact_id)
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Fact with ID {fact_id} not found"
+        )
+
+    return FactDeleteResponse(
+        success=True,
+        fact_id=fact_id,
+        message="Fact deleted successfully"
+    )
+
+
+@router.get(
+    "/memory/stats",
+    response_model=FactStatsResponse,
+    summary="Get memory statistics",
+    description="Get statistics about stored facts"
+)
+async def get_memory_stats(
+        memory_service: MemoryService = Depends(get_memory_service),
+        db: AsyncSession = Depends(get_db)
+):
+    """Get statistics about facts in memory"""
+
+    stats = await memory_service.get_facts_stats()
+
+    return FactStatsResponse(
+        total_facts=stats["total_facts"],
+        facts_by_type=stats["facts_by_type"],
+        avg_importance=stats["avg_importance"]
+    )
