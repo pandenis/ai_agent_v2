@@ -1,6 +1,8 @@
 """
 API routes for AI Agent System with multi-model support
 """
+from idlelib.query import Query
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
@@ -265,7 +267,7 @@ from app.schemas.memory import (
 async def get_facts(
         min_importance: float = 0.5,
         fact_type: Optional[str] = None,
-        tags: Optional[str] = None,  # Comma-separated
+        tags: Optional[str] = None,
         limit: int = 100,
         offset: int = 0,
         memory_service: MemoryService = Depends(get_memory_service),
@@ -276,14 +278,21 @@ async def get_facts(
     # Parse tags if provided
     tag_list = tags.split(",") if tags else None
 
-    # Get facts from database
+    # Get facts from database (get limit+1 to check if more exist)
     facts = await memory_service.get_facts(
         min_importance=min_importance,
         fact_type=fact_type,
         tags=tag_list,
-        limit=limit,
+        limit=limit + 1,  # Get one extra to check has_more
         offset=offset
     )
+
+    # Check if more facts available
+    has_more = len(facts) > limit
+
+    # Trim to requested limit
+    if has_more:
+        facts = facts[:limit]
 
     # Convert to response models
     fact_responses = [
@@ -303,9 +312,6 @@ async def get_facts(
         )
         for f in facts
     ]
-
-    # Check if more facts available
-    has_more = len(facts) == limit
 
     return FactListResponse(
         facts=fact_responses,
