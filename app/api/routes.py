@@ -138,6 +138,17 @@ async def create_session(
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new chat session"""
+
+    # Security: Validate agent name
+    if session_data.agent_name:
+        is_valid, sanitized_name, error = validate_input(session_data.agent_name)
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid agent name: {error}"
+            )
+        session_data.agent_name = sanitized_name
+
     from app.models.session import Session
     
     session = Session(agent_name=session_data.agent_name)
@@ -164,6 +175,23 @@ async def enhanced_chat(
     memory_service: MemoryService = Depends(get_memory_service)
 ):
     """Enhanced chat with multi-source intelligence and agent selection"""
+
+    # Security: Validate user message (CRITICAL - main user input)
+    is_valid, sanitized_message, error = validate_input(request.message)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid message: {error}"
+        )
+
+    # Security: Validate session_id format
+    is_valid_session, session_error = SecurityValidator.validate_session_id(request.session_id)
+    if not is_valid_session:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid session ID: {session_error}"
+        )
+
     document_service = DocumentService()
     web_search_service = WebSearchService()
     
@@ -200,6 +228,19 @@ async def enhanced_chat(
 )
 async def upload_document(document: DocumentUpload):
     """Upload and index a document for semantic search"""
+
+    # Security: Validate document text content
+    is_valid, sanitized_text, error = validate_input(document.text)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid document content: {error}"
+        )
+
+    # Security: Sanitize filename
+    if document.filename:
+        document.filename = SecurityValidator.sanitize_filename(document.filename)
+
     document_service = DocumentService()
     
     doc_id = await document_service.add_document(
@@ -244,6 +285,15 @@ async def search_documents(request: DocumentSearchRequest):
 )
 async def web_search(request: WebSearchRequest):
     """Perform web search and get results"""
+
+    # Security: Validate search query
+    is_valid, sanitized_query, error = validate_input(request.query)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid search query: {error}"
+        )
+
     web_search_service = WebSearchService()
     
     results = await web_search_service.search(
