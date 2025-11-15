@@ -7,6 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
+# Security module import
+from security.input_validation import SecurityValidator, validate_input
+
 from app.api.deps import get_db, get_agent_service, get_memory_service
 from app.schemas.agent import (
     SessionCreate,
@@ -62,6 +65,15 @@ async def select_best_agent(
     agent_service: AgentService = Depends(get_agent_service)
 ):
     """Intelligently select the best agent for a task"""
+
+    # Security: Validate user input
+    is_valid, sanitized_task, error = validate_input(request.task)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid input: {error}"
+        )
+
     # Parse task_type if provided
     task_type = None
     if request.task_type:
