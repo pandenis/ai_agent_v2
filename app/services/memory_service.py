@@ -9,6 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.memory import ConversationMessage, UserFact
 from app.models.memory_v2 import Fact, FactModel
 from loguru import logger
+
+# Security import
+from security.input_validation import validate_input, SecurityValidator
+
 import uuid
 
 
@@ -30,10 +34,23 @@ class MemoryService:
         tokens_used: Optional[int] = None
     ) -> ConversationMessage:
         """Add a message to conversation history"""
+
+        # Security: Validate session_id
+        is_valid_session, session_error = SecurityValidator.validate_session_id(session_id)
+        if not is_valid_session:
+            logger.warning(f"Invalid session_id attempted: {session_id}")
+            raise ValueError(f"Invalid session ID: {session_error}")
+
+        # Security: Validate message content
+        is_valid, sanitized_content, error = validate_input(content)
+        if not is_valid:
+            logger.warning(f"Invalid message content blocked: {error}")
+            raise ValueError(f"Invalid message content: {error}")
+
         message = ConversationMessage(
             session_id=session_id,
             role=role,
-            content=content,
+            content=sanitized_content,  # ← Use sanitized version!
             tokens_used=tokens_used
         )
 

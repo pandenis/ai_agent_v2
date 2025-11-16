@@ -2,6 +2,10 @@
 Enhanced Agent Service with multi-model support via AgentFactory
 """
 from typing import Optional, Dict, Any
+
+# Security import
+from security.input_validation import validate_input
+
 from app.core.config import settings
 from app.services.agent_factory import agent_factory
 from app.core.agent_config import agent_registry, TaskType
@@ -38,6 +42,19 @@ class AgentService:
         Returns:
             Dict with response, status, and metadata
         """
+        # Security: Validate user prompt
+        is_valid, sanitized_prompt, error = validate_input(prompt)
+        if not is_valid:
+            return {
+                "response": f"Invalid input: {error}",
+                "status": "error",
+                "agent": "security_validator",
+                "error": error
+            }
+
+        # Use sanitized prompt
+        prompt = sanitized_prompt
+
         # Use specified agent or default
         agent_name = agent_name or self.default_agent
         
