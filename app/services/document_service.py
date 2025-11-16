@@ -3,6 +3,10 @@ Document service for vector search with ChromaDB
 """
 import chromadb
 from chromadb.config import Settings
+
+# Security import
+from security.input_validation import validate_input
+
 from typing import List, Dict, Optional
 import os
 from pathlib import Path
@@ -36,6 +40,12 @@ class DocumentService:
         metadata: Optional[Dict] = None
     ):
         """Add document to vector store"""
+
+        # Security: Validate document text
+        is_valid, sanitized_text, error = validate_input(text)
+        if not is_valid:
+            raise ValueError(f"Invalid document text: {error}")
+
         # ChromaDB requires non-empty metadata or None
         if metadata is not None and len(metadata) == 0:
             metadata = None
@@ -46,7 +56,7 @@ class DocumentService:
         
         self.collection.add(
             ids=[doc_id],
-            documents=[text],
+            documents=[sanitized_text],
             metadatas=[metadata]
         )
     
@@ -56,6 +66,12 @@ class DocumentService:
         n_results: int = 5
     ) -> List[Dict]:
         """Search documents by semantic similarity"""
+
+        # Security: Validate search query
+        is_valid, sanitized_query, error = validate_input(query)
+        if not is_valid:
+            raise ValueError(f"Invalid search query: {error}")
+
         results = self.collection.query(
             query_texts=[query],
             n_results=n_results

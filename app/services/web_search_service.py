@@ -4,6 +4,8 @@ Web search service using DuckDuckGo API
 from duckduckgo_search import DDGS
 from typing import List, Dict
 
+# Security import
+from security.input_validation import validate_input
 
 class WebSearchService:
     """Service for web search integration"""
@@ -26,6 +28,15 @@ class WebSearchService:
         Returns:
             List of search results with title, snippet, url
         """
+        # Security: Validate search query
+        is_valid, sanitized_query, error = validate_input(query)
+        if not is_valid:
+            return [{
+                "error": "Invalid query",
+                "message": f"Search query validation failed: {error}",
+                "query": query[:50]  # Show only first 50 chars for safety
+            }]
+
         try:
             results = []
             
@@ -43,6 +54,6 @@ class WebSearchService:
         except Exception as e:
             return [{
                 "error": str(e),
-                "query": query,
+                "query": sanitized_query[:50],  # ← Use sanitized!
                 "message": "Web search temporarily unavailable"
             }]
