@@ -67,7 +67,7 @@ async def select_best_agent(
     """Intelligently select the best agent for a task"""
 
     # Security: Validate user input
-    is_valid, sanitized_task, error = validate_input(request.task)
+    is_valid, sanitized_prompt, error = validate_input(request.prompt)
     if not is_valid:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
