@@ -3,8 +3,10 @@ Session model for managing conversation sessions
 """
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import String, DateTime, Integer, Boolean
+
+from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
+
 from app.core.database import Base
 
 

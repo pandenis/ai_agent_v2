@@ -1,9 +1,11 @@
 """
 Pydantic schemas for Memory/Memorisator API
 """
-from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class FactResponse(BaseModel):
@@ -29,31 +31,11 @@ class FactResponse(BaseModel):
 class FactListRequest(BaseModel):
     """Request parameters for listing facts"""
 
-    min_importance: float = Field(
-        default=0.5,
-        ge=0.0,
-        le=1.0,
-        description="Minimum importance threshold"
-    )
-    fact_type: Optional[str] = Field(
-        None,
-        description="Filter by fact type"
-    )
-    tags: Optional[List[str]] = Field(
-        None,
-        description="Filter by tags (OR logic)"
-    )
-    limit: int = Field(
-        default=100,
-        ge=1,
-        le=1000,
-        description="Maximum number of facts to return"
-    )
-    offset: int = Field(
-        default=0,
-        ge=0,
-        description="Offset for pagination"
-    )
+    min_importance: float = Field(default=0.5, ge=0.0, le=1.0, description="Minimum importance threshold")
+    fact_type: Optional[str] = Field(None, description="Filter by fact type")
+    tags: Optional[List[str]] = Field(None, description="Filter by tags (OR logic)")
+    limit: int = Field(default=100, ge=1, le=1000, description="Maximum number of facts to return")
+    offset: int = Field(default=0, ge=0, description="Offset for pagination")
 
 
 class FactListResponse(BaseModel):

@@ -1,13 +1,15 @@
 """
 Agent configuration system for multi-model support
 """
+
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Any
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class AgentType(Enum):
     """Types of AI agents"""
+
     LOCAL_OLLAMA = "local_ollama"
     LOCAL_LLAMA_CPP = "local_llama_cpp"
     CLOUD_API = "cloud_api"
@@ -15,6 +17,7 @@ class AgentType(Enum):
 
 class TaskType(Enum):
     """Task types for intelligent routing"""
+
     GENERAL_CHAT = "general_chat"
     CODE_ANALYSIS = "code_analysis"
     MEDICAL_QUERY = "medical_query"
@@ -27,6 +30,7 @@ class TaskType(Enum):
 @dataclass
 class AgentCapability:
     """Agent capability definition"""
+
     name: str
     confidence: float  # 0.0-1.0 how good at this
     description: str
@@ -35,6 +39,7 @@ class AgentCapability:
 @dataclass
 class AgentConfig:
     """Base configuration for an AI agent"""
+
     name: str
     description: str
     agent_type: AgentType
@@ -44,7 +49,7 @@ class AgentConfig:
     languages: List[str] = field(default_factory=lambda: ["en"])
     enabled: bool = True
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def get_capability_score(self, task_type: TaskType) -> float:
         """Get confidence score for a specific task type"""
         for cap in self.capabilities:
@@ -56,9 +61,10 @@ class AgentConfig:
 @dataclass
 class OllamaAgentConfig(AgentConfig):
     """Configuration for Ollama-based agents"""
+
     base_url: str = "http://localhost:11434"
     model_name: str = "mistral"
-    
+
     def __init__(
         self,
         name: str,
@@ -81,7 +87,7 @@ class OllamaAgentConfig(AgentConfig):
             temperature=temperature,
             languages=languages or ["en"],
             enabled=enabled,
-            metadata=metadata or {}
+            metadata=metadata or {},
         )
         self.base_url = base_url
         self.model_name = model_name
@@ -90,10 +96,11 @@ class OllamaAgentConfig(AgentConfig):
 @dataclass
 class LlamaCppAgentConfig(AgentConfig):
     """Configuration for llama.cpp agents"""
+
     model_path: str = ""
     n_ctx: int = 2048
     n_threads: int = 4
-    
+
     def __init__(
         self,
         name: str,
@@ -117,7 +124,7 @@ class LlamaCppAgentConfig(AgentConfig):
             temperature=temperature,
             languages=languages or ["en"],
             enabled=enabled,
-            metadata=metadata or {}
+            metadata=metadata or {},
         )
         self.model_path = model_path
         self.n_ctx = n_ctx
@@ -127,11 +134,12 @@ class LlamaCppAgentConfig(AgentConfig):
 @dataclass
 class CloudAgentConfig(AgentConfig):
     """Configuration for cloud API agents"""
+
     api_base_url: str = ""
     api_key: str = ""
     model_id: str = ""
     rate_limit_rpm: int = 60  # requests per minute
-    
+
     def __init__(
         self,
         name: str,
@@ -156,7 +164,7 @@ class CloudAgentConfig(AgentConfig):
             temperature=temperature,
             languages=languages or ["en"],
             enabled=enabled,
-            metadata=metadata or {}
+            metadata=metadata or {},
         )
         self.api_base_url = api_base_url
         self.api_key = api_key
@@ -181,7 +189,7 @@ MISTRAL_CONFIG = OllamaAgentConfig(
     max_tokens=1000,
     temperature=0.7,
     languages=["en", "ru", "fr", "es"],
-    metadata={"speed": "fast", "size": "7B"}
+    metadata={"speed": "fast", "size": "7B"},
 )
 
 DEEPSEEK_CONFIG = LlamaCppAgentConfig(
@@ -197,7 +205,7 @@ DEEPSEEK_CONFIG = LlamaCppAgentConfig(
     temperature=0.3,
     n_ctx=4096,
     languages=["en"],
-    metadata={"specialty": "code", "size": "7B"}
+    metadata={"specialty": "code", "size": "7B"},
 )
 
 LLAMA3_CONFIG = OllamaAgentConfig(
@@ -214,7 +222,7 @@ LLAMA3_CONFIG = OllamaAgentConfig(
     max_tokens=1000,
     temperature=0.7,
     languages=["en", "es", "fr", "de", "it"],
-    metadata={"speed": "medium", "size": "8B", "quality": "high"}
+    metadata={"speed": "medium", "size": "8B", "quality": "high"},
 )
 
 GROQ_CONFIG = CloudAgentConfig(
@@ -234,7 +242,7 @@ GROQ_CONFIG = CloudAgentConfig(
     temperature=0.7,
     rate_limit_rpm=30,
     languages=["en", "es", "fr", "de", "it", "pt"],
-    metadata={"speed": "very_fast", "size": "70B", "quality": "premium", "cost": "paid"}
+    metadata={"speed": "very_fast", "size": "70B", "quality": "premium", "cost": "paid"},
 )
 
 MEDICAL_CONFIG = OllamaAgentConfig(
@@ -249,11 +257,7 @@ MEDICAL_CONFIG = OllamaAgentConfig(
     max_tokens=800,
     temperature=0.4,
     languages=["en"],
-    metadata={
-        "specialty": "medical",
-        "disclaimer": "Educational only - not medical advice",
-        "safety": "high"
-    }
+    metadata={"specialty": "medical", "disclaimer": "Educational only - not medical advice", "safety": "high"},
 )
 
 GPT_OSS_CONFIG = OllamaAgentConfig(
@@ -277,14 +281,14 @@ GPT_OSS_CONFIG = OllamaAgentConfig(
         "supports_function_calling": True,
         "memory_usage": "16GB",
         "specialty": "memory_management",
-        "chain_of_thought": True
-    }
+        "chain_of_thought": True,
+    },
 )
 
 
 class AgentRegistry:
     """Central registry for all available agents"""
-    
+
     def __init__(self):
         self._agents: Dict[str, AgentConfig] = {
             "mistral": MISTRAL_CONFIG,
@@ -294,46 +298,43 @@ class AgentRegistry:
             "medical": MEDICAL_CONFIG,
             "gpt-oss": GPT_OSS_CONFIG,
         }
-    
+
     def get_agent_config(self, name: str) -> Optional[AgentConfig]:
         """Get configuration for an agent"""
         return self._agents.get(name.lower())
-    
+
     def list_agents(self, enabled_only: bool = True) -> List[str]:
         """List all available agents"""
         agents = list(self._agents.keys())
         if enabled_only:
-            agents = [
-                name for name, config in self._agents.items()
-                if config.enabled
-            ]
+            agents = [name for name, config in self._agents.items() if config.enabled]
         return agents
-    
+
     def find_best_agent_for_task(self, task_type: TaskType) -> Optional[str]:
         """Find the best agent for a specific task type"""
         best_agent = None
         best_score = 0.0
-        
+
         for name, config in self._agents.items():
             if not config.enabled:
                 continue
-            
+
             score = config.get_capability_score(task_type)
             if score > best_score:
                 best_score = score
                 best_agent = name
-        
+
         return best_agent
-    
+
     def register_agent(self, config: AgentConfig):
         """Register a new agent configuration"""
         self._agents[config.name.lower()] = config
-    
+
     def disable_agent(self, name: str):
         """Disable an agent"""
         if name.lower() in self._agents:
             self._agents[name.lower()].enabled = False
-    
+
     def enable_agent(self, name: str):
         """Enable an agent"""
         if name.lower() in self._agents:

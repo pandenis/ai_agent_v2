@@ -2,11 +2,13 @@
 Enhanced memory models for Memorisator
 Version: 2.0
 """
-from datetime import datetime
-from typing import Optional, List, Dict, Any
 from dataclasses import dataclass, field
-from sqlalchemy import String, DateTime, Integer, Float, Text, JSON, Boolean
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import JSON, Boolean, DateTime, Float, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
+
 from app.core.database import Base
 
 

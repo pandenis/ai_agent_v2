@@ -12,10 +12,10 @@ Purpose: Validate and sanitize all user inputs to prevent:
 - File upload vulnerabilities
 """
 
-import re
 import os
-from typing import Optional, List, Tuple
+import re
 from pathlib import Path
+from typing import List, Optional, Tuple
 
 
 class SecurityValidator:
@@ -26,37 +26,32 @@ class SecurityValidator:
     # Configuration
     MAX_PROMPT_LENGTH = 4000
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
-    ALLOWED_EXTENSIONS = {'.txt', '.pdf', '.docx', '.csv', '.md'}
+    ALLOWED_EXTENSIONS = {".txt", ".pdf", ".docx", ".csv", ".md"}
 
     # Dangerous patterns that indicate injection attempts
     DANGEROUS_PATTERNS = [
         # Command injection
-        r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]',  # Control characters
-        r'[;&|`$]',  # Shell metacharacters
-        r'\$\(',  # Command substitution
-        r'`[^`]*`',  # Backticks
-
+        r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]",  # Control characters
+        r"[;&|`$]",  # Shell metacharacters
+        r"\$\(",  # Command substitution
+        r"`[^`]*`",  # Backticks
         # System commands (only at start or after shell chars)
-        r'(?:^|\s|[;&|])(curl|wget|nc|netcat|bash|sh)\s',
-        r'(?:^|\s|[;&|])(python|perl|ruby)\s+-',  # Only when followed by flags
-
+        r"(?:^|\s|[;&|])(curl|wget|nc|netcat|bash|sh)\s",
+        r"(?:^|\s|[;&|])(python|perl|ruby)\s+-",  # Only when followed by flags
         # Prompt injection patterns
-        r'(?i)(ignore\s+(previous|above|all)|disregard|forget)',
-        r'(?i)(system\s+prompt|new\s+instructions|override)',
-        r'(?i)(jailbreak|DAN|developer\s+mode)',
-
+        r"(?i)(ignore\s+(previous|above|all)|disregard|forget)",
+        r"(?i)(system\s+prompt|new\s+instructions|override)",
+        r"(?i)(jailbreak|DAN|developer\s+mode)",
         # Path traversal
-        r'\.\.[/\\]',  # Directory traversal
-        r'[/\\]etc[/\\]',  # System files
-
+        r"\.\.[/\\]",  # Directory traversal
+        r"[/\\]etc[/\\]",  # System files
         # SQL injection
-        r'(?i)(union|select|insert|update|delete|drop)\s+(from|into|table)',
-        r'[;\']--',  # SQL comment
-
+        r"(?i)(union|select|insert|update|delete|drop)\s+(from|into|table)",
+        r"[;\']--",  # SQL comment
         # XSS patterns
-        r'<script[^>]*>',
-        r'javascript:',
-        r'on\w+\s*=',  # Event handlers
+        r"<script[^>]*>",
+        r"javascript:",
+        r"on\w+\s*=",  # Event handlers
     ]
 
     @classmethod
@@ -84,16 +79,12 @@ class SecurityValidator:
                 return False, "", "Input contains potentially dangerous characters or patterns"
 
         # Sanitize: remove excessive whitespace
-        sanitized = ' '.join(prompt.split())
+        sanitized = " ".join(prompt.split())
 
         return True, sanitized, None
 
     @classmethod
-    def validate_file_upload(
-        cls,
-        file_path: str,
-        original_filename: str
-    ) -> Tuple[bool, Optional[str]]:
+    def validate_file_upload(cls, file_path: str, original_filename: str) -> Tuple[bool, Optional[str]]:
         """
         Validate uploaded file for security
 
@@ -111,7 +102,7 @@ class SecurityValidator:
         # Check file size
         file_size = os.path.getsize(file_path)
         if file_size > cls.MAX_FILE_SIZE:
-            return False, f"File too large. Maximum {cls.MAX_FILE_SIZE // (1024*1024)}MB"
+            return False, f"File too large. Maximum {cls.MAX_FILE_SIZE // (1024 * 1024)}MB"
 
         if file_size == 0:
             return False, "File is empty"
@@ -122,11 +113,11 @@ class SecurityValidator:
             return False, f"File type not allowed. Allowed: {', '.join(cls.ALLOWED_EXTENSIONS)}"
 
         # Validate filename (no path traversal)
-        if '..' in original_filename or '/' in original_filename or '\\' in original_filename:
+        if ".." in original_filename or "/" in original_filename or "\\" in original_filename:
             return False, "Invalid filename"
 
         # CSV specific validation
-        if file_ext == '.csv':
+        if file_ext == ".csv":
             is_valid, error = cls._validate_csv(file_path)
             if not is_valid:
                 return False, error
@@ -147,7 +138,7 @@ class SecurityValidator:
         try:
             import csv
 
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 # Read first few lines to check structure
                 reader = csv.reader(f)
                 rows = []
@@ -163,7 +154,7 @@ class SecurityValidator:
                 # Check for formula injection
                 for row in rows:
                     for cell in row:
-                        if cell and cell[0] in ['=', '+', '-', '@']:
+                        if cell and cell[0] in ["=", "+", "-", "@"]:
                             return False, "CSV contains formulas (potential injection)"
 
             return True, None
@@ -186,15 +177,15 @@ class SecurityValidator:
         filename = os.path.basename(filename)
 
         # Remove dangerous characters
-        filename = re.sub(r'[^\w\s\.-]', '', filename)
+        filename = re.sub(r"[^\w\s\.-]", "", filename)
 
         # Remove leading dots
-        filename = filename.lstrip('.')
+        filename = filename.lstrip(".")
 
         # Limit length
         if len(filename) > 255:
             name, ext = os.path.splitext(filename)
-            filename = name[:255-len(ext)] + ext
+            filename = name[: 255 - len(ext)] + ext
 
         return filename
 
@@ -210,7 +201,7 @@ class SecurityValidator:
             Tuple of (is_valid, error_message)
         """
         # Session ID should be alphanumeric with dashes/underscores
-        if not re.match(r'^[a-zA-Z0-9_-]{8,64}$', session_id):
+        if not re.match(r"^[a-zA-Z0-9_-]{8,64}$", session_id):
             return False, "Invalid session ID format"
 
         return True, None
@@ -227,11 +218,11 @@ class SecurityValidator:
             Tuple of (is_valid, error_message)
         """
         # Extract command prefix
-        if ':' not in command:
+        if ":" not in command:
             return True, None  # Not a special command
 
-        prefix = command.split(':', 1)[0].lower()
-        valid_commands = ['log', 'search', 'web', 'use']
+        prefix = command.split(":", 1)[0].lower()
+        valid_commands = ["log", "search", "web", "use"]
 
         if prefix not in valid_commands:
             return False, f"Invalid command. Valid commands: {', '.join(valid_commands)}"
@@ -245,7 +236,7 @@ class SecureLogger:
     """
 
     SENSITIVE_PATTERNS = [
-        r'GROQ_API_KEY=\w+',
+        r"GROQ_API_KEY=\w+",
         r'api[_-]?key["\s:=]+[\w-]+',
         r'password["\s:=]+[\w-]+',
         r'token["\s:=]+[\w-]+',
@@ -265,7 +256,7 @@ class SecureLogger:
         sanitized = message
 
         for pattern in cls.SENSITIVE_PATTERNS:
-            sanitized = re.sub(pattern, '[REDACTED]', sanitized, flags=re.IGNORECASE)
+            sanitized = re.sub(pattern, "[REDACTED]", sanitized, flags=re.IGNORECASE)
 
         return sanitized
 

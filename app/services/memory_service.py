@@ -2,18 +2,20 @@
 Memory service for managing conversation history and facts
 Extended to support Memorisator v2 (FactModel)
 """
-from datetime import datetime
-from typing import List, Optional
-from sqlalchemy import select, and_
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.memory import ConversationMessage, UserFact
-from app.models.memory_v2 import Fact, FactModel
-from loguru import logger
-
-# Security import
-from security.input_validation import validate_input, SecurityValidator
 
 import uuid
+from datetime import datetime
+from typing import List, Optional
+
+from loguru import logger
+from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.memory import ConversationMessage, UserFact
+from app.models.memory_v2 import Fact, FactModel
+
+# Security import
+from security.input_validation import SecurityValidator, validate_input
 
 
 class MemoryService:
@@ -27,11 +29,7 @@ class MemoryService:
     # ========================
 
     async def add_message(
-        self,
-        session_id: str,
-        role: str,
-        content: str,
-        tokens_used: Optional[int] = None
+        self, session_id: str, role: str, content: str, tokens_used: Optional[int] = None
     ) -> ConversationMessage:
         """Add a message to conversation history"""
 
@@ -48,10 +46,7 @@ class MemoryService:
             raise ValueError(f"Invalid message content: {error}")
 
         message = ConversationMessage(
-            session_id=session_id,
-            role=role,
-            content=sanitized_content,  # ← Use sanitized version!
-            tokens_used=tokens_used
+            session_id=session_id, role=role, content=sanitized_content, tokens_used=tokens_used  # ← Use sanitized version!
         )
 
         self.db.add(message)
@@ -60,11 +55,7 @@ class MemoryService:
 
         return message
 
-    async def get_conversation_history(
-        self,
-        session_id: str,
-        limit: int = 10
-    ) -> List[ConversationMessage]:
+    async def get_conversation_history(self, session_id: str, limit: int = 10) -> List[ConversationMessage]:
         """Get recent conversation history"""
         result = await self.db.execute(
             select(ConversationMessage)
@@ -81,20 +72,10 @@ class MemoryService:
     # ========================
 
     async def add_fact(
-        self,
-        text: str,
-        importance: float = 0.5,
-        tags: Optional[List[str]] = None,
-        source: str = "conversation"
+        self, text: str, importance: float = 0.5, tags: Optional[List[str]] = None, source: str = "conversation"
     ) -> UserFact:
         """Add a new user fact (legacy)"""
-        fact = UserFact(
-            fact_id=str(uuid.uuid4()),
-            text=text,
-            importance=importance,
-            tags=tags or [],
-            source=source
-        )
+        fact = UserFact(fact_id=str(uuid.uuid4()), text=text, importance=importance, tags=tags or [], source=source)
 
         self.db.add(fact)
         await self.db.commit()
@@ -102,35 +83,19 @@ class MemoryService:
 
         return fact
 
-    async def get_important_facts(
-        self,
-        min_importance: float = 0.5,
-        limit: int = 10
-    ) -> List[UserFact]:
+    async def get_important_facts(self, min_importance: float = 0.5, limit: int = 10) -> List[UserFact]:
         """Get important facts above threshold (legacy)"""
         result = await self.db.execute(
-            select(UserFact)
-            .where(UserFact.importance >= min_importance)
-            .order_by(UserFact.importance.desc())
-            .limit(limit)
+            select(UserFact).where(UserFact.importance >= min_importance).order_by(UserFact.importance.desc()).limit(limit)
         )
 
         return result.scalars().all()
 
-    async def search_facts(
-        self,
-        query: str,
-        min_importance: float = 0.3
-    ) -> List[UserFact]:
+    async def search_facts(self, query: str, min_importance: float = 0.3) -> List[UserFact]:
         """Search facts by text content (legacy)"""
         result = await self.db.execute(
             select(UserFact)
-            .where(
-                and_(
-                    UserFact.text.contains(query),
-                    UserFact.importance >= min_importance
-                )
-            )
+            .where(and_(UserFact.text.contains(query), UserFact.importance >= min_importance))
             .order_by(UserFact.importance.desc())
         )
 
@@ -138,9 +103,7 @@ class MemoryService:
 
     async def update_fact_usage(self, fact_id: str):
         """Update fact usage statistics (legacy)"""
-        result = await self.db.execute(
-            select(UserFact).where(UserFact.fact_id == fact_id)
-        )
+        result = await self.db.execute(select(UserFact).where(UserFact.fact_id == fact_id))
         fact = result.scalar_one_or_none()
 
         if fact:
@@ -183,7 +146,7 @@ class MemoryService:
                     related_fact_ids=fact.related_fact_ids,
                     context_maps=fact.context_maps,
                     meta_data=fact.meta_data,
-                    usage_count=fact.usage_count
+                    usage_count=fact.usage_count,
                 )
 
                 self.db.add(fact_model)
@@ -213,7 +176,7 @@ class MemoryService:
         fact_type: Optional[str] = None,
         tags: Optional[List[str]] = None,
         limit: int = 100,
-        offset: int = 0
+        offset: int = 0,
     ) -> List[FactModel]:
         """
         Get facts with filters (Memorisator v2)
@@ -249,10 +212,7 @@ class MemoryService:
 
         # Filter by tags in Python (if needed)
         if tags:
-            facts = [
-                fact for fact in facts
-                if fact.tags and any(tag in fact.tags for tag in tags)
-            ]
+            facts = [fact for fact in facts if fact.tags and any(tag in fact.tags for tag in tags)]
 
         return facts
 
@@ -266,9 +226,7 @@ class MemoryService:
         Returns:
             FactModel or None if not found
         """
-        result = await self.db.execute(
-            select(FactModel).where(FactModel.fact_id == fact_id)
-        )
+        result = await self.db.execute(select(FactModel).where(FactModel.fact_id == fact_id))
         return result.scalar_one_or_none()
 
     async def delete_fact(self, fact_id: str) -> bool:
@@ -281,9 +239,7 @@ class MemoryService:
         Returns:
             True if deleted, False if not found
         """
-        result = await self.db.execute(
-            select(FactModel).where(FactModel.fact_id == fact_id)
-        )
+        result = await self.db.execute(select(FactModel).where(FactModel.fact_id == fact_id))
         fact = result.scalar_one_or_none()
 
         if fact:
@@ -302,9 +258,7 @@ class MemoryService:
         Args:
             fact_id: Fact ID to update
         """
-        result = await self.db.execute(
-            select(FactModel).where(FactModel.fact_id == fact_id)
-        )
+        result = await self.db.execute(select(FactModel).where(FactModel.fact_id == fact_id))
         fact = result.scalar_one_or_none()
 
         if fact:
@@ -335,8 +289,4 @@ class MemoryService:
         # Average importance
         avg_importance = sum(f.importance for f in all_facts) / total if total > 0 else 0.0
 
-        return {
-            "total_facts": total,
-            "facts_by_type": by_type,
-            "avg_importance": round(avg_importance, 2)
-        }
+        return {"total_facts": total, "facts_by_type": by_type, "avg_importance": round(avg_importance, 2)}

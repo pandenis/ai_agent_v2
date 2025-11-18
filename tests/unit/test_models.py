@@ -1,11 +1,14 @@
 """
 Unit tests for database models
 """
-import pytest
+
 from datetime import datetime
+
+import pytest
 from sqlalchemy import select
+
+from app.models.memory import ConversationMessage, UserFact
 from app.models.session import Session
-from app.models.memory import UserFact, ConversationMessage
 
 
 @pytest.mark.asyncio
@@ -47,11 +50,7 @@ async def test_create_user_fact(test_db, sample_fact_data):
 async def test_create_conversation_message(test_db):
     """Test creating a conversation message"""
     # Create message
-    message = ConversationMessage(
-        session_id="test-session-123",
-        role="user",
-        content="Hello, AI!"
-    )
+    message = ConversationMessage(session_id="test-session-123", role="user", content="Hello, AI!")
     test_db.add(message)
     await test_db.commit()
     await test_db.refresh(message)
@@ -67,19 +66,14 @@ async def test_create_conversation_message(test_db):
 async def test_query_facts_by_importance(test_db):
     """Test querying facts by importance"""
     # Create multiple facts
-    facts = [
-        UserFact(fact_id=f"fact-{i}", text=f"Fact {i}", importance=i * 0.1)
-        for i in range(1, 11)
-    ]
+    facts = [UserFact(fact_id=f"fact-{i}", text=f"Fact {i}", importance=i * 0.1) for i in range(1, 11)]
 
     for fact in facts:
         test_db.add(fact)
     await test_db.commit()
 
     # Query facts with importance > 0.5
-    result = await test_db.execute(
-        select(UserFact).where(UserFact.importance > 0.5)
-    )
+    result = await test_db.execute(select(UserFact).where(UserFact.importance > 0.5))
     high_importance_facts = result.scalars().all()
 
     # Verify

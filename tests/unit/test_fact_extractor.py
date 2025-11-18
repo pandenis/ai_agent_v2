@@ -1,12 +1,14 @@
 """
 Unit tests for FactExtractor service
 """
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime
 
-from app.services.fact_extractor import FactExtractor
+from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
 from app.models.memory_v2 import Fact
+from app.services.fact_extractor import FactExtractor
 
 
 @pytest.fixture
@@ -32,7 +34,7 @@ class TestFactExtractor:
         # Mock response
         mock_agent_service.generate_response.return_value = {
             "status": "success",
-            "response": '{"facts": [{"text": "User loves Python", "importance": 0.8, "confidence": 0.9, "fact_type": "preference", "tags": ["python"]}]}'
+            "response": '{"facts": [{"text": "User loves Python", "importance": 0.8, "confidence": 0.9, "fact_type": "preference", "tags": ["python"]}]}',
         }
 
         messages = [{"role": "user", "content": "I love Python"}]
@@ -48,10 +50,7 @@ class TestFactExtractor:
     @pytest.mark.asyncio
     async def test_extract_facts_empty_result(self, fact_extractor, mock_agent_service):
         """Test extraction with no facts found"""
-        mock_agent_service.generate_response.return_value = {
-            "status": "success",
-            "response": '{"facts": []}'
-        }
+        mock_agent_service.generate_response.return_value = {"status": "success", "response": '{"facts": []}'}
 
         messages = [{"role": "user", "content": "Hello"}]
         facts = await fact_extractor.extract_facts(messages)
@@ -61,10 +60,7 @@ class TestFactExtractor:
     @pytest.mark.asyncio
     async def test_extract_facts_generation_failure(self, fact_extractor, mock_agent_service):
         """Test extraction when generation fails"""
-        mock_agent_service.generate_response.return_value = {
-            "status": "error",
-            "error": "Model unavailable"
-        }
+        mock_agent_service.generate_response.return_value = {"status": "error", "error": "Model unavailable"}
 
         messages = [{"role": "user", "content": "Test"}]
         facts = await fact_extractor.extract_facts(messages)
@@ -74,10 +70,7 @@ class TestFactExtractor:
     @pytest.mark.asyncio
     async def test_extract_facts_invalid_json(self, fact_extractor, mock_agent_service):
         """Test extraction with invalid JSON response"""
-        mock_agent_service.generate_response.return_value = {
-            "status": "success",
-            "response": "Not valid JSON"
-        }
+        mock_agent_service.generate_response.return_value = {"status": "success", "response": "Not valid JSON"}
 
         messages = [{"role": "user", "content": "Test"}]
         facts = await fact_extractor.extract_facts(messages)
@@ -89,7 +82,7 @@ class TestFactExtractor:
         """Test extraction with markdown code blocks"""
         mock_agent_service.generate_response.return_value = {
             "status": "success",
-            "response": '```json\n{"facts": [{"text": "Test fact", "importance": 0.7, "confidence": 0.8, "fact_type": "static", "tags": []}]}\n```'
+            "response": '```json\n{"facts": [{"text": "Test fact", "importance": 0.7, "confidence": 0.8, "fact_type": "static", "tags": []}]}\n```',
         }
 
         messages = [{"role": "user", "content": "Test"}]
@@ -103,13 +96,13 @@ class TestFactExtractor:
         """Test extraction of multiple facts"""
         mock_agent_service.generate_response.return_value = {
             "status": "success",
-            "response": '''{
+            "response": """{
                 "facts": [
                     {"text": "Fact 1", "importance": 0.8, "confidence": 0.9, "fact_type": "static", "tags": ["tag1"]},
                     {"text": "Fact 2", "importance": 0.7, "confidence": 0.8, "fact_type": "preference", "tags": ["tag2"]},
                     {"text": "Fact 3", "importance": 0.9, "confidence": 1.0, "fact_type": "event", "tags": []}
                 ]
-            }'''
+            }""",
         }
 
         messages = [{"role": "user", "content": "Multiple facts"}]
@@ -125,7 +118,7 @@ class TestFactExtractor:
         """Test convenience method extract_from_text"""
         mock_agent_service.generate_response.return_value = {
             "status": "success",
-            "response": '{"facts": [{"text": "Test", "importance": 0.5, "confidence": 0.8, "fact_type": "static", "tags": []}]}'
+            "response": '{"facts": [{"text": "Test", "importance": 0.5, "confidence": 0.8, "fact_type": "static", "tags": []}]}',
         }
 
         facts = await fact_extractor.extract_from_text("Single text input")
@@ -137,7 +130,7 @@ class TestFactExtractor:
         messages = [
             {"role": "user", "content": "Hello"},
             {"role": "assistant", "content": "Hi there"},
-            {"role": "user", "content": "How are you?"}
+            {"role": "user", "content": "How are you?"},
         ]
 
         formatted = fact_extractor._format_messages(messages)
@@ -166,13 +159,7 @@ class TestFactExtractor:
 
     def test_create_fact_from_dict_valid(self, fact_extractor):
         """Test creating Fact from valid dictionary"""
-        fact_data = {
-            "text": "Test fact",
-            "importance": 0.8,
-            "confidence": 0.9,
-            "fact_type": "static",
-            "tags": ["test"]
-        }
+        fact_data = {"text": "Test fact", "importance": 0.8, "confidence": 0.9, "fact_type": "static", "tags": ["test"]}
 
         fact = fact_extractor._create_fact_from_dict(fact_data)
 
@@ -206,11 +193,7 @@ class TestFactExtractor:
 
     def test_create_fact_from_dict_with_defaults(self, fact_extractor):
         """Test creating Fact uses defaults for missing fields"""
-        fact_data = {
-            "text": "Test",
-            "importance": 1.5,  # Will be clamped
-            "confidence": -0.5  # Will be clamped
-        }
+        fact_data = {"text": "Test", "importance": 1.5, "confidence": -0.5}  # Will be clamped  # Will be clamped
 
         fact = fact_extractor._create_fact_from_dict(fact_data)
 
@@ -244,13 +227,13 @@ class TestFactExtractor:
 
     def test_parse_extraction_result_with_invalid_facts(self, fact_extractor):
         """Test parsing result with some invalid facts"""
-        response = '''{
+        response = """{
             "facts": [
                 {"text": "Valid fact", "importance": 0.8, "confidence": 0.9, "fact_type": "static", "tags": []},
                 {"importance": 0.7},
                 {"text": "Another valid", "importance": 0.6, "confidence": 0.7, "fact_type": "preference", "tags": []}
             ]
-        }'''
+        }"""
 
         facts = fact_extractor._parse_extraction_result(response)
 
@@ -270,10 +253,7 @@ class TestFactExtractor:
 
     def test_build_extraction_prompt(self, fact_extractor):
         """Test extraction prompt building"""
-        messages = [
-            {"role": "user", "content": "I love programming"},
-            {"role": "assistant", "content": "That's great!"}
-        ]
+        messages = [{"role": "user", "content": "I love programming"}, {"role": "assistant", "content": "That's great!"}]
 
         prompt = fact_extractor._build_extraction_prompt(messages)
 

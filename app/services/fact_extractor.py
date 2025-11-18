@@ -3,10 +3,12 @@ FactExtractor Service - Automatic fact extraction from conversations
 
 Uses gpt-oss:20b with chain-of-thought reasoning to extract structured facts
 """
-from typing import List, Dict, Any, Optional
-from datetime import datetime
+
 import json
 import uuid
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 from loguru import logger
 
 from app.models.memory_v2 import Fact
@@ -34,11 +36,7 @@ class FactExtractor:
         self.agent_service = agent_service or AgentService()
         self.model_name = "gpt-oss"  # Use gpt-oss:20b for fact extraction
 
-    async def extract_facts(
-            self,
-            messages: List[Dict[str, str]],
-            context: Optional[Dict[str, Any]] = None
-    ) -> List[Fact]:
+    async def extract_facts(self, messages: List[Dict[str, str]], context: Optional[Dict[str, Any]] = None) -> List[Fact]:
         """
         Extract facts from conversation messages
 
@@ -68,7 +66,7 @@ class FactExtractor:
                 agent_name=self.model_name,
                 system_prompt=self._get_system_prompt(),
                 temperature=0.3,  # Lower temperature for more deterministic output
-                max_tokens=2000
+                max_tokens=2000,
             )
 
             if result["status"] != "success":
@@ -117,11 +115,7 @@ OUTPUT FORMAT (JSON only, no other text):
 If no important facts found, return: {"facts": []}
 """
 
-    def _build_extraction_prompt(
-            self,
-            messages: List[Dict[str, str]],
-            context: Optional[Dict[str, Any]] = None
-    ) -> str:
+    def _build_extraction_prompt(self, messages: List[Dict[str, str]], context: Optional[Dict[str, Any]] = None) -> str:
         """
         Build extraction prompt from messages
 
@@ -246,7 +240,7 @@ Return ONLY valid JSON in the specified format. No explanations, just JSON."""
                 fact_type=fact_data.get("fact_type", "static"),
                 source="conversation",
                 created=datetime.utcnow(),
-                updated=datetime.utcnow()
+                updated=datetime.utcnow(),
             )
 
             return fact
@@ -272,11 +266,7 @@ Return ONLY valid JSON in the specified format. No explanations, just JSON."""
             logger.warning(f"Invalid score value: {score}, using 0.5")
             return 0.5
 
-    async def extract_from_text(
-            self,
-            text: str,
-            context: Optional[Dict[str, Any]] = None
-    ) -> List[Fact]:
+    async def extract_from_text(self, text: str, context: Optional[Dict[str, Any]] = None) -> List[Fact]:
         """
         Convenience method to extract facts from single text
 

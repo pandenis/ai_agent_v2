@@ -1,9 +1,9 @@
 """
 Database models
 """
-from app.models.session import Session
 from app.models.memory import ConversationMessage, UserFact
-from app.models.memory_v2 import FactModel, ContextMapModel, AuditHistoryModel
+from app.models.memory_v2 import AuditHistoryModel, ContextMapModel, FactModel
+from app.models.session import Session
 
 __all__ = [
     "Session",

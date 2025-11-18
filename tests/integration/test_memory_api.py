@@ -1,13 +1,14 @@
 """
 Integration tests for Memory/Memorisator API endpoints
 """
+
 import pytest
-from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from app.main import app
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from app.core.database import Base, get_db
+from app.main import app
 from app.models.memory_v2 import Fact, FactModel
-from httpx import AsyncClient, ASGITransport
 
 # Test database setup
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -58,7 +59,7 @@ async def sample_facts(test_db_session):
             confidence=0.95,
             tags=["programming", "python"],
             fact_type="static",
-            source="conversation"
+            source="conversation",
         ),
         FactModel(
             fact_id="fact-2",
@@ -67,7 +68,7 @@ async def sample_facts(test_db_session):
             confidence=0.9,
             tags=["location"],
             fact_type="static",
-            source="conversation"
+            source="conversation",
         ),
         FactModel(
             fact_id="fact-3",
@@ -76,7 +77,7 @@ async def sample_facts(test_db_session):
             confidence=0.85,
             tags=["preference", "ai"],
             fact_type="preference",
-            source="conversation"
+            source="conversation",
         ),
         FactModel(
             fact_id="fact-4",
@@ -85,8 +86,8 @@ async def sample_facts(test_db_session):
             confidence=0.8,
             tags=["travel", "event"],
             fact_type="event",
-            source="conversation"
-        )
+            source="conversation",
+        ),
     ]
 
     for fact in facts:
@@ -214,18 +215,13 @@ class TestMemoryFactsListEndpoint:
     @pytest.mark.asyncio
     async def test_get_facts_combined_filters(self, client, sample_facts):
         """Test combining multiple filters"""
-        response = await client.get(
-            "/api/v1/memory/facts?min_importance=0.7&fact_type=static"
-        )
+        response = await client.get("/api/v1/memory/facts?min_importance=0.7&fact_type=static")
 
         assert response.status_code == 200
         data = response.json()
 
         # Should get facts that are both static AND importance >= 0.7
-        assert all(
-            fact["fact_type"] == "static" and fact["importance"] >= 0.7
-            for fact in data["facts"]
-        )
+        assert all(fact["fact_type"] == "static" and fact["importance"] >= 0.7 for fact in data["facts"])
 
 
 class TestMemoryFactByIdEndpoint:
@@ -263,10 +259,7 @@ class TestMemoryFactByIdEndpoint:
         data = response.json()
 
         # Check all required fields
-        required_fields = [
-            "fact_id", "text", "importance", "confidence",
-            "tags", "fact_type", "source", "created", "updated"
-        ]
+        required_fields = ["fact_id", "text", "importance", "confidence", "tags", "fact_type", "source", "created", "updated"]
         for field in required_fields:
             assert field in data
 

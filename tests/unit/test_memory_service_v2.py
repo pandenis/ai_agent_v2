@@ -1,8 +1,10 @@
 """
 Unit tests for MemoryService - Memorisator v2 (FactModel) methods
 """
-import pytest
+
 from datetime import datetime
+
+import pytest
 from sqlalchemy import select
 
 from app.models.memory_v2 import Fact, FactModel
@@ -20,7 +22,7 @@ def sample_facts():
             confidence=0.95,
             tags=["programming", "python"],
             fact_type="preference",
-            source="conversation"
+            source="conversation",
         ),
         Fact(
             fact_id="test-fact-2",
@@ -29,7 +31,7 @@ def sample_facts():
             confidence=1.0,
             tags=["location", "telавiv"],
             fact_type="static",
-            source="conversation"
+            source="conversation",
         ),
         Fact(
             fact_id="test-fact-3",
@@ -38,8 +40,8 @@ def sample_facts():
             confidence=0.9,
             tags=["travel", "athens"],
             fact_type="event",
-            source="conversation"
-        )
+            source="conversation",
+        ),
     ]
 
 
@@ -75,9 +77,7 @@ class TestMemoryServiceV2:
         await memory_service.add_facts([sample_facts[0]])
 
         # Query directly
-        result = await test_db.execute(
-            select(FactModel).where(FactModel.fact_id == "test-fact-1")
-        )
+        result = await test_db.execute(select(FactModel).where(FactModel.fact_id == "test-fact-1"))
         fact = result.scalar_one_or_none()
 
         assert fact is not None
@@ -147,10 +147,7 @@ class TestMemoryServiceV2:
         await memory_service.add_facts(sample_facts)
 
         # Get static facts with importance >= 0.8
-        facts = await memory_service.get_facts(
-            min_importance=0.8,
-            fact_type="static"
-        )
+        facts = await memory_service.get_facts(min_importance=0.8, fact_type="static")
 
         assert len(facts) == 1
         assert facts[0].fact_type == "static"
@@ -302,7 +299,7 @@ class TestMemoryServiceV2:
             related_fact_ids=["fact-1", "fact-2"],
             context_maps=["map-1"],
             meta_data={"key": "value"},
-            usage_count=5
+            usage_count=5,
         )
 
         saved = await memory_service.add_facts([fact])
@@ -351,7 +348,7 @@ class TestMemoryServiceV2:
                 importance=0.8,
                 confidence=0.9,
                 fact_type="static",
-                source="conversation"
+                source="conversation",
             ),
             # This will be handled by the error handling in add_facts
         ]

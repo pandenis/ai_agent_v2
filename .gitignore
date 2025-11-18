@@ -1,38 +1,141 @@
-# Python
+# AI Agent v2 - .gitignore
+# Updated: November 15, 2025
+# Purpose: Exclude sensitive files and build artifacts
+
+# ========================================
+# 🔒 CRITICAL: Secrets and Credentials
+# ========================================
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets.json
+credentials.json
+
+# ========================================
+# 🗄️ Data and Databases
+# ========================================
+data/
+*.db
+*.sqlite
+*.sqlite3
+chroma/
+vector_store/
+
+# ========================================
+# 📝 Logs
+# ========================================
+logs/
+*.log
+*.log.*
+
+# ========================================
+# 🐍 Python
+# ========================================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ========================================
+# 🧪 Testing
+# ========================================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# ========================================
+# 🔧 Virtual Environments
+# ========================================
 venv/
+ENV/
 env/
 .venv
-*.egg-info/
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Environment
-.env
-.env.*
-
-# IDE
+# ========================================
+# 💻 IDEs and Editors
+# ========================================
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+.DS_Store
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
+# ========================================
+# 📦 Dependencies
+# ========================================
+node_modules/
 
-# Logs
-logs/
-*.log
+# ========================================
+# 🔨 Build Tools
+# ========================================
+*.o
+*.a
+*.dylib
+*.exe
+*.out
 
-# Data
-data/
+# ========================================
+# 📄 Backup Files
+# ========================================
+*.bak
+*.backup
+*~
+*.tmp
+
+# ========================================
+# 🎯 Project Specific
+# ========================================
+# Ollama models (large files)
+models/
+*.gguf
+
+# DeepSeek compiled binaries
+llama_cpp/build/
+
+# Uploaded documents (user data)
+docs/
 uploads/
+
+# Memory files (user data)
+memory.json
+memory.json.backup
+
+# Journal entries (user data)
+journal/
+
+# ChromaDB persistence
+chroma_db/
+
+# ========================================
+# ✅ What TO INCLUDE (explicitly allowed)
+# ========================================
+!.env.example
+!requirements.txt
+!requirements-py313.txt
+!README.md
+!LICENSE

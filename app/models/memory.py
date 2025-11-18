@@ -3,8 +3,10 @@ Memory model for storing conversation history and facts
 """
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import String, DateTime, Integer, Float, Text, JSON
+
+from sqlalchemy import JSON, DateTime, Float, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
+
 from app.core.database import Base
 
 
