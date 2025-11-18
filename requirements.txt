@@ -24,3 +24,4 @@ sentence-transformers==2.2.2
 # Web search
 duckduckgo-search==4.0.0
 loguru>=0.7.0
+numpy<2.0.0
