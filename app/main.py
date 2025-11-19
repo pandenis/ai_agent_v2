@@ -2,13 +2,16 @@
 import app.core.agent_config_local
 FastAPI application entry point
 """
+
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
+from loguru import logger
+
+from app.api.routes import router
 from app.core.config import settings
 from app.core.database import init_db
-from app.api.routes import router
-from loguru import logger
 
 
 @asynccontextmanager
@@ -18,9 +21,9 @@ async def lifespan(app: FastAPI):
     logger.info("Starting AI Agent System")
     await init_db()
     logger.info("Database initialized")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down AI Agent System")
 
@@ -30,7 +33,7 @@ app = FastAPI(
     title=settings.app_name,
     description="Multi-model AI Agent System with persistent memory",
     version="2.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # CORS middleware
@@ -49,18 +52,10 @@ app.include_router(router, prefix="/api/v1", tags=["api"])
 @app.get("/")
 async def root():
     """Root endpoint"""
-    return {
-        "message": "AI Agent System API",
-        "version": "2.0.0",
-        "docs": "/docs"
-    }
+    return {"message": "AI Agent System API", "version": "2.0.0", "docs": "/docs"}
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        "app.main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=settings.debug
-    )
+
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=settings.debug)

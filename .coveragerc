@@ -1,0 +1,81 @@
+[run]
+# Source directories to measure
+source = 
+    app
+    security
+
+# Omit specific files/directories
+omit =
+    */tests/*
+    */test_*.py
+    */__pycache__/*
+    */venv/*
+    */.venv/*
+    */alembic/*
+    */migrations/*
+    */conftest.py
+    */setup.py
+
+# Branch coverage
+branch = True
+
+# Parallel mode for multi-threaded tests
+parallel = False
+
+[report]
+# Show missing lines
+show_missing = True
+
+# Skip covered files
+skip_covered = False
+
+# Skip empty files
+skip_empty = True
+
+# Precision for coverage percentage
+precision = 2
+
+# Ignore errors
+ignore_errors = False
+
+# Exclude lines from coverage
+exclude_lines =
+    # Standard pragma
+    pragma: no cover
+    
+    # Don't complain about missing debug code
+    def __repr__
+    
+    # Don't complain if tests don't hit defensive assertion code
+    raise AssertionError
+    raise NotImplementedError
+    
+    # Don't complain if non-runnable code isn't run
+    if __name__ == .__main__.:
+    
+    # Don't complain about abstract methods
+    @abstractmethod
+    @abc.abstractmethod
+    
+    # Don't complain about type checking blocks
+    if TYPE_CHECKING:
+    if typing.TYPE_CHECKING:
+    
+    # Don't complain about pass statements
+    pass
+
+[html]
+# Output directory for HTML report
+directory = htmlcov
+
+# Title for HTML report
+title = AI Agent v2 - Coverage Report
+
+[xml]
+# Output file for XML report
+output = coverage.xml
+
+[json]
+# Output file for JSON report
+output = coverage.json
+show_contexts = True
