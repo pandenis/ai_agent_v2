@@ -25,12 +25,12 @@ from app.schemas.agent import (
     WebSearchRequest,
     WebSearchResponse,
 )
+from app.schemas.memory import FactDeleteResponse, FactListRequest, FactListResponse, FactResponse, FactStatsResponse
 from app.services.agent_service import AgentService
 from app.services.document_service import DocumentService
 from app.services.enhanced_chat_service import EnhancedChatService
 from app.services.memory_service import MemoryService
 from app.services.web_search_service import WebSearchService
-from app.schemas.memory import FactDeleteResponse, FactListRequest, FactListResponse, FactResponse, FactStatsResponse
 
 # Security module import
 from security.input_validation import SecurityValidator, validate_input
@@ -247,6 +247,7 @@ async def web_search(request: WebSearchRequest):
 # ============================================================================
 # MEMORY/MEMORISATOR ENDPOINTS
 # ============================================================================
+
 
 @router.get(
     "/memory/facts",
