@@ -3,9 +3,10 @@ API routes for AI Agent System with multi-model support
 """
 
 from idlelib.query import Query
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_agent_service, get_db, get_memory_service
@@ -136,6 +137,135 @@ async def create_session(session_data: SessionCreate, db: AsyncSession = Depends
     await db.refresh(session)
 
     return SessionResponse(session_id=str(session.id), agent_name=session.agent_name, created_at=session.created_at)
+
+
+# ============================================================================
+# SESSION HISTORY ENDPOINTS - NEW!
+# ============================================================================
+
+
+@router.get(
+    "/sessions",
+    response_model=List[SessionResponse],
+    summary="Get all chat sessions",
+    description="Returns list of all chat sessions ordered by last activity",
+)
+async def get_sessions(limit: int = 50, skip: int = 0, db: AsyncSession = Depends(get_db)):
+    """Get list of all sessions"""
+    from app.models.session import Session
+
+    result = await db.execute(select(Session).order_by(desc(Session.last_activity)).offset(skip).limit(limit))
+    sessions = result.scalars().all()
+
+    return [
+        SessionResponse(session_id=s.session_id, agent_name=s.agent_name, created_at=s.created_at) for s in sessions
+    ]
+
+
+@router.get(
+    "/sessions/{session_id}",
+    response_model=SessionResponse,
+    summary="Get session details",
+    description="Returns details of a specific session",
+)
+async def get_session(session_id: str, db: AsyncSession = Depends(get_db)):
+    """Get session by ID"""
+    from app.models.session import Session
+
+    result = await db.execute(select(Session).where(Session.session_id == session_id))
+    session = result.scalar_one_or_none()
+
+    if not session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Session {session_id} not found")
+
+    return SessionResponse(session_id=session.session_id, agent_name=session.agent_name, created_at=session.created_at)
+
+
+@router.get(
+    "/sessions/{session_id}/messages",
+    summary="Get session messages",
+    description="Returns all messages from a session",
+)
+async def get_session_messages(session_id: str, limit: int = 100, skip: int = 0, db: AsyncSession = Depends(get_db)):
+    """Get messages from session"""
+    from app.models.memory import ConversationMessage
+    from app.models.session import Session
+
+    # Verify session exists
+    result = await db.execute(select(Session).where(Session.session_id == session_id))
+    session = result.scalar_one_or_none()
+
+    if not session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Session {session_id} not found")
+
+    # Get messages
+    result = await db.execute(
+        select(ConversationMessage)
+        .where(ConversationMessage.session_id == session_id)
+        .order_by(ConversationMessage.timestamp)
+        .offset(skip)
+        .limit(limit)
+    )
+    messages = result.scalars().all()
+
+    return {
+        "session_id": session_id,
+        "messages": [
+            {
+                "id": str(m.id),
+                "role": m.role,
+                "content": m.content,
+                "timestamp": m.timestamp.isoformat(),
+                "tokens_used": m.tokens_used,
+            }
+            for m in messages
+        ],
+        "total": len(messages),
+    }
+
+
+@router.get(
+    "/sessions/{session_id}/facts",
+    summary="Get facts extracted from session",
+    description="Returns all facts extracted from this session",
+)
+async def get_session_facts(session_id: str, db: AsyncSession = Depends(get_db)):
+    """Get facts extracted from session"""
+    from app.models.memory_v2 import Fact
+    from app.models.session import Session
+
+    # Verify session exists
+    result = await db.execute(select(Session).where(Session.session_id == session_id))
+    session = result.scalar_one_or_none()
+
+    if not session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Session {session_id} not found")
+
+    # Get facts from this session
+    result = await db.execute(select(Fact).where(Fact.source_session_id == session_id).order_by(desc(Fact.extracted_at)))
+    facts = result.scalars().all()
+
+    return {
+        "session_id": session_id,
+        "facts": [
+            {
+                "fact_id": f.fact_id,
+                "text": f.text,
+                "fact_type": f.fact_type,
+                "importance": f.importance,
+                "confidence": f.confidence,
+                "extracted_at": f.extracted_at.isoformat(),
+                "tags": f.tags,
+            }
+            for f in facts
+        ],
+        "total": len(facts),
+    }
+
+
+# ============================================================================
+# CHAT ENDPOINTS
+# ============================================================================
 
 
 @router.post(
