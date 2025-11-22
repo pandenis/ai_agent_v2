@@ -2,6 +2,7 @@
 API routes for AI Agent System with multi-model support
 """
 
+import uuid
 from idlelib.query import Query
 from typing import List, Optional
 
@@ -117,7 +118,10 @@ async def health_check():
 
 
 @router.post(
-    "/sessions", response_model=SessionResponse, status_code=status.HTTP_201_CREATED, summary="Create new chat session"
+    "/sessions",
+    response_model=SessionResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create new chat session"
 )
 async def create_session(session_data: SessionCreate, db: AsyncSession = Depends(get_db)):
     """Create a new chat session"""
@@ -126,17 +130,28 @@ async def create_session(session_data: SessionCreate, db: AsyncSession = Depends
     if session_data.agent_name:
         is_valid, sanitized_name, error = validate_input(session_data.agent_name)
         if not is_valid:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid agent name: {error}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid agent name: {error}"
+            )
         session_data.agent_name = sanitized_name
 
     from app.models.session import Session
 
-    session = Session(agent_name=session_data.agent_name)
+    # Generate UUID for session
+    session = Session(
+        session_id=str(uuid.uuid4()),  # ✅ FIX: Generate UUID
+        agent_name=session_data.agent_name
+    )
     db.add(session)
     await db.commit()
     await db.refresh(session)
 
-    return SessionResponse(session_id=str(session.id), agent_name=session.agent_name, created_at=session.created_at)
+    return SessionResponse(
+        session_id=session.session_id,  # ✅ FIX: Use session_id, not id
+        agent_name=session.agent_name,
+        created_at=session.created_at
+    )
 
 
 # ============================================================================
