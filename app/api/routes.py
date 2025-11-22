@@ -246,7 +246,7 @@ async def get_session_messages(session_id: str, limit: int = 100, skip: int = 0,
 )
 async def get_session_facts(session_id: str, db: AsyncSession = Depends(get_db)):
     """Get facts extracted from session"""
-    from app.models.memory_v2 import Fact
+    from app.models.memory_v2 import FactModel
     from app.models.session import Session
 
     # Verify session exists
@@ -257,7 +257,11 @@ async def get_session_facts(session_id: str, db: AsyncSession = Depends(get_db))
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Session {session_id} not found")
 
     # Get facts from this session
-    result = await db.execute(select(Fact).where(Fact.source_session_id == session_id).order_by(desc(Fact.extracted_at)))
+    result = await db.execute(
+        select(FactModel)
+        .where(FactModel.source_session_id == session_id)
+        .order_by(desc(FactModel.created))
+    )
     facts = result.scalars().all()
 
     return {
@@ -269,8 +273,8 @@ async def get_session_facts(session_id: str, db: AsyncSession = Depends(get_db))
                 "fact_type": f.fact_type,
                 "importance": f.importance,
                 "confidence": f.confidence,
-                "extracted_at": f.extracted_at.isoformat(),
-                "tags": f.tags,
+                "created": f.created.isoformat(),
+                "tags": f.tags or [],
             }
             for f in facts
         ],
