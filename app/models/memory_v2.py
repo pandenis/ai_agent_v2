@@ -42,6 +42,7 @@ class Fact:
 
     # Sources and relations
     source: str = "conversation"  # conversation, web_search, document, manual
+    source_session_id: Optional[str] = None
     related_fact_ids: List[str] = field(default_factory=list)
     context_maps: List[str] = field(default_factory=list)
 

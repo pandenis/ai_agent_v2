@@ -143,6 +143,7 @@ class MemoryService:
                     needs_update=fact.needs_update,
                     update_frequency=fact.update_frequency,
                     source=fact.source,
+                    source_session_id=fact.source_session_id,
                     related_fact_ids=fact.related_fact_ids,
                     context_maps=fact.context_maps,
                     meta_data=fact.meta_data,

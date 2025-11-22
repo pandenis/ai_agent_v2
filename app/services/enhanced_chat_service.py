@@ -224,7 +224,8 @@ class EnhancedChatService:
             filtered_facts = [
                 f
                 for f in facts
-                if f.importance >= settings.fact_importance_threshold and f.confidence >= settings.fact_confidence_threshold
+                if f.importance >= settings.fact_importance_threshold
+                and f.confidence >= settings.fact_confidence_threshold
             ]
 
             if not filtered_facts:
@@ -234,6 +235,9 @@ class EnhancedChatService:
                     f"confidence>={settings.fact_confidence_threshold})"
                 )
                 return 0
+
+            for fact in filtered_facts:
+                fact.source_session_id = session_id
 
             # Save to database
             saved_facts = await self.memory_service.add_facts(filtered_facts)
