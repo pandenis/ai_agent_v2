@@ -84,6 +84,14 @@ class FactModel(Base):
 
     # Sources and relations
     source: Mapped[str] = mapped_column(String(50), default="conversation")
+
+    source_session_id: Mapped[Optional[str]] = mapped_column(
+        String(64),
+        nullable=True,
+        index=True,
+        comment="Session ID where this fact was extracted"
+    )
+
     related_fact_ids: Mapped[Optional[List[str]]] = mapped_column(JSON, nullable=True)
     context_maps: Mapped[Optional[List[str]]] = mapped_column(JSON, nullable=True)
 
