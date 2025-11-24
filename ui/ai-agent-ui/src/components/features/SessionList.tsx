@@ -159,10 +159,13 @@ function SessionItem({ session, isActive, onClick, formatTimeAgo }: SessionItemP
         <span className={isActive ? 'text-blue-100' : 'text-gray-500'}>
           {session.message_count || 0} messages
         </span>
-        <span className={isActive ? 'text-blue-100' : 'text-gray-400'}>
+        <span
+          className={isActive ? 'text-blue-100' : 'text-gray-400'}
+          suppressHydrationWarning
+        >
           {formatTimeAgo(session.created_at)}
         </span>
       </div>
     </button>
-  )
+  );
 }
