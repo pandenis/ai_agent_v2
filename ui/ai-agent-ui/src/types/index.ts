@@ -17,6 +17,7 @@ export interface Message {
   timestamp: string
   agent_used?: string
   sources?: string[]
+  tokens_used?: number | null
 }
 
 export interface ChatSession {
@@ -59,14 +60,6 @@ export interface Session {
   last_activity?: string
   is_active?: boolean
   message_count?: number
-}
-
-export interface Message {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  timestamp: string
-  tokens_used?: number | null
 }
 
 export interface SessionMessages {

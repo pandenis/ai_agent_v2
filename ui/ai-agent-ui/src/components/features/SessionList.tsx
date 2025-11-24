@@ -67,7 +67,7 @@ export function SessionList({
         <div className="text-red-600 text-sm mb-4">
           ⚠️ {error}
         </div>
-        <Button onClick={loadSessions} variant="outline" className="w-full">
+        <Button onClick={loadSessions} variant="secondary" className="w-full">
           Retry
         </Button>
       </div>
