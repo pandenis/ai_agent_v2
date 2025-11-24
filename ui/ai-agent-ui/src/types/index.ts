@@ -51,5 +51,46 @@ export interface BaseProps {
   children?: React.ReactNode
 }
 
+// Session types
+export interface Session {
+  session_id: string
+  agent_name: string
+  created_at: string
+  last_activity?: string
+  is_active?: boolean
+  message_count?: number
+}
+
+export interface Message {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: string
+  tokens_used?: number | null
+}
+
+export interface SessionMessages {
+  session_id: string
+  messages: Message[]
+  total: number
+}
+
+export interface SessionFact {
+  fact_id: string
+  text: string
+  fact_type: string
+  importance: number
+  confidence: number
+  created: string
+  tags: string[]
+}
+
+export interface SessionFacts {
+  session_id: string
+  facts: SessionFact[]
+  total: number
+}
+
 export type Variant = 'primary' | 'secondary' | 'accent' | 'ghost'
 export type Size = 'sm' | 'md' | 'lg'
+

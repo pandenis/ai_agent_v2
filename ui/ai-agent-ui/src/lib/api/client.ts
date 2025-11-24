@@ -10,6 +10,9 @@ export interface ApiError {
   status: number
 }
 
+// Import types
+import { Session, SessionMessages, SessionFacts } from '@/types'
+
 class ApiClient {
   private baseUrl: string
 
@@ -22,7 +25,7 @@ class ApiClient {
     options?: RequestInit
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`
-    
+
     try {
       const response = await fetch(url, {
         ...options,
@@ -96,6 +99,33 @@ class ApiClient {
     }>('/chat/enhanced', {
       method: 'POST',
       body: JSON.stringify(data),
+    })
+  }
+
+  // ========================================
+  // SESSION MANAGEMENT (NEW)
+  // ========================================
+
+  async getSessions(limit = 50, skip = 0): Promise<Session[]> {
+    return this.request<Session[]>(`/sessions?limit=${limit}&skip=${skip}`)
+  }
+
+  async getSession(sessionId: string): Promise<Session> {
+    return this.request<Session>(`/sessions/${sessionId}`)
+  }
+
+  async getSessionMessages(sessionId: string): Promise<SessionMessages> {
+    return this.request<SessionMessages>(`/sessions/${sessionId}/messages`)
+  }
+
+  async getSessionFacts(sessionId: string): Promise<SessionFacts> {
+    return this.request<SessionFacts>(`/sessions/${sessionId}/facts`)
+  }
+
+  async createSession(agentName: string = 'mistral'): Promise<Session> {
+    return this.request<Session>('/sessions', {
+      method: 'POST',
+      body: JSON.stringify({ agent_name: agentName })
     })
   }
 }
