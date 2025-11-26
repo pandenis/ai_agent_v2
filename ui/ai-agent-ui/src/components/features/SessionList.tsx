@@ -7,85 +7,35 @@ import Button from '@/components/ui/Button'
 import { formatDistanceToNow } from 'date-fns'
 
 interface SessionListProps {
+  sessions: Session[]
   currentSessionId?: string
   onSessionSelect: (sessionId: string) => void
   onNewSession: () => void
 }
 
 export function SessionList({
+  sessions,
   currentSessionId,
   onSessionSelect,
   onNewSession
 }: SessionListProps) {
-  const [sessions, setSessions] = useState<Session[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  // Load sessions on mount
-  useEffect(() => {
-    loadSessions()
-  }, [])
-
-  const loadSessions = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await apiClient.getSessions(50, 0)
-      setSessions(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load sessions')
-      console.error('Error loading sessions:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const formatTimeAgo = (dateString: string) => {
-    try {
-      return formatDistanceToNow(new Date(dateString), { addSuffix: true })
-    } catch {
-      return 'Unknown'
-    }
+  try {
+    const date = new Date(dateString)
+    console.log('Raw created_at:', dateString, 'Parsed date:', date.toISOString())
+    return formatDistanceToNow(date, { addSuffix: true })
+  } catch {
+    return 'Unknown'
+  }
   }
 
-  if (loading) {
-    return (
-      <div className="w-64 bg-white border-r border-gray-200 p-4">
-        <div className="animate-pulse space-y-4">
-          <div className="h-10 bg-gray-200 rounded"></div>
-          <div className="h-20 bg-gray-200 rounded"></div>
-          <div className="h-20 bg-gray-200 rounded"></div>
-          <div className="h-20 bg-gray-200 rounded"></div>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="w-64 bg-white border-r border-gray-200 p-4">
-        <div className="text-red-600 text-sm mb-4">
-          ⚠️ {error}
-        </div>
-        <Button onClick={loadSessions} variant="secondary" className="w-full">
-          Retry
-        </Button>
-      </div>
-    )
-  }
-
+  // Все JSX возвращается единственным return:
   return (
     <div className="w-64 bg-white border-r border-gray-200 flex flex-col h-full">
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">
-          Sessions
-        </h2>
-        <Button
-          onClick={onNewSession}
-          className="w-full"
-          size="sm"
-        >
+        <h2 className="text-lg font-semibold text-gray-900 mb-3">Sessions</h2>
+        <Button onClick={onNewSession} className="w-full" size="sm">
           + New Session
         </Button>
       </div>
@@ -119,7 +69,7 @@ export function SessionList({
   )
 }
 
-// Separate component for session item
+// Отдельный компонент SessionItem вынеси отдельно, НО ВНЕ SessionList
 interface SessionItemProps {
   session: Session
   isActive: boolean
@@ -167,5 +117,5 @@ function SessionItem({ session, isActive, onClick, formatTimeAgo }: SessionItemP
         </span>
       </div>
     </button>
-  );
+  )
 }

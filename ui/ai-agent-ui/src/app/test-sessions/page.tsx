@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
 import { SessionList } from '@/components/features/SessionList'
+import { useEffect, useState } from 'react'
 
 export default function TestSessionsPage() {
+  const [sessions, setSessions] = useState<any[]>([])
   const [currentSessionId, setCurrentSessionId] = useState<string>()
   const [selectedInfo, setSelectedInfo] = useState<string>('')
 
@@ -13,15 +14,42 @@ export default function TestSessionsPage() {
     console.log('Session selected:', sessionId)
   }
 
-  const handleNewSession = () => {
-    setSelectedInfo('New session button clicked!')
-    console.log('New session requested')
+  const fetchSessions = async () => {
+  const res = await fetch('http://localhost:8000/api/v1/sessions')
+  if (!res.ok) throw new Error('Failed to fetch sessions')
+  const data = await res.json()
+  setSessions(data)
+}
+
+  useEffect(() => {
+     fetchSessions()
+  }, [])
+
+const handleNewSession = async () => {
+  setSelectedInfo('Creating new session...')
+  try {
+    const res = await fetch('http://localhost:8000/api/v1/sessions', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ agent_name: 'mistral' }),
+    })
+    if (!res.ok) throw new Error('Failed to create session')
+    const session = await res.json()
+    await fetchSessions() // autoreload
+    setCurrentSessionId(session.session_id)
+    setSelectedInfo(`New session created: ${session.session_id}`)
+  } catch (err) {
+    setSelectedInfo('Error: Could not create session')
+    console.error('Create session error:', err)
   }
+}
+
 
   return (
     <div className="h-screen flex bg-gradient-to-br from-gray-50 to-gray-100">
       {/* SessionList Component */}
       <SessionList
+        sessions={sessions}
         currentSessionId={currentSessionId}
         onSessionSelect={handleSessionSelect}
         onNewSession={handleNewSession}

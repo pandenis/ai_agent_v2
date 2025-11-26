@@ -25,7 +25,10 @@ class SessionResponse(BaseModel):
     agent_name: str
     created_at: datetime
 
-
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat() + "Z" if v.tzinfo else v.isoformat() + "Z"
+        }
 # ============================================================================
 # CHAT SCHEMAS
 # ============================================================================
