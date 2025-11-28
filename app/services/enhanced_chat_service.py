@@ -37,7 +37,8 @@ class EnhancedChatService:
         memory_service: MemoryService,
         document_service: DocumentService,
         web_search_service: WebSearchService,
-        fact_extractor: Optional[FactExtractor] = None,  # NEW
+        fact_extractor: Optional[FactExtractor] = None,
+        history_limit: int = 5,  # NEW
     ):
         self.agent_service = agent_service
         self.memory_service = memory_service
@@ -47,6 +48,8 @@ class EnhancedChatService:
         # Initialize FactExtractor if enabled
         self.memorisator_enabled = getattr(settings, "memorisator_enabled", False)
         self.fact_extractor = fact_extractor or (FactExtractor(agent_service) if self.memorisator_enabled else None)
+
+        self.history_limit = history_limit  # NEW
 
         logger.info(f"EnhancedChatService initialized (Memorisator: {self.memorisator_enabled})")
 
