@@ -182,4 +182,38 @@ async def test_history_limit_truncates_history(enhanced_chat_service):
     assert "user: Message 9..." in prompt
     assert "user: Message 0..." not in prompt
 
+@pytest.mark.asyncio
+async def test_facts_limit_and_sorting(enhanced_chat_service):
+    """facts_limit controls how many facts go into the prompt, sorted by importance"""
+    # Подготовим 5 фактов с разной важностью
+    enhanced_chat_service.memory_service.search_facts.return_value = [
+        {"text": "fact_low_1", "importance": 0.6},
+        {"text": "fact_high_1", "importance": 0.95},
+        {"text": "fact_mid", "importance": 0.8},
+        {"text": "fact_high_2", "importance": 0.9},
+        {"text": "fact_low_2", "importance": 0.51},
+    ]
+
+    # Ограничим до 3 фактов
+    enhanced_chat_service.facts_limit = 3
+
+    await enhanced_chat_service.process_message(
+        session_id="test-ses",
+        message="some question",
+        agent_name="mistral",
+        include_memory=True,
+    )
+
+    # Смотрим, какой prompt ушел в агент
+    assert enhanced_chat_service.agent_service.generate_response.called
+    prompt = enhanced_chat_service.agent_service.generate_response.call_args.kwargs["prompt"]
+
+    # В prompt должны быть только топ-3 по importance: 0.95, 0.9, 0.8
+    assert "fact_high_1" in prompt
+    assert "fact_high_2" in prompt
+    assert "fact_mid" in prompt
+
+    # А низко-важные факты не должны попасть
+    assert "fact_low_1" not in prompt
+    assert "fact_low_2" not in prompt
 

@@ -38,7 +38,8 @@ class EnhancedChatService:
         document_service: DocumentService,
         web_search_service: WebSearchService,
         fact_extractor: Optional[FactExtractor] = None,
-        history_limit: int = 5,  # NEW
+        history_limit: int = 5,
+        facts_limit: int = 5,
     ):
         self.agent_service = agent_service
         self.memory_service = memory_service
@@ -49,7 +50,8 @@ class EnhancedChatService:
         self.memorisator_enabled = getattr(settings, "memorisator_enabled", False)
         self.fact_extractor = fact_extractor or (FactExtractor(agent_service) if self.memorisator_enabled else None)
 
-        self.history_limit = history_limit  # NEW
+        self.history_limit = history_limit
+        self.facts_limit = facts_limit
 
         logger.info(f"EnhancedChatService initialized (Memorisator: {self.memorisator_enabled})")
 
@@ -94,7 +96,6 @@ class EnhancedChatService:
                 )
 
         # 3. Get conversation history and facts
-        # 3. Get conversation history and facts
         if include_memory:
             sources.append("conversation_history")
 
@@ -117,8 +118,18 @@ class EnhancedChatService:
             # Get relevant facts
             facts = await self.memory_service.search_facts(query=message, min_importance=0.5)
             if facts:
+                # Сортируем по importance (по убыванию), если есть поле importance
+                sorted_facts = sorted(
+                    facts,
+                    key=lambda f: f.get("importance", 0),
+                    reverse=True,
+                )
+                top_facts = sorted_facts[: self.facts_limit]
+
                 sources.append("user_facts")
-                context_parts.append(f"Relevant facts:\n" + "\n".join([f"- {f['text']}" for f in facts]))
+                context_parts.append(
+                    "Relevant facts:\n" + "\n".join(f"- {f['text']}" for f in top_facts)
+                )
 
         # 4. Build enhanced prompt with context
         enhanced_prompt = message
