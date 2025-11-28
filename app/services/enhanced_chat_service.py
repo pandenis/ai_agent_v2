@@ -98,8 +98,7 @@ class EnhancedChatService:
             history = await self.memory_service.get_conversation_history(session_id=session_id, limit=5)
             if history:
                 context_parts.append(
-                    f"Recent conversation: {'. '.join(f'{m['role']}: {m['content'][:100]}...' for m in history) if history else ''}"
-
+                    f"Recent conversation: {'.'.join(f'{m['role']}: {m['content'][:100]}...' for m in history) if history else ''}"
                 )
 
             # Get relevant facts
