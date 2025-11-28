@@ -21,7 +21,7 @@ async def test_create_session(test_db, sample_session_data):
     await test_db.refresh(session)
 
     # Verify
-    assert session.id is not None
+    assert session.session_id is not None
     assert session.session_id == sample_session_data["session_id"]
     assert session.agent_name == sample_session_data["agent_name"]
     assert session.is_active is True
