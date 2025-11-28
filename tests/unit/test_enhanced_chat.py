@@ -158,3 +158,28 @@ async def test_infer_task_type(enhanced_chat_service):
     # General chat
     task = enhanced_chat_service._infer_task_type("Hello, how are you?")
     assert task == TaskType.GENERAL_CHAT
+
+@pytest.mark.asyncio
+async def test_history_limit_truncates_history(enhanced_chat_service):
+    enhanced_chat_service.memory_service.get_conversation_history.return_value = [
+        {"role": "user", "content": f"Message {i}"} for i in range(10)
+    ]
+
+    enhanced_chat_service.history_limit = 3
+
+    await enhanced_chat_service.process_message(
+        session_id="test-ses",
+        message="hi",
+        agent_name="mistral",
+        include_memory=True,
+    )
+
+    assert enhanced_chat_service.agent_service.generate_response.called
+    prompt = enhanced_chat_service.agent_service.generate_response.call_args.kwargs["prompt"]
+
+    assert "user: Message 7..." in prompt
+    assert "user: Message 8..." in prompt
+    assert "user: Message 9..." in prompt
+    assert "user: Message 0..." not in prompt
+
+

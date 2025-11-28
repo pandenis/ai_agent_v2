@@ -94,13 +94,22 @@ class EnhancedChatService:
                 )
 
         # 3. Get conversation history and facts
+        # 3. Get conversation history and facts
         if include_memory:
             sources.append("conversation_history")
 
             # Get recent conversation
-            history = await self.memory_service.get_conversation_history(session_id=session_id, limit=5)
+            history = await self.memory_service.get_conversation_history(
+                session_id=session_id,
+                limit=self.history_limit,
+            )
+
             if history:
-                history_summary = '.'.join(f"{m['role']}: {m['content'][:100]}..." for m in history)
+                # ЯВНО режем список, даже если мок вернул больше
+                trimmed_history = history[-self.history_limit:]
+                history_summary = ". ".join(
+                    f"{m['role']}: {m['content'][:100]}..." for m in trimmed_history
+                )
                 context_parts.append(f"Recent conversation: {history_summary}")
             else:
                 context_parts.append("No recent conversation history")
