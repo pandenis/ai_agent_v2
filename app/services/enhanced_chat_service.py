@@ -106,14 +106,11 @@ class EnhancedChatService:
             )
 
             if history:
-                # ЯВНО режем список, даже если мок вернул больше
                 trimmed_history = history[-self.history_limit:]
                 history_summary = ". ".join(
                     f"{m['role']}: {m['content'][:100]}..." for m in trimmed_history
                 )
                 context_parts.append(f"Recent conversation: {history_summary}")
-            else:
-                context_parts.append("No recent conversation history")
 
             # Get relevant facts
             facts = await self.memory_service.search_facts(query=message, min_importance=0.5)

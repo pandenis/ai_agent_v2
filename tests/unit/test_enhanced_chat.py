@@ -217,3 +217,20 @@ async def test_facts_limit_and_sorting(enhanced_chat_service):
     assert "fact_low_1" not in prompt
     assert "fact_low_2" not in prompt
 
+@pytest.mark.asyncio
+async def test_no_history_does_not_add_history_block(enhanced_chat_service):
+    # Память возвращает пустую историю
+    enhanced_chat_service.memory_service.get_conversation_history.return_value = []
+
+    await enhanced_chat_service.process_message(
+        session_id="test-ses",
+        message="hi",
+        agent_name="mistral",
+        include_memory=True,
+    )
+
+    assert enhanced_chat_service.agent_service.generate_response.called
+    prompt = enhanced_chat_service.agent_service.generate_response.call_args.kwargs["prompt"]
+
+    # Не должно быть фразы про Recent conversation
+    assert "Recent conversation:" not in prompt
