@@ -108,7 +108,7 @@ class EnhancedChatService:
             if history:
                 trimmed_history = history[-self.history_limit:]
                 history_summary = ". ".join(
-                    f"{m['role']}: {m['content'][:100]}..." for m in trimmed_history
+                    f"{m.role}: {m.content[:100]}..." for m in trimmed_history
                 )
                 context_parts.append(f"Recent conversation: {history_summary}")
 

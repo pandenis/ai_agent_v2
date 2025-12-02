@@ -230,7 +230,7 @@ GROQ_CONFIG = CloudAgentConfig(
     description="High-performance cloud model for complex tasks",
     api_base_url="https://api.groq.com/openai/v1",
     api_key="",  # Will be loaded from env
-    model_id="llama3-70b-8192",
+    model_id="llama-3.3-70b-versatile",
     capabilities=[
         AgentCapability("general_chat", 0.95, "Exceptional conversation quality"),
         AgentCapability("code_analysis", 0.9, "Very strong code understanding"),

@@ -42,13 +42,13 @@ export function SessionList({
 
       {/* Session List */}
       <div className="flex-1 overflow-y-auto">
-        {sessions.length === 0 ? (
+        {sessions?.length === 0 ? (
           <div className="p-4 text-center text-gray-500 text-sm">
             No sessions yet. Create your first one!
           </div>
         ) : (
           <div className="p-2 space-y-2">
-            {sessions.map((session) => (
+            {sessions?.map((session) => (
               <SessionItem
                 key={session.session_id}
                 session={session}
@@ -63,7 +63,7 @@ export function SessionList({
 
       {/* Footer Stats */}
       <div className="p-4 border-t border-gray-200 text-xs text-gray-500">
-        {sessions.length} {sessions.length === 1 ? 'session' : 'sessions'}
+        {sessions?.length || 0} {(sessions?.length || 0) === 1 ? 'session' : 'sessions'}
       </div>
     </div>
   )
