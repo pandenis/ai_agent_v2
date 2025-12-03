@@ -3,6 +3,7 @@ Tests for enhanced chat service with multi-source intelligence
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
+from types import SimpleNamespace
 
 import pytest
 
@@ -125,7 +126,7 @@ async def test_process_message_with_memory(enhanced_chat_service):
     """Test message processing with memory integration"""
     # Configure mocks to return results
     enhanced_chat_service.memory_service.get_conversation_history.return_value = [
-        {"role": "user", "content": "Previous message"}
+        SimpleNamespace(role="user", content="Previous message")
     ]
     enhanced_chat_service.memory_service.search_facts.return_value = [{"text": "User prefers Python", "importance": 0.8}]
 
@@ -162,7 +163,7 @@ async def test_infer_task_type(enhanced_chat_service):
 @pytest.mark.asyncio
 async def test_history_limit_truncates_history(enhanced_chat_service):
     enhanced_chat_service.memory_service.get_conversation_history.return_value = [
-        {"role": "user", "content": f"Message {i}"} for i in range(10)
+        SimpleNamespace(role="user", content=f"Message {i}") for i in range(10)
     ]
 
     enhanced_chat_service.history_limit = 3
