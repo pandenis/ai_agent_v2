@@ -168,13 +168,31 @@ async def create_session(session_data: SessionCreate, db: AsyncSession = Depends
 async def get_sessions(limit: int = 50, skip: int = 0, db: AsyncSession = Depends(get_db)):
     """Get list of all sessions"""
     from app.models.session import Session
+    from app.models.memory import ConversationMessage
+    from sqlalchemy import func
 
     result = await db.execute(select(Session).order_by(desc(Session.last_activity)).offset(skip).limit(limit))
     sessions = result.scalars().all()
 
-    return [
-        SessionResponse(session_id=s.session_id, agent_name=s.agent_name, created_at=s.created_at) for s in sessions
-    ]
+    # Подсчитываем сообщения для каждой сессии
+    session_responses = []
+    for s in sessions:
+        # Считаем количество сообщений в этой сессии
+        count_result = await db.execute(
+            select(func.count(ConversationMessage.id)).where(ConversationMessage.session_id == s.session_id)
+        )
+        message_count = count_result.scalar() or 0
+
+        session_responses.append(
+            SessionResponse(
+                session_id=s.session_id,
+                agent_name=s.agent_name,
+                created_at=s.created_at,
+                message_count=message_count
+            )
+        )
+
+    return session_responses
 
 
 @router.get(

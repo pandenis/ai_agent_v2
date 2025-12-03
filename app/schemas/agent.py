@@ -24,6 +24,7 @@ class SessionResponse(BaseModel):
     session_id: str
     agent_name: str
     created_at: datetime
+    message_count: int = 0
 
     class Config:
         json_encoders = {
