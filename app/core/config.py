@@ -32,10 +32,11 @@ class Settings(BaseSettings):
     ollama_model: str = "mistral:latest"
 
     # Services
-    max_memory_facts: int = 100
+    max_memory_facts: int = 2000
     session_timeout_minutes: int = 30
     max_prompt_length: int = 3500
     max_response_length: int = 2000
+
 
     # ============================================================================
     # NEW: MULTI-MODEL AGENT CONFIGURATION
@@ -65,7 +66,7 @@ class Settings(BaseSettings):
     # ============================================================================
 
     # Enable/disable automatic fact extraction
-    memorisator_enabled: bool = False
+    memorisator_enabled: bool = True
 
     # Model to use for fact extraction (should be gpt-oss for best results)
     memorisator_model: str = "gpt-oss"

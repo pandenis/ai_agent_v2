@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import MessageList from '@/components/features/MessageList';
 import ChatInput from '@/components/features/ChatInput';
+import { MemoryPanel } from '@/components/features/MemoryPanel';
 import AgentSelector from '@/components/features/AgentSelector';
 import { type Message } from '@/types';
 import { apiClient } from '@/lib/api/client';
@@ -16,6 +17,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
   const [selectedAgent, setSelectedAgent] = useState('groq');
   const [loading, setLoading] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(true);
+  const [isMemoryPanelOpen, setIsMemoryPanelOpen] = useState(false);
 
   // Load messages when sessionId changes
   useEffect(() => {
@@ -83,7 +85,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-900">
+  <div className="flex h-full">
+    {/* Main Chat Area */}
+    <div className={`flex flex-col bg-slate-900 transition-all duration-300 ${
+      isMemoryPanelOpen ? 'w-2/3' : 'w-full'
+    }`}>
       {/* Header with Agent Selector */}
       <div className="flex items-center justify-between p-4 border-b border-slate-700 bg-slate-950">
         <div>
@@ -91,12 +97,23 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
             Session: {sessionId.slice(0, 8)}...
           </h2>
         </div>
-
-        <AgentSelector
-          selectedAgent={selectedAgent}
-          onSelect={setSelectedAgent}
-          disabled={loading}
-        />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsMemoryPanelOpen(!isMemoryPanelOpen)}
+            className={`px-3 py-1.5 text-sm rounded ${
+              isMemoryPanelOpen
+                ? 'bg-blue-600 text-white'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            {isMemoryPanelOpen ? '✕ Memory' : '📝 Memory'}
+          </button>
+          <AgentSelector
+            selectedAgent={selectedAgent}
+            onSelect={setSelectedAgent}
+            disabled={loading}
+          />
+        </div>
       </div>
 
       {/* Messages */}
@@ -115,5 +132,17 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
         placeholder={loading ? 'AI is thinking...' : 'Type your message...'}
       />
     </div>
-  );
+
+    {/* Memory Panel */}
+    {isMemoryPanelOpen && (
+      <div className="w-1/3 border-l border-slate-700 bg-slate-950">
+        <MemoryPanel
+          sessionId={sessionId}
+          isOpen={isMemoryPanelOpen}
+          onClose={() => setIsMemoryPanelOpen(false)}
+        />
+      </div>
+    )}
+  </div>
+);
 };

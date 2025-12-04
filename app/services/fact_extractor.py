@@ -54,7 +54,7 @@ class FactExtractor:
             ]
             facts = await extractor.extract_facts(messages)
         """
-        logger.info(f"Extracting facts from {len(messages)} messages")
+        # logger.info(f"Extracting facts from {len(messages)} messages")
 
         # Build extraction prompt
         prompt = self._build_extraction_prompt(messages, context)
@@ -129,17 +129,44 @@ If no important facts found, return: {"facts": []}
         # Format conversation
         conversation = self._format_messages(messages)
 
-        # Build prompt
+        # Build prompt with explicit examples
         prompt = f"""Extract important facts from this conversation:
 
-{conversation}
+    {conversation}
 
-Analyze the conversation and extract factual information about the user, their preferences, plans, or any important details.
+    CRITICAL INSTRUCTIONS:
+    1. You MUST return ONLY valid JSON
+    2. You MUST use this EXACT structure:
+    {{"facts": [...]}}
+    3. Do NOT add any text before or after the JSON
+    4. Do NOT use markdown code blocks
+    5. If no facts found, return: {{"facts": []}}
 
-Return ONLY valid JSON in the specified format. No explanations, just JSON."""
+    REQUIRED JSON FORMAT:
+    {{
+      "facts": [
+        {{
+          "text": "User's name is John",
+          "importance": 0.9,
+          "confidence": 0.95,
+          "fact_type": "personal",
+          "tags": ["name", "identity"]
+        }},
+        {{
+          "text": "User works as a software engineer",
+          "importance": 0.8,
+          "confidence": 0.9,
+          "fact_type": "professional",
+          "tags": ["job", "profession"]
+        }}
+      ]
+    }}
+
+    FACT TYPES: personal, professional, preference, knowledge, event, plan
+
+    Now extract facts from the conversation above. Return ONLY the JSON, nothing else:"""
 
         return prompt
-
     def _format_messages(self, messages: List[Dict[str, str]]) -> str:
         """
         Format messages for prompt
@@ -184,6 +211,8 @@ Return ONLY valid JSON in the specified format. No explanations, just JSON."""
             if response.endswith("```"):
                 response = response[:-3]
             response = response.strip()
+
+            logger.info(f"Raw AI response (first 500 chars): {response[:500]}")  # DEBUG
 
             # Parse JSON
             data = json.loads(response)
