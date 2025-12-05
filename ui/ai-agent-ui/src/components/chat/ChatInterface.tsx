@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import MessageList from '@/components/features/MessageList';
+import { TypingIndicator } from '@/components/ui/TypingIndicator'
 import ChatInput from '@/components/features/ChatInput';
 import { MemoryPanel } from '@/components/features/MemoryPanel';
 import AgentSelector from '@/components/features/AgentSelector';
@@ -14,6 +15,7 @@ interface ChatInterfaceProps {
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [isAiTyping, setIsAiTyping] = useState(false)
   const [selectedAgent, setSelectedAgent] = useState('groq');
   const [loading, setLoading] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(true);
@@ -38,7 +40,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
   };
 
   const handleSendMessage = async (content: string) => {
-    // Add user message immediately
+    // Add user message
+
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -50,6 +53,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
     setLoading(true);
 
     try {
+      setIsAiTyping(true)
+
       // Call API
       const response = await apiClient.sendMessage({
         message: content,
@@ -78,9 +83,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
         timestamp: new Date().toISOString(),
       };
 
-      setMessages((prev) => [...prev, errorMessage]);
     } finally {
-      setLoading(false);
+        setIsAiTyping(false);
+        setLoading(false);
     }
   };
 
@@ -122,7 +127,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
           Loading messages...
         </div>
       ) : (
-        <MessageList messages={messages} loading={loading} />
+        <div className="flex-1 overflow-y-auto">
+          <MessageList messages={messages} loading={loading} />
+          {isAiTyping && <TypingIndicator />}
+        </div>
       )}
 
       {/* Input */}

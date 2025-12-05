@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Session } from '@/types'
+import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { apiClient } from '@/lib/api/client'
 import Button from '@/components/ui/Button'
 import { formatDistanceToNow } from 'date-fns'
@@ -19,6 +20,15 @@ export function SessionList({
   onSessionSelect,
   onNewSession
 }: SessionListProps) {
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    // Simulate initial load
+    if (sessions.length > 0) {
+      setIsLoading(false)
+    }
+  }, [sessions])
+
   const formatTimeAgo = (dateString: string) => {
   try {
     const date = new Date(dateString)
@@ -42,7 +52,9 @@ export function SessionList({
 
       {/* Session List */}
       <div className="flex-1 overflow-y-auto">
-        {sessions?.length === 0 ? (
+        {isLoading ? (
+            <SkeletonLoader count={5} />
+        ) : sessions?.length === 0 ? (
           <div className="p-4 text-center text-gray-500 text-sm">
             No sessions yet. Create your first one!
           </div>
