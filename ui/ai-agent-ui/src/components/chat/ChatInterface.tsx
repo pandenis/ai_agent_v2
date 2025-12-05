@@ -8,6 +8,7 @@ import { MemoryPanel } from '@/components/features/MemoryPanel';
 import AgentSelector from '@/components/features/AgentSelector';
 import { type Message } from '@/types';
 import { apiClient } from '@/lib/api/client';
+import toast from 'react-hot-toast';
 
 interface ChatInterfaceProps {
   sessionId: string;
@@ -75,6 +76,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
     } catch (error: any) {
       console.error('Failed to send message:', error);
 
+      // Show toast notification
+      toast.error(error.message || 'Failed to send message. Please try again.');
       // Add error message
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),

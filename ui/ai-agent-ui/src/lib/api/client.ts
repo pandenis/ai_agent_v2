@@ -21,11 +21,13 @@ class ApiClient {
   }
 
   private async request<T>(
-    endpoint: string,
-    options?: RequestInit
-  ): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`
+  endpoint: string,
+  options?: RequestInit,
+  retries: number = 2
+): Promise<T> {
+  const url = `${this.baseUrl}${endpoint}`
 
+  for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const response = await fetch(url, {
         ...options,
@@ -36,6 +38,21 @@ class ApiClient {
       })
 
       if (!response.ok) {
+        // Don't retry on 4xx errors (client errors)
+        if (response.status >= 400 && response.status < 500) {
+          throw {
+            message: `API Error: ${response.statusText}`,
+            status: response.status,
+          } as ApiError
+        }
+
+        // Retry on 5xx errors (server errors)
+        if (attempt < retries) {
+          console.log(`Retry attempt ${attempt + 1}/${retries} for ${endpoint}`)
+          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
+          continue
+        }
+
         throw {
           message: `API Error: ${response.statusText}`,
           status: response.status,
@@ -44,10 +61,20 @@ class ApiClient {
 
       return await response.json()
     } catch (error) {
+      // Network errors - retry
+      if (attempt < retries && error instanceof TypeError) {
+        console.log(`Network error, retry ${attempt + 1}/${retries}`)
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
+        continue
+      }
+
       console.error('API Request failed:', error)
-      throw error
+        throw error
     }
   }
+
+        throw new Error('Max retries exceeded')
+    }
 
   // Health check
   async health() {
