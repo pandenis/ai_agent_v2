@@ -39,11 +39,15 @@ class MemoryService:
             logger.warning(f"Invalid session_id attempted: {session_id}")
             raise ValueError(f"Invalid session ID: {session_error}")
 
-        # Security: Validate message content
-        is_valid, sanitized_content, error = validate_input(content)
-        if not is_valid:
-            logger.warning(f"Invalid message content blocked: {error}")
-            raise ValueError(f"Invalid message content: {error}")
+        # Security: Validate message content (ONLY for user messages)
+        if role == "user":
+            is_valid, sanitized_content, error = validate_input(content)
+            if not is_valid:
+                logger.warning(f"Invalid message content blocked: {error}")
+                raise ValueError(f"Invalid message content: {error}")
+        else:
+            # Don't sanitize AI responses - they need to contain code, symbols, etc.
+            sanitized_content = content
 
         message = ConversationMessage(
             session_id=session_id, role=role, content=sanitized_content, tokens_used=tokens_used  # ← Use sanitized version!
