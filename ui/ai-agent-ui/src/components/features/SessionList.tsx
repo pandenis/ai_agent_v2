@@ -41,10 +41,10 @@ export function SessionList({
 
   // Все JSX возвращается единственным return:
   return (
-    <div className="w-64 bg-white border-r border-gray-200 flex flex-col h-full">
+    <div className="w-64 bg-slate-800 border-r border-slate-700 flex flex-col h-full">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">Sessions</h2>
+      <div className="p-4 border-b border-slate-700">
+  	<h2 className="text-lg font-semibold text-slate-100 mb-3">Sessions</h2>
         <Button onClick={onNewSession} className="w-full" size="sm">
           + New Session
         </Button>
@@ -55,9 +55,9 @@ export function SessionList({
         {isLoading ? (
             <SkeletonLoader count={5} />
         ) : sessions?.length === 0 ? (
-          <div className="p-4 text-center text-gray-500 text-sm">
-            No sessions yet. Create your first one!
-          </div>
+          <div className="p-4 text-center text-slate-400 text-sm">
+  		No sessions yet. Create your first one!
+	  </div>
         ) : (
           <div className="p-2 space-y-2">
             {sessions?.map((session) => (
@@ -97,36 +97,30 @@ function SessionItem({ session, isActive, onClick, formatTimeAgo }: SessionItemP
         w-full text-left p-3 rounded-lg transition-all
         ${isActive
           ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md'
-          : 'bg-gray-50 hover:bg-gray-100 text-gray-900'
+          : 'bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600'
         }
       `}
     >
-      {/* Active indicator */}
-      <div className="flex items-center gap-2 mb-1">
-        {isActive && (
-          <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-        )}
-        <span className={`text-xs font-medium ${isActive ? 'text-white' : 'text-gray-500'}`}>
-          {session.agent_name || 'mistral'}
-        </span>
-      </div>
-
-      {/* Session info */}
-      <div className={`text-sm font-medium mb-1 truncate ${isActive ? 'text-white' : 'text-gray-900'}`}>
-        Session {session.session_id.slice(0, 8)}...
-      </div>
-
-      {/* Metadata */}
-      <div className="flex items-center justify-between text-xs">
-        <span className={isActive ? 'text-blue-100' : 'text-gray-500'}>
+      <div className="flex flex-col gap-1">
+        {/* Agent name */}
+        <p className={`text-xs ${isActive ? 'text-slate-100' : 'text-slate-400'}`}>
+          {session.agent_name || 'groq'}
+        </p>
+        
+        {/* Session title */}
+        <p className={`font-medium truncate ${isActive ? 'text-white' : 'text-slate-200'}`}>
+          Session {session.session_id.slice(0, 8)}...
+        </p>
+        
+        {/* Message count */}
+        <p className={`text-xs ${isActive ? 'text-slate-200' : 'text-slate-300'}`}>
           {session.message_count || 0} messages
-        </span>
-        <span
-          className={isActive ? 'text-blue-100' : 'text-gray-400'}
-          suppressHydrationWarning
-        >
+        </p>
+        
+        {/* Time ago */}
+        <p className={`text-xs ${isActive ? 'text-slate-300' : 'text-slate-400'}`}>
           {formatTimeAgo(session.created_at)}
-        </span>
+        </p>
       </div>
     </button>
   )
