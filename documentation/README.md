@@ -6,7 +6,7 @@ Complete documentation for the AI Agent System project.
 
 ## 📁 Document Structure
 ```
-docs/
+documentation/
 ├── README.md                           # This file - documentation index
 ├── session_reports/                    # Daily session reports
 │   └── Session_Report_2025-12-06...md # Week 4 Tasks 5 & 5.1
@@ -27,6 +27,20 @@ Session reports document daily development progress, decisions, and results.
   - Security validation fix
   - Medical & DeepSeek integration
   - Mixtral & Llama3.1 added
+
+---
+
+## 📐 Technical Specifications
+
+Technical design documents and detailed specifications.
+
+### Orchestrator & Reasoning:
+- [**Intelligent Orchestrator with Memory-Aware Reasoning**](Technical_Specification_Intelligent_Orchestrator.md)
+  - Query analysis & complexity detection
+  - Memory coverage evaluation
+  - Decision tree (direct/enhanced/deep reasoning)
+  - Multi-step reasoning engine
+  - Implementation roadmap (Weeks 5-7)
 
 ### Previous Sessions:
 - See `/mnt/project/` for historical reports
