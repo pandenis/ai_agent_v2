@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, KeyboardEvent } from 'react'
+import TextareaAutosize from 'react-textarea-autosize'
 import Button from '@/components/ui/Button'
 
 interface ChatInputProps {
@@ -35,19 +36,16 @@ const ChatInput: React.FC<ChatInputProps> = ({
       <div className="flex gap-3 items-end">
         {/* Text input */}
         <div className="flex-1">
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder={placeholder}
-            disabled={disabled}
-            rows={1}
-            className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              minHeight: '52px',
-              maxHeight: '200px',
-            }}
-          />
+          <TextareaAutosize
+		  value={message}
+		  onChange={(e) => setMessage(e.target.value)}
+		  onKeyDown={handleKeyPress}
+		  placeholder={placeholder}
+		  disabled={disabled}
+		  minRows={1}
+		  maxRows={10}
+		  className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+		/>
           {/* Character count */}
           <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 text-right">
             {message.length} characters

@@ -18,15 +18,9 @@ interface AgentSelectorProps {
 const availableAgents: Agent[] = [
   {
     name: 'groq',
-    displayName: 'Groq (Llama)',
-    description: 'Fast & efficient for general tasks',
+    displayName: 'Groq (Llama 3.3)',
+    description: 'Ultra-fast cloud AI (70B)',
     icon: '⚡',
-  },
-  {
-    name: 'mistral',
-    displayName: 'Mistral 7B',
-    description: 'Balanced performance & accuracy',
-    icon: '🎯',
   },
   {
     name: 'gpt-oss',
@@ -35,16 +29,34 @@ const availableAgents: Agent[] = [
     icon: '🧠',
   },
   {
-    name: 'llama3',
-    displayName: 'Llama 3 8B',
-    description: 'General purpose assistant',
-    icon: '🦙',
+    name: 'mixtral',
+    displayName: 'Mixtral (8x7B)',
+    description: 'Premium quality MoE model',
+    icon: '🔥',
+  },
+  {
+    name: 'llama3.1',
+    displayName: 'Llama 3.1 (8B)',
+    description: 'Long context (128k tokens)',
+    icon: '📚',
+  },
+  {
+    name: 'mistral',
+    displayName: 'Mistral 7B',
+    description: 'Balanced performance & accuracy',
+    icon: '🎯',
   },
   {
     name: 'deepseek',
     displayName: 'DeepSeek Coder',
-    description: 'Specialized for coding tasks',
+    description: 'Code analysis specialist',
     icon: '💻',
+  },
+  {
+    name: 'medical',
+    displayName: 'Medical AI',
+    description: 'Health knowledge (educational)',
+    icon: '⚕️',
   },
 ]
 
