@@ -12,6 +12,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 export default function ChatPage() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [isAiTyping, setIsAiTyping] = useState(false);
 
   const handleSessionSelect = (sessionId: string) => {
     console.log('Switching to session:', sessionId);
@@ -54,13 +55,18 @@ export default function ChatPage() {
               currentSessionId={activeSessionId || undefined}
               onSessionSelect={handleSessionSelect}
               onNewSession={handleCreateSession}
+              isAiTyping={isAiTyping}
+
             />
           </div>
 
           {/* MAIN CHAT AREA */}
           <div className="flex-1 flex flex-col">
             {activeSessionId ? (
-              <ChatInterface sessionId={activeSessionId} />
+              <ChatInterface 
+		  sessionId={activeSessionId}
+		  onLoadingChange={setIsAiTyping}
+	      />
             ) : (
               <div className="flex-1 flex items-center justify-center text-slate-400">
                 <div className="text-center">

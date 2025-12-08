@@ -12,9 +12,10 @@ import toast from 'react-hot-toast';
 
 interface ChatInterfaceProps {
   sessionId: string;
+  onLoadingChange?: (loading: boolean) => void;
 }
 
-export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
+export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId, onLoadingChange }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isAiTyping, setIsAiTyping] = useState(false)
   const [selectedAgent, setSelectedAgent] = useState('groq');
@@ -52,6 +53,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
 
     setMessages((prev) => [...prev, userMessage]);
     setLoading(true);
+    onLoadingChange?.(true);
 
     try {
       setIsAiTyping(true)
@@ -89,6 +91,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
     } finally {
         setIsAiTyping(false);
         setLoading(false);
+        onLoadingChange?.(false);
+
     }
   };
 

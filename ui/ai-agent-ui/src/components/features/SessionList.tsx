@@ -12,13 +12,15 @@ interface SessionListProps {
   currentSessionId?: string
   onSessionSelect: (sessionId: string) => void
   onNewSession: () => void
+  isAiTyping?: boolean;
 }
 
 export function SessionList({
   sessions,
   currentSessionId,
   onSessionSelect,
-  onNewSession
+  onNewSession,
+  isAiTyping = false, 
 }: SessionListProps) {
   const [isLoading, setIsLoading] = useState(true)
 
@@ -67,6 +69,7 @@ export function SessionList({
                 isActive={session.session_id === currentSessionId}
                 onClick={() => onSessionSelect(session.session_id)}
                 formatTimeAgo={formatTimeAgo}
+                isAiTyping={session.session_id === currentSessionId && isAiTyping}
               />
             ))}
           </div>
@@ -87,9 +90,10 @@ interface SessionItemProps {
   isActive: boolean
   onClick: () => void
   formatTimeAgo: (date: string) => string
+  isAiTyping?: boolean;
 }
 
-function SessionItem({ session, isActive, onClick, formatTimeAgo }: SessionItemProps) {
+function SessionItem({ session, isActive, onClick, formatTimeAgo, isAiTyping = false }: SessionItemProps) {
   return (
     <button
       onClick={onClick}
@@ -117,10 +121,17 @@ function SessionItem({ session, isActive, onClick, formatTimeAgo }: SessionItemP
           {session.message_count || 0} messages
         </p>
         
-        {/* Time ago */}
-        <p className={`text-xs ${isActive ? 'text-slate-300' : 'text-slate-400'}`}>
-          {formatTimeAgo(session.created_at)}
-        </p>
+        {/* Time ago or AI typing indicator */}
+	<p className={`text-xs ${isActive ? 'text-slate-300' : 'text-slate-400'}`}>
+	  {isActive && isAiTyping ? (
+	    <span className="flex items-center gap-1">
+	      <span className="inline-block w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
+	      AI is typing...
+	    </span>
+	  ) : (
+	    formatTimeAgo(session.created_at)
+	  )}
+	</p>
       </div>
     </button>
   )
