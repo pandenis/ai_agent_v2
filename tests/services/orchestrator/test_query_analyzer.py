@@ -71,3 +71,43 @@ class TestQueryAnalyzer:
 
         # Assert
         assert "programming" in result.topics
+
+    def test_greeting_simple(self):
+        """Test: Greetings should be simple"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+        query = "Hello!"
+
+        # Act
+        result = analyzer.analyze(query)
+
+        # Assert
+        assert result.complexity == "simple"
+        assert result.requires_reasoning == False
+
+    def test_medical_topic(self):
+        """Test: Should identify medical topic"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+        query = "What are the symptoms of flu?"
+
+        # Act
+        result = analyzer.analyze(query)
+
+        # Assert
+        assert "medical" in result.topics
+        assert "symptom" in result.entities
+
+    def test_multiple_topics(self):
+        """Test: Can identify multiple topics"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+        query = "Analyze the Python code for medical diagnosis system"
+
+        # Act
+        result = analyzer.analyze(query)
+
+        # Assert
+        assert "programming" in result.topics
+        assert "medical" in result.topics
+        assert "analysis" in result.topics
