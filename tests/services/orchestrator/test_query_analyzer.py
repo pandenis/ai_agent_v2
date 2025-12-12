@@ -46,3 +46,16 @@ class TestQueryAnalyzer:
         # Assert
         assert result.complexity == "medium"
         assert result.requires_memory == True
+
+    def test_entity_extraction_python_bug(self):
+        """Test: Should extract 'Python' and 'bug' as entities"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+        query = "How to fix a Python bug?"
+
+        # Act
+        result = analyzer.analyze(query)
+
+        # Assert
+        assert "Python" in result.entities
+        assert "bug" in result.entities

@@ -44,11 +44,14 @@ class QueryAnalyzer:
         complexity = self._detect_complexity(query_lower)
         requires_reasoning = (complexity == "complex")
 
+        # Extract entities
+        entities = self._extract_entities(query)
+
         return QueryAnalysis(
             complexity=complexity,
             intent="question",
             query_type="factual",
-            entities=[],
+            entities=entities,
             topics=[],
             requires_memory=True,
             requires_reasoning=requires_reasoning,
@@ -69,3 +72,33 @@ class QueryAnalyzer:
 
         # Default to simple
         return "simple"
+
+    def _extract_entities(self, query: str) -> List[str]:
+        """Extract entities (capitalized words and known terms)"""
+        entities = []
+        words = query.split()
+
+        # Extract capitalized words (like "Python")
+        for word in words:
+            # Remove punctuation
+            clean_word = word.strip('?.,!;:')
+            # Check if starts with capital letter
+            if clean_word and clean_word[0].isupper():
+                entities.append(clean_word)
+
+        # Extract known technical terms
+        known_terms = [
+            # Programming
+            'bug', 'error', 'issue', 'code', 'function', 'database',
+            # Medical
+            'symptom', 'disease', 'treatment', 'medicine', 'diagnosis',
+            # General
+            'problem', 'solution', 'question', 'answer', 'help',
+            'file', 'document', 'data', 'system', 'process'
+        ]
+        query_lower = query.lower()
+        for term in known_terms:
+            if term in query_lower and term not in [e.lower() for e in entities]:
+                entities.append(term)
+
+        return entities
