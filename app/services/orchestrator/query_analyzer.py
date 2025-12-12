@@ -50,9 +50,12 @@ class QueryAnalyzer:
         # Extract topics
         topics = self._identify_topics(query_lower, entities)
 
+        # Detect intent
+        intent = self._detect_intent(query_lower)
+
         return QueryAnalysis(
             complexity=complexity,
-            intent="question",
+            intent=intent,
             query_type="factual",
             entities=entities,
             topics=topics,
@@ -60,6 +63,7 @@ class QueryAnalyzer:
             requires_reasoning=requires_reasoning,
             confidence=1.0
         )
+
     def _detect_complexity(self, query_lower: str) -> str:
         """Detect query complexity based on patterns"""
         # Check for complex patterns first
@@ -136,3 +140,34 @@ class QueryAnalyzer:
             topics.append("general")
 
         return topics
+
+    def _detect_intent(self, query_lower: str) -> str:
+        """Detect query intent: question, command, or statement"""
+        # Command patterns (imperative verbs)
+        command_patterns = [
+            'create', 'make', 'write', 'generate', 'build',
+            'translate', 'convert', 'transform', 'calculate',
+            'find', 'search', 'show', 'display', 'list',
+            'explain', 'describe', 'tell me', 'give me'
+        ]
+
+        # Check for commands (starts with imperative verb)
+        first_word = query_lower.split()[0] if query_lower.split() else ""
+        if first_word in command_patterns:
+            return "command"
+
+        # Check for any command pattern in query
+        if any(pattern in query_lower for pattern in command_patterns):
+            return "command"
+
+        # Question patterns
+        question_words = ['what', 'when', 'where', 'who', 'why', 'how', 'which', 'whose']
+        if any(query_lower.startswith(word) for word in question_words):
+            return "question"
+
+        # Question mark
+        if '?' in query_lower:
+            return "question"
+
+        # Default to statement
+        return "statement"

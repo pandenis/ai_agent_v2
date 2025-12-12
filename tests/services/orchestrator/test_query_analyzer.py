@@ -111,3 +111,39 @@ class TestQueryAnalyzer:
         assert "programming" in result.topics
         assert "medical" in result.topics
         assert "analysis" in result.topics
+
+    def test_intent_question(self):
+        """Test: Questions should be identified as 'question' intent"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+        query = "How does photosynthesis work?"
+
+        # Act
+        result = analyzer.analyze(query)
+
+        # Assert
+        assert result.intent == "question"
+
+    def test_intent_command(self):
+        """Test: Commands should be identified as 'command' intent"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+        query = "Translate this text to French"
+
+        # Act
+        result = analyzer.analyze(query)
+
+        # Assert
+        assert result.intent == "command"
+
+    def test_intent_statement(self):
+        """Test: Statements should be identified as 'statement' intent"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+        query = "Dogs are loyal animals"
+
+        # Act
+        result = analyzer.analyze(query)
+
+        # Assert
+        assert result.intent == "statement"
