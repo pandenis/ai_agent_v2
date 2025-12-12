@@ -20,3 +20,16 @@ class TestQueryAnalyzer:
         assert result.complexity == "simple"
         assert result.requires_memory == True
         assert result.requires_reasoning == False
+
+    def test_complex_query_compare(self):
+        """Test: Complex question with 'compare' should be classified as complex"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+        query = "Compare quantum computing with classical computing"
+
+        # Act
+        result = analyzer.analyze(query)
+
+        # Assert
+        assert result.complexity == "complex"
+        assert result.requires_reasoning == True
