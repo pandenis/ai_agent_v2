@@ -59,3 +59,15 @@ class TestQueryAnalyzer:
         # Assert
         assert "Python" in result.entities
         assert "bug" in result.entities
+
+    def test_topic_extraction_programming(self):
+        """Test: Should identify 'programming' as topic for Python bug question"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+        query = "How to fix a Python bug?"
+
+        # Act
+        result = analyzer.analyze(query)
+
+        # Assert
+        assert "programming" in result.topics

@@ -47,17 +47,19 @@ class QueryAnalyzer:
         # Extract entities
         entities = self._extract_entities(query)
 
+        # Extract topics
+        topics = self._identify_topics(query_lower, entities)
+
         return QueryAnalysis(
             complexity=complexity,
             intent="question",
             query_type="factual",
             entities=entities,
-            topics=[],
+            topics=topics,
             requires_memory=True,
             requires_reasoning=requires_reasoning,
             confidence=1.0
         )
-
     def _detect_complexity(self, query_lower: str) -> str:
         """Detect query complexity based on patterns"""
         # Check for complex patterns first
@@ -102,3 +104,35 @@ class QueryAnalyzer:
                 entities.append(term)
 
         return entities
+
+    def _identify_topics(self, query_lower: str, entities: List[str]) -> List[str]:
+        """Identify main topics based on keywords and entities"""
+        topics = []
+
+        # Programming indicators
+        programming_keywords = ['python', 'code', 'bug', 'function', 'database',
+                                'programming', 'javascript', 'java', 'api']
+        if any(keyword in query_lower for keyword in programming_keywords):
+            topics.append("programming")
+
+        # Medical indicators
+        medical_keywords = ['symptom', 'disease', 'treatment', 'medicine',
+                            'diagnosis', 'doctor', 'health', 'medical']
+        if any(keyword in query_lower for keyword in medical_keywords):
+            topics.append("medical")
+
+        # Creative indicators
+        creative_keywords = ['story', 'write', 'creative', 'poem', 'article', 'blog']
+        if any(keyword in query_lower for keyword in creative_keywords):
+            topics.append("creative")
+
+        # Analysis indicators
+        analysis_keywords = ['analyze', 'compare', 'evaluate', 'assess', 'review']
+        if any(keyword in query_lower for keyword in analysis_keywords):
+            topics.append("analysis")
+
+        # General if no specific topic found
+        if not topics:
+            topics.append("general")
+
+        return topics
