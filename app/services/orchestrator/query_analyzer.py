@@ -27,6 +27,15 @@ class QueryAnalyzer:
         "assess",
     ]
 
+    # Patterns for medium queries
+    MEDIUM_PATTERNS = [
+        "how to",
+        "how can",
+        "what are the steps",
+        "explain",
+        "why does",
+    ]
+
     def analyze(self, query: str) -> QueryAnalysis:
         """Analyze a query and return analysis results"""
         query_lower = query.lower()
@@ -48,10 +57,15 @@ class QueryAnalyzer:
 
     def _detect_complexity(self, query_lower: str) -> str:
         """Detect query complexity based on patterns"""
-        # Check for complex patterns
+        # Check for complex patterns first
         for pattern in self.COMPLEX_PATTERNS:
             if pattern in query_lower:
                 return "complex"
+
+        # Check for medium patterns
+        for pattern in self.MEDIUM_PATTERNS:
+            if pattern in query_lower:
+                return "medium"
 
         # Default to simple
         return "simple"

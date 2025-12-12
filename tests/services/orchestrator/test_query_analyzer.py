@@ -33,3 +33,16 @@ class TestQueryAnalyzer:
         # Assert
         assert result.complexity == "complex"
         assert result.requires_reasoning == True
+
+    def test_medium_query_how_to(self):
+        """Test: 'How to' questions should be classified as medium"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+        query = "How to fix a Python bug?"
+
+        # Act
+        result = analyzer.analyze(query)
+
+        # Assert
+        assert result.complexity == "medium"
+        assert result.requires_memory == True
