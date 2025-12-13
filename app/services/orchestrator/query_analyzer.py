@@ -56,6 +56,9 @@ class QueryAnalyzer:
         # Detect query type
         query_type = self._detect_query_type(query_lower)
 
+        # Calculate confidence
+        confidence = self._calculate_confidence(query, entities, topics)
+
         return QueryAnalysis(
             complexity=complexity,
             intent=intent,
@@ -64,7 +67,7 @@ class QueryAnalyzer:
             topics=topics,
             requires_memory=True,
             requires_reasoning=requires_reasoning,
-            confidence=1.0
+            confidence=confidence
         )
 
     def _detect_complexity(self, query_lower: str) -> str:
@@ -201,3 +204,29 @@ class QueryAnalyzer:
 
         # Default to factual
         return "factual"
+
+    def _calculate_confidence(self, query: str, entities: List[str], topics: List[str]) -> float:
+        """Calculate confidence score (0-1) based on query clarity"""
+        confidence = 1.0
+
+        # Penalize very short queries (vague)
+        if len(query.split()) <= 3:
+            confidence -= 0.2
+
+        # Penalize if no entities found (unclear)
+        if len(entities) == 0:
+            confidence -= 0.2
+
+        # Penalize if only "general" topic (not specific)
+        if topics == ["general"]:
+            confidence -= 0.2
+
+        # Penalize very vague words
+        vague_words = ['something', 'anything', 'stuff', 'thing', 'whatever']
+        if any(word in query.lower() for word in vague_words):
+            confidence -= 0.3
+
+        # Ensure confidence stays in valid range [0.3, 1.0]
+        confidence = max(0.3, min(1.0, confidence))
+
+        return confidence

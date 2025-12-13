@@ -183,3 +183,29 @@ class TestQueryAnalyzer:
 
         # Assert
         assert result.query_type == "creative"
+
+    def test_confidence_high_for_clear_patterns(self):
+        """Test: Clear patterns should have high confidence (>0.8)"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+        query = "What is the capital of France?"
+
+        # Act
+        result = analyzer.analyze(query)
+
+        # Assert
+        assert result.confidence >= 0.8
+        assert result.confidence <= 1.0
+
+    def test_confidence_medium_for_ambiguous(self):
+        """Test: Ambiguous queries should have medium confidence (0.5-0.8)"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+        query = "Tell me something"  # Very vague
+
+        # Act
+        result = analyzer.analyze(query)
+
+        # Assert
+        assert result.confidence >= 0.3
+        assert result.confidence < 0.8
