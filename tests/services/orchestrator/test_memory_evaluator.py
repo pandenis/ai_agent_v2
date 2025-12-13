@@ -156,3 +156,66 @@ class TestMemoryEvaluator:
         # Assert
         assert result.coverage_score > 0.5
         assert "programming" not in result.gaps  # Should not have gap
+
+    @pytest.mark.asyncio
+    async def test_low_coverage_with_one_fact(self):
+        """Test: Low coverage (0.5) when only one fact found"""
+        # Arrange
+        query_analysis = QueryAnalysis(
+            complexity="simple",
+            intent="question",
+            query_type="factual",
+            entities=["Denis"],
+            topics=["general"],
+            requires_memory=True,
+            requires_reasoning=False,
+            confidence=0.9
+        )
+
+        # Mock with only 1 fact
+        mock_facts = [{"text": "User's name is Denis", "importance": 5.0}]
+
+        mock_memory_service = AsyncMock()
+        mock_memory_service.search_facts.return_value = mock_facts
+
+        evaluator = MemoryEvaluator(memory_service=mock_memory_service)
+
+        # Act
+        result = await evaluator.evaluate(query_analysis, "test-session")
+
+        # Assert
+        assert result.coverage_score == 0.5
+        assert len(result.relevant_facts) == 1
+
+    @pytest.mark.asyncio
+    async def test_high_coverage_with_many_facts(self):
+        """Test: High coverage (0.9) when 5+ facts found"""
+        # Arrange
+        query_analysis = QueryAnalysis(
+            complexity="medium",
+            intent="question",
+            query_type="factual",
+            entities=["Python"],
+            topics=["programming"],
+            requires_memory=True,
+            requires_reasoning=False,
+            confidence=0.8
+        )
+
+        # Mock with 5 facts
+        mock_facts = [
+            {"text": f"Python fact {i}", "importance": 4.0 + i * 0.2}
+            for i in range(5)
+        ]
+
+        mock_memory_service = AsyncMock()
+        mock_memory_service.search_facts.return_value = mock_facts
+
+        evaluator = MemoryEvaluator(memory_service=mock_memory_service)
+
+        # Act
+        result = await evaluator.evaluate(query_analysis, "test-session")
+
+        # Assert
+        assert result.coverage_score == 0.9
+        assert len(result.relevant_facts) == 5
