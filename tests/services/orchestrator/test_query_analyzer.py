@@ -147,3 +147,39 @@ class TestQueryAnalyzer:
 
         # Assert
         assert result.intent == "statement"
+
+    def test_query_type_factual(self):
+        """Test: Factual questions should be 'factual' type"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+        query = "What is the capital of France?"
+
+        # Act
+        result = analyzer.analyze(query)
+
+        # Assert
+        assert result.query_type == "factual"
+
+    def test_query_type_reasoning(self):
+        """Test: Why questions should be 'reasoning' type"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+        query = "Why do birds migrate south in winter?"
+
+        # Act
+        result = analyzer.analyze(query)
+
+        # Assert
+        assert result.query_type == "reasoning"
+
+    def test_query_type_creative(self):
+        """Test: Creative requests should be 'creative' type"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+        query = "Write a poem about the ocean"
+
+        # Act
+        result = analyzer.analyze(query)
+
+        # Assert
+        assert result.query_type == "creative"

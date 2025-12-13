@@ -53,10 +53,13 @@ class QueryAnalyzer:
         # Detect intent
         intent = self._detect_intent(query_lower)
 
+        # Detect query type
+        query_type = self._detect_query_type(query_lower)
+
         return QueryAnalysis(
             complexity=complexity,
             intent=intent,
-            query_type="factual",
+            query_type=query_type,
             entities=entities,
             topics=topics,
             requires_memory=True,
@@ -171,3 +174,30 @@ class QueryAnalyzer:
 
         # Default to statement
         return "statement"
+
+    def _detect_query_type(self, query_lower: str) -> str:
+        """Detect query type: factual, reasoning, or creative"""
+        # Creative patterns
+        creative_patterns = [
+            'write', 'create', 'compose', 'draft',
+            'poem', 'story', 'essay', 'article',
+            'imagine', 'design', 'invent'
+        ]
+
+        if any(pattern in query_lower for pattern in creative_patterns):
+            return "creative"
+
+        # Reasoning patterns (why, how come, explain why)
+        reasoning_patterns = [
+            'why ', 'why?',
+            'how come',
+            'explain why',
+            'what causes',
+            'what is the reason'
+        ]
+
+        if any(pattern in query_lower for pattern in reasoning_patterns):
+            return "reasoning"
+
+        # Default to factual
+        return "factual"
