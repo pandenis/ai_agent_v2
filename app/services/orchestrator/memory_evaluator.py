@@ -2,18 +2,32 @@
 MemoryEvaluator - Evaluates memory coverage for queries.
 
 This component searches the memory system for relevant facts and calculates
-how well the existing memory can answer the query.
+how well the existing memory can answer the query. It's a key part of the
+Intelligent Orchestrator's decision-making process.
 
 Features:
 - Search facts by topics and entities
-- Calculate coverage score (0-1)
-- Identify information gaps
-- Recommend memory-based vs AI-based responses
+- Calculate coverage score (0-1) based on number of relevant facts:
+  * 0.0: No facts found
+  * 0.5: 1 fact found (low coverage)
+  * 0.7: 2-4 facts found (medium coverage)
+  * 0.9: 5+ facts found (high coverage)
+- Identify information gaps (topics not covered by memory)
+- Dependency injection support for testing
+- Graceful error handling (returns 0 coverage on failures)
 
-Example:
-    >>> evaluator = MemoryEvaluator()
+Usage:
+    >>> from app.services.memory_service import MemoryService
+    >>> memory_service = MemoryService(db)
+    >>> evaluator = MemoryEvaluator(memory_service=memory_service)
     >>> result = await evaluator.evaluate(query_analysis, session_id)
-    >>> print(result.coverage_score)  # 0.8
+    >>> print(f"Coverage: {result.coverage_score}")
+    >>> print(f"Gaps: {result.gaps}")
+
+Testing:
+    >>> # Use dependency injection for testing
+    >>> mock_service = AsyncMock()
+    >>> evaluator = MemoryEvaluator(memory_service=mock_service)
 """
 from dataclasses import dataclass
 from typing import List, Optional
