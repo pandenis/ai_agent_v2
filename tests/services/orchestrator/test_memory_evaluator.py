@@ -219,3 +219,32 @@ class TestMemoryEvaluator:
         # Assert
         assert result.coverage_score == 0.9
         assert len(result.relevant_facts) == 5
+
+    @pytest.mark.asyncio
+    async def test_handles_memory_service_error_gracefully(self):
+        """Test: Should handle memory service errors gracefully"""
+        # Arrange
+        query_analysis = QueryAnalysis(
+            complexity="medium",
+            intent="question",
+            query_type="factual",
+            entities=["Python"],
+            topics=["programming"],
+            requires_memory=True,
+            requires_reasoning=False,
+            confidence=0.8
+        )
+
+        # Mock memory service that raises exception
+        mock_memory_service = AsyncMock()
+        mock_memory_service.search_facts.side_effect = Exception("Database error")
+
+        evaluator = MemoryEvaluator(memory_service=mock_memory_service)
+
+        # Act
+        result = await evaluator.evaluate(query_analysis, "test-session")
+
+        # Assert
+        assert result.coverage_score == 0.0  # Should return 0 coverage on error
+        assert len(result.relevant_facts) == 0
+        assert len(result.gaps) > 0  # Should identify all topics as gaps
