@@ -94,3 +94,65 @@ class TestMemoryEvaluator:
         assert result.coverage_score > 0.5  # Should have good coverage
         assert len(result.relevant_facts) == 2
         mock_memory_service.search_facts.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_identify_gaps_when_no_facts(self):
+        """Test: Should identify all topics as gaps when no facts"""
+        # Arrange
+        query_analysis = QueryAnalysis(
+            complexity="medium",
+            intent="question",
+            query_type="factual",
+            entities=["React", "TypeScript"],
+            topics=["programming", "frontend"],
+            requires_memory=True,
+            requires_reasoning=False,
+            confidence=0.8
+        )
+
+        # Mock empty facts
+        mock_memory_service = AsyncMock()
+        mock_memory_service.search_facts.return_value = []
+
+        evaluator = MemoryEvaluator(memory_service=mock_memory_service)
+
+        # Act
+        result = await evaluator.evaluate(query_analysis, "test-session")
+
+        # Assert
+        assert result.coverage_score == 0.0
+        assert "programming" in result.gaps
+        assert "frontend" in result.gaps
+
+    @pytest.mark.asyncio
+    async def test_no_gaps_when_facts_cover_topics(self):
+        """Test: No gaps when facts exist for all topics"""
+        # Arrange
+        query_analysis = QueryAnalysis(
+            complexity="medium",
+            intent="question",
+            query_type="factual",
+            entities=["Python"],
+            topics=["programming"],
+            requires_memory=True,
+            requires_reasoning=False,
+            confidence=0.8
+        )
+
+        # Mock facts that cover programming topic
+        mock_facts = [
+            {"text": "User knows Python programming", "importance": 4.5},
+            {"text": "User is learning programming", "importance": 4.0}
+        ]
+
+        mock_memory_service = AsyncMock()
+        mock_memory_service.search_facts.return_value = mock_facts
+
+        evaluator = MemoryEvaluator(memory_service=mock_memory_service)
+
+        # Act
+        result = await evaluator.evaluate(query_analysis, "test-session")
+
+        # Assert
+        assert result.coverage_score > 0.5
+        assert "programming" not in result.gaps  # Should not have gap
