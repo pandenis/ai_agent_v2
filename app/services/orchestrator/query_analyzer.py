@@ -1,4 +1,26 @@
-"""QueryAnalyzer - analyzes user queries for complexity and intent"""
+"""
+QueryAnalyzer - Analyzes user queries for complexity, intent, entities, and topics.
+
+This component is part of the Intelligent Orchestrator system and provides
+the first stage of query processing. It uses pattern matching and keyword
+detection to classify queries without requiring an LLM.
+
+Features:
+- Complexity detection (simple/medium/complex)
+- Intent detection (question/command/statement)
+- Query type classification (factual/reasoning/creative)
+- Entity extraction (capitalized words + common terms)
+- Topic identification (programming/medical/creative/analysis/general)
+- Confidence scoring (0.3-1.0 based on query clarity)
+
+Example:
+    >>> analyzer = QueryAnalyzer()
+    >>> result = analyzer.analyze("How to fix a Python bug?")
+    >>> print(result.complexity)  # "medium"
+    >>> print(result.topics)      # ["programming"]
+    >>> print(result.entities)    # ["How", "Python", "bug"]
+"""
+
 from dataclasses import dataclass
 from typing import List
 
