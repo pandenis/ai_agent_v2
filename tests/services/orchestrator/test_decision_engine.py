@@ -183,3 +183,169 @@ class TestDecisionEngine:
         # Assert
         assert result.strategy == "enhanced"
         assert result.agent == "mistral"
+
+    def test_deep_reasoning_when_low_coverage(self):
+        """Test: Deep reasoning when coverage is too low (<0.7)"""
+        # Arrange
+        engine = DecisionEngine()
+        query_analysis = QueryAnalysis(
+            complexity="simple",  # Even simple query
+            intent="question",
+            query_type="factual",
+            entities=["unknown"],
+            topics=["general"],
+            requires_memory=True,
+            requires_reasoning=False,
+            confidence=0.8
+        )
+        memory_eval = MemoryEvaluation(
+            coverage_score=0.3,  # Too low!
+            relevant_facts=[],
+            gaps=["unknown topic"],
+            confidence=0.5
+        )
+
+        # Act
+        result = engine.decide(query_analysis, memory_eval)
+
+        # Assert
+        assert result.strategy == "deep_reasoning"  # Falls back to deep
+        assert result.agent == "mixtral"
+
+    def test_default_agent_for_unknown_topic(self):
+        """Test: Uses llama3 as default for unknown topics"""
+        # Arrange
+        engine = DecisionEngine()
+        query_analysis = QueryAnalysis(
+            complexity="medium",
+            intent="question",
+            query_type="factual",
+            entities=["something"],
+            topics=["unknown_topic"],  # Not in AGENT_MAP
+            requires_memory=True,
+            requires_reasoning=False,
+            confidence=0.8
+        )
+        memory_eval = MemoryEvaluation(
+            coverage_score=0.8,
+            relevant_facts=[{"text": "Some fact"}],
+            gaps=[],
+            confidence=0.8
+        )
+
+        # Act
+        result = engine.decide(query_analysis, memory_eval)
+
+        # Assert
+        assert result.strategy == "enhanced"
+        assert result.agent == "llama3"  # Default fallback
+
+    def test_enhanced_at_coverage_boundary_0_7(self):
+        """Test: Enhanced strategy at exactly 0.7 coverage"""
+        # Arrange
+        engine = DecisionEngine()
+        query_analysis = QueryAnalysis(
+            complexity="medium",
+            intent="question",
+            query_type="factual",
+            entities=["test"],
+            topics=["general"],
+            requires_memory=True,
+            requires_reasoning=False,
+            confidence=0.8
+        )
+        memory_eval = MemoryEvaluation(
+            coverage_score=0.7,  # Exactly at boundary
+            relevant_facts=[{"text": "fact"}],
+            gaps=[],
+            confidence=0.8
+        )
+
+        # Act
+        result = engine.decide(query_analysis, memory_eval)
+
+        # Assert
+        assert result.strategy == "enhanced"
+        assert result.agent == "llama3"
+
+    def test_direct_at_coverage_boundary_0_9(self):
+        """Test: Direct strategy at exactly 0.9 coverage"""
+        # Arrange
+        engine = DecisionEngine()
+        query_analysis = QueryAnalysis(
+            complexity="simple",
+            intent="question",
+            query_type="factual",
+            entities=["test"],
+            topics=["general"],
+            requires_memory=True,
+            requires_reasoning=False,
+            confidence=0.9
+        )
+        memory_eval = MemoryEvaluation(
+            coverage_score=0.9,  # Exactly at boundary
+            relevant_facts=[{"text": "fact"}],
+            gaps=[],
+            confidence=0.9
+        )
+
+        # Act
+        result = engine.decide(query_analysis, memory_eval)
+
+        # Assert
+        assert result.strategy == "direct"
+        assert result.agent is None
+        assert result.estimated_cost == 0.0
+
+    def test_empty_topics_uses_default_agent(self):
+        """Test: Empty topics list uses llama3 default"""
+        # Arrange
+        engine = DecisionEngine()
+        query_analysis = QueryAnalysis(
+            complexity="medium",
+            intent="question",
+            query_type="factual",
+            entities=[],
+            topics=[],  # Empty!
+            requires_memory=True,
+            requires_reasoning=False,
+            confidence=0.8
+        )
+        memory_eval = MemoryEvaluation(
+            coverage_score=0.8,
+            relevant_facts=[],
+            gaps=[],
+            confidence=0.8
+        )
+
+        # Act
+        result = engine.decide(query_analysis, memory_eval)
+
+        # Assert
+        assert result.strategy == "enhanced"
+        assert result.agent == "llama3"
+
+    def test_all_decisions_use_memory(self):
+        """Test: All strategies should use memory"""
+        # Arrange
+        engine = DecisionEngine()
+
+        # Test all three strategies
+        strategies = [
+            # Direct
+            (QueryAnalysis("simple", "question", "factual", [], ["general"], True, False, 0.9),
+             MemoryEvaluation(0.95, [], [], 0.9)),
+            # Enhanced
+            (QueryAnalysis("medium", "question", "factual", [], ["programming"], True, False, 0.8),
+             MemoryEvaluation(0.75, [], [], 0.8)),
+            # Deep
+            (QueryAnalysis("complex", "question", "reasoning", [], ["analysis"], True, True, 0.7),
+             MemoryEvaluation(0.3, [], [], 0.6))
+        ]
+
+        for query_analysis, memory_eval in strategies:
+            # Act
+            result = engine.decide(query_analysis, memory_eval)
+
+            # Assert
+            assert result.use_memory is True
