@@ -1,11 +1,41 @@
 """
-DecisionEngine - Decides optimal response strategy.
+DecisionEngine - Decides optimal response strategy using rule-based logic.
 
-Rule-based decision logic (NO LLM) that selects:
-- Strategy: direct/enhanced/deep_reasoning
-- Agent: best AI agent for the topic
-- Estimates: time and cost
+This component makes intelligent decisions about how to respond to queries
+based on query analysis and memory evaluation. It uses simple IF-THEN rules
+(NO LLM needed) to select the best strategy and agent.
+
+Decision Rules:
+1. DIRECT (coverage ≥ 0.9 + simple):
+   - Answer from memory only
+   - No AI needed
+   - Cost: $0, Time: ~100ms
+
+2. ENHANCED (coverage ≥ 0.7 + simple/medium):
+   - AI with memory context
+   - Agent selected by topic
+   - Cost: ~$0.0003, Time: ~3s
+
+3. DEEP REASONING (everything else):
+   - Multi-step AI reasoning
+   - Powerful model (mixtral)
+   - Cost: ~$0.005, Time: ~15s
+
+Agent Selection:
+- programming → deepseek
+- medical → medical_ai
+- creative → mistral
+- analysis → mixtral
+- default → llama3
+
+Usage:
+    >>> engine = DecisionEngine()
+    >>> decision = engine.decide(query_analysis, memory_eval)
+    >>> print(f"Strategy: {decision.strategy}")
+    >>> print(f"Agent: {decision.agent}")
+    >>> print(f"Cost: ${decision.estimated_cost}")
 """
+
 from dataclasses import dataclass
 from typing import Optional
 
