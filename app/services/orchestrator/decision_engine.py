@@ -36,18 +36,47 @@ Usage:
     >>> print(f"Cost: ${decision.estimated_cost}")
 """
 
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import Optional, List
 
 
 @dataclass
 class Decision:
-    """Decision result"""
+    """Decision result with complete metadata"""
     strategy: str  # "direct", "enhanced", "deep_reasoning"
     agent: Optional[str]  # AI agent to use (None for direct)
     use_memory: bool  # Whether to use memory
     estimated_time: float  # Seconds
     estimated_cost: float  # USD
+
+    # Additional fields needed by orchestrator
+    reasoning_depth: int = 0  # 0, 1, 2-4
+    use_ai: bool = True  # Whether AI is needed
+    agent_preference: str = "balanced"  # "fast", "balanced", "premium"
+    tools: List[str] = field(default_factory=list)  # Tools to use (web_search, etc.)
+    confidence: float = 0.9  # Confidence in decision (0-1)
+
+    def __post_init__(self):
+        """Set intelligent defaults after initialization"""
+        # Set use_ai based on strategy
+        if self.strategy == "direct":
+            self.use_ai = False
+
+        # Set reasoning_depth based on strategy
+        if self.strategy == "direct":
+            self.reasoning_depth = 0
+        elif self.strategy == "enhanced":
+            self.reasoning_depth = 1
+        else:  # deep_reasoning
+            self.reasoning_depth = 3
+
+        # Set agent_preference based on strategy
+        if self.strategy == "direct":
+            self.agent_preference = "none"
+        elif self.strategy == "enhanced":
+            self.agent_preference = "balanced"
+        else:
+            self.agent_preference = "premium"
 
 
 class DecisionEngine:
@@ -105,3 +134,7 @@ class DecisionEngine:
             first_topic = topics[0]
             return self.AGENT_MAP.get(first_topic, "llama3")
         return "llama3"
+
+
+# Alias for compatibility with orchestrator
+ResponseStrategy = Decision
