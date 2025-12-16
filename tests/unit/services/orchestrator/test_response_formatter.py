@@ -22,3 +22,23 @@ class TestResponseFormatter:
 
         assert "Denis" in result
         assert result == "User's name is Denis."
+
+    def test_format_direct_multiple_facts(self):
+        """Test: Multiple facts formatted as bullet list"""
+        formatter = ResponseFormatter()
+        facts = [
+            {"text": "User's name is Denis", "confidence": 0.95},
+            {"text": "Denis is a QA Engineer", "confidence": 0.90},
+            {"text": "Denis loves Python", "confidence": 0.85}
+        ]
+
+        result = formatter.format_direct(facts)
+
+        # Should have bullet points
+        assert "•" in result
+        # Should contain all facts
+        assert "Denis" in result
+        assert "QA Engineer" in result
+        assert "Python" in result
+        # Should have intro line
+        assert "Here's what I know" in result or "know" in result.lower()

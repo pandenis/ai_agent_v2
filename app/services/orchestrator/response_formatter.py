@@ -19,4 +19,10 @@ class ResponseFormatter:
         """Format direct answer from memory facts"""
         if len(facts) == 1:
             return facts[0]["text"] + "."
-        return ""
+
+        # Multiple facts: bullet list
+        formatted = "Here's what I know:\n\n"
+        for fact in facts:
+            formatted += f"• {fact['text']}\n"
+
+        return formatted.strip()
