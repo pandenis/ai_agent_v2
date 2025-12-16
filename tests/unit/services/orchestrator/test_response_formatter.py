@@ -84,3 +84,28 @@ class TestResponseFormatter:
         # Should include facts
         assert "blood pressure" in result
         assert "doctor" in result
+
+    def test_format_enhanced_with_sources(self):
+        """Test: Enhanced answers show AI + memory sources"""
+        formatter = ResponseFormatter()
+        ai_response = "Walking 30 minutes daily can help manage blood pressure."
+        context_facts = [
+            {"text": "User has high blood pressure", "confidence": 0.9}
+        ]
+        agent_name = "mixtral"
+
+        result = formatter.format_enhanced(
+            ai_response,
+            context_facts,
+            agent_name=agent_name,
+            include_source=True
+        )
+
+        # Should include AI response
+        assert "Walking" in result
+        # Should include context
+        assert "blood pressure" in result
+        # Should show AI source
+        assert "mixtral" in result.lower()
+        # Should show memory source
+        assert "memory" in result.lower()

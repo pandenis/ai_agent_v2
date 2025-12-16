@@ -49,16 +49,20 @@ class ResponseFormatter:
     def format_enhanced(
             self,
             ai_response: str,
-            context_facts: list[dict]
+            context_facts: list[dict],
+            agent_name: str = None,
+            include_source: bool = False
     ) -> str:
         """Format enhanced answer with memory context
 
         Args:
             ai_response: Response from AI agent
             context_facts: Relevant facts from memory for context
+            agent_name: Name of AI agent used (e.g., "mixtral")
+            include_source: If True, append source attribution
 
         Returns:
-            Formatted string with AI response and context
+            Formatted string with AI response, context, and optional sources
         """
         formatted = ai_response + "\n\n"
 
@@ -66,5 +70,8 @@ class ResponseFormatter:
             formatted += "Based on what I know about you:\n"
             for fact in context_facts[:3]:  # Top 3 most relevant facts
                 formatted += f"• {fact['text']}\n"
+
+        if include_source:
+            formatted += f"\n(AI: {agent_name}, Memory: {len(context_facts)} facts)"
 
         return formatted.strip()
