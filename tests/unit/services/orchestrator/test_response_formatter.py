@@ -65,3 +65,22 @@ class TestResponseFormatter:
 
         assert "•" in result
         assert "(from memory)" in result.lower()
+
+    def test_format_enhanced_with_context(self):
+        """Test: Enhanced answers include context from memory"""
+        formatter = ResponseFormatter()
+        ai_response = "The Mediterranean diet is excellent for heart health."
+        context_facts = [
+            {"text": "User has high blood pressure", "confidence": 0.9},
+            {"text": "User's doctor recommended dietary changes", "confidence": 0.85}
+        ]
+
+        result = formatter.format_enhanced(ai_response, context_facts)
+
+        # Should include AI response
+        assert "Mediterranean diet" in result
+        # Should include context header
+        assert "Based on" in result or "Context:" in result or "know about you" in result
+        # Should include facts
+        assert "blood pressure" in result
+        assert "doctor" in result
