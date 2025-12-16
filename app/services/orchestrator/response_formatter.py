@@ -15,14 +15,33 @@ Usage:
 
 class ResponseFormatter:
     """Formats responses for better readability"""
-    def format_direct(self, facts: list[dict]) -> str:
-        """Format direct answer from memory facts"""
+
+    def format_direct(
+            self,
+            facts: list[dict],
+            include_source: bool = False
+    ) -> str:
+        """Format direct answer from memory facts
+
+        Args:
+            facts: List of fact dictionaries with 'text' and 'confidence'
+            include_source: If True, append source attribution
+
+        Returns:
+            Formatted string with facts and optional source
+        """
         if len(facts) == 1:
-            return facts[0]["text"] + "."
+            answer = facts[0]["text"] + "."
+            if include_source:
+                answer += " (from memory)"
+            return answer
 
         # Multiple facts: bullet list
         formatted = "Here's what I know:\n\n"
         for fact in facts:
             formatted += f"• {fact['text']}\n"
+
+        if include_source:
+            formatted += "\n(from memory)"
 
         return formatted.strip()

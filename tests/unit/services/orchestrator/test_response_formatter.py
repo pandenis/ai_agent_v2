@@ -42,3 +42,26 @@ class TestResponseFormatter:
         assert "Python" in result
         # Should have intro line
         assert "Here's what I know" in result or "know" in result.lower()
+
+    def test_format_direct_with_attribution(self):
+        """Test: Direct answers show source (memory)"""
+        formatter = ResponseFormatter()
+        facts = [{"text": "User's name is Denis", "confidence": 0.95}]
+
+        result = formatter.format_direct(facts, include_source=True)
+
+        assert "Denis" in result
+        assert "(from memory)" in result.lower()
+
+    def test_format_direct_multiple_with_attribution(self):
+        """Test: Multiple facts also show source"""
+        formatter = ResponseFormatter()
+        facts = [
+            {"text": "User's name is Denis", "confidence": 0.95},
+            {"text": "Denis is a QA Engineer", "confidence": 0.90}
+        ]
+
+        result = formatter.format_direct(facts, include_source=True)
+
+        assert "•" in result
+        assert "(from memory)" in result.lower()
