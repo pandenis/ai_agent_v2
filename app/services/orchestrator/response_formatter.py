@@ -75,3 +75,25 @@ class ResponseFormatter:
             formatted += f"\n(AI: {agent_name}, Memory: {len(context_facts)} facts)"
 
         return formatted.strip()
+
+    def format_deep(
+            self,
+            ai_response: str,
+            include_source: bool = False
+    ) -> str:
+        """Format deep reasoning response with paragraph structure
+
+        Args:
+            ai_response: Multi-paragraph response from AI
+            include_source: If True, append source attribution
+
+        Returns:
+            Formatted string preserving paragraph breaks
+        """
+        # Preserve paragraph structure (just return as-is for now)
+        formatted = ai_response
+
+        if include_source:
+            formatted += "\n\n(Deep reasoning with multiple sources)"
+
+        return formatted

@@ -109,3 +109,21 @@ class TestResponseFormatter:
         assert "mixtral" in result.lower()
         # Should show memory source
         assert "memory" in result.lower()
+
+    def test_format_deep_multi_paragraph(self):
+        """Test: Deep reasoning supports paragraph breaks"""
+        formatter = ResponseFormatter()
+        long_response = """Climate change affects weather patterns in several ways.
+
+    Rising global temperatures cause more extreme weather events. This includes stronger hurricanes, longer droughts, and more intense rainfall.
+
+    Ocean temperatures also increase, affecting marine ecosystems. Coral reefs are particularly vulnerable to these changes."""
+
+        result = formatter.format_deep(long_response)
+
+        # Should preserve paragraph structure
+        assert result.count("\n\n") >= 2
+        # Should include all content
+        assert "Climate change" in result
+        assert "hurricanes" in result
+        assert "Coral reefs" in result
