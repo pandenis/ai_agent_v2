@@ -15,4 +15,8 @@ Usage:
 
 class ResponseFormatter:
     """Formats responses for better readability"""
-    pass
+    def format_direct(self, facts: list[dict]) -> str:
+        """Format direct answer from memory facts"""
+        if len(facts) == 1:
+            return facts[0]["text"] + "."
+        return ""
