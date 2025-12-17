@@ -265,14 +265,7 @@ class IntelligentOrchestrator:
         Generate a deep, thoughtful answer for complex queries.
         This is SLOW but THOROUGH - uses premium AI with multiple reasoning steps.
 
-        Args:
-            query: User's question
-            query_analysis: Analysis of the query
-            memory_eval: Memory evaluation results
-            strategy: The response strategy
-
-        Returns:
-            Tuple of (response_text, sources_used)
+        Uses ResponseFormatter to preserve paragraph structure.
         """
         # Build comprehensive context
         context_parts = []
@@ -293,18 +286,22 @@ class IntelligentOrchestrator:
         # Create deep reasoning prompt
         deep_prompt = f"""You are analyzing a complex question that requires deep thinking.
 
-Question: {query}
+    Question: {query}
 
-{context}
+    {context}
 
-Please provide a comprehensive, well-reasoned response. Think through this step by step."""
+    Please provide a comprehensive, well-reasoned response. Think through this step by step."""
 
         # Use premium agent (e.g., Mixtral, DeepSeek)
         agent = self._select_agent("premium")
 
         if agent:
-            response = await agent.process(deep_prompt)
-            return response, ["memory", agent.name, "deep_reasoning"]
+            ai_response = await agent.process(deep_prompt)
+
+            # Format with ResponseFormatter (preserves paragraphs)
+            formatted_response = self.response_formatter.format_deep(ai_response)
+
+            return formatted_response, ["memory", agent.name, "deep_reasoning"]
         else:
             # Fallback
             return "I apologize, but I need a more powerful AI model to answer this complex question properly.", [
