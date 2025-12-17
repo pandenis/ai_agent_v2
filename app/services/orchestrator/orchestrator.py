@@ -223,32 +223,33 @@ class IntelligentOrchestrator:
         Generate an enhanced answer using AI + memory.
         This is BALANCED - uses AI but with memory context to be more relevant.
 
-        Args:
-            query: User's question
-            memory_facts: Facts we found in memory
-            strategy: The response strategy with agent preferences
-
-        Returns:
-            Tuple of (response_text, sources_used)
+        Uses ResponseFormatter to format the response with context.
         """
         # Build context from memory
         context = "\n".join([f"- {fact.get('text', '')}" for fact in memory_facts[:5]])
 
         # Create enhanced prompt
         enhanced_prompt = f"""Context from previous conversations:
-{context}
+    {context}
 
-User question: {query}
+    User question: {query}
 
-Please provide a helpful response using the context above."""
+    Please provide a helpful response using the context above."""
 
         # Select agent based on strategy preference
         agent = self._select_agent(strategy.agent_preference)
 
         if agent:
             # Call the AI agent
-            response = await agent.process(enhanced_prompt)
-            return response, ["memory", agent.name]
+            ai_response = await agent.process(enhanced_prompt)
+
+            # Format with ResponseFormatter
+            formatted_response = self.response_formatter.format_enhanced(
+                ai_response=ai_response,
+                context_facts=memory_facts[:3]  # Top 3 facts for context
+            )
+
+            return formatted_response, ["memory", agent.name]
         else:
             # Fallback if no agent available
             return self._direct_answer(memory_facts), ["memory"]
