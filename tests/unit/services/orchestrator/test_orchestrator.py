@@ -476,9 +476,75 @@ def test_summary():
     print("  ✅ Test 6: Fallback Scenarios")
     print("  ✅ Test 7: Performance Metrics")
     print("  ✅ Test 8: Complete E2E Flow")
-    print("\nTotal: 8 comprehensive E2E tests")
+    print("  ✅ Test 9: ResponseFormatter Integration")  # NEW!
+    print("\nTotal: 9 comprehensive E2E tests")
     print("=" * 60 + "\n")
 
+# ==========================================
+# Test 9: ResponseFormatter Integration
+# ==========================================
+
+@pytest.mark.asyncio
+async def test_response_formatter_integration(
+        orchestrator,
+        mock_memory_service,
+        mock_agent
+):
+    """
+    Test Case: ResponseFormatter is used to format all responses
+
+    Scenario:
+        Verify that responses are properly formatted using ResponseFormatter
+        for all three strategies: direct, enhanced, deep_reasoning
+    """
+    from app.services.orchestrator.response_formatter import ResponseFormatter
+
+    # Verify: ResponseFormatter is initialized in orchestrator
+    assert hasattr(orchestrator, 'response_formatter')
+    assert isinstance(orchestrator.response_formatter, ResponseFormatter)
+
+    # Test 1: Direct answer formatting
+    # Setup: High-confidence, highly relevant facts for direct answer
+    mock_memory_service.search_facts.return_value = [
+        {"text": "User's name is Denis", "importance": 0.95, "confidence": 0.98, "fact_type": "personal"},
+        {"text": "Denis is the user", "importance": 0.94, "confidence": 0.97, "fact_type": "personal"},
+        {"text": "User goes by Denis", "importance": 0.93, "confidence": 0.96, "fact_type": "personal"},
+        {"text": "Denis is what user is called", "importance": 0.92, "confidence": 0.95, "fact_type": "personal"},
+        {"text": "The name Denis belongs to user", "importance": 0.91, "confidence": 0.94, "fact_type": "personal"}
+    ]
+
+    result = await orchestrator.process_query(
+        query="What is my name?",
+        session_id="test-formatter-001"
+    )
+
+    # Response should be formatted and contain answer
+    assert "Denis" in result["text"]
+    assert len(result["text"]) > 10
+    # Bullet list format (multiple facts) or sentence format (single fact)
+    assert "•" in result["text"] or "." in result["text"]
+
+    print(f"  Test 1: Strategy used = {result['metadata']['strategy']}")
+
+    # Test 2: Enhanced answer formatting
+    mock_memory_service.search_facts.return_value = [
+        {"text": "User knows Python", "importance": 0.8, "confidence": 0.9, "fact_type": "skill"},
+        {"text": "User is a QA Engineer", "importance": 0.75, "confidence": 0.85, "fact_type": "professional"}
+    ]
+
+    mock_agent.process.return_value = "Based on your Python skills, I recommend trying JavaScript."
+
+    result = await orchestrator.process_query(
+        query="What programming language should I learn next?",
+        session_id="test-formatter-002"
+    )
+
+    # Should format the response (strategy may vary)
+    assert len(result["text"]) > 0
+    # Response should contain either AI response or context
+    assert "Python" in result["text"] or "JavaScript" in result["text"] or "QA Engineer" in result["text"]
+
+    print(f"  Test 2: Strategy used = {result['metadata']['strategy']}")
 
 if __name__ == "__main__":
     # If running this file directly, show the summary

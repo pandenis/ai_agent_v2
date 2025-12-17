@@ -17,6 +17,7 @@ import logging
 from app.services.orchestrator.query_analyzer import QueryAnalyzer, QueryAnalysis
 from app.services.orchestrator.memory_evaluator import MemoryEvaluator, MemoryEvaluation
 from app.services.orchestrator.decision_engine import DecisionEngine, ResponseStrategy
+from app.services.orchestrator.response_formatter import ResponseFormatter
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,7 @@ class IntelligentOrchestrator:
         self.query_analyzer = QueryAnalyzer()
         self.memory_evaluator = MemoryEvaluator(memory_service)
         self.decision_engine = DecisionEngine()
+        self.response_formatter = ResponseFormatter()
 
         logger.info("IntelligentOrchestrator initialized successfully")
 
@@ -203,19 +205,13 @@ class IntelligentOrchestrator:
         Generate a direct answer from memory facts.
         This is FAST (no AI needed) and FREE.
 
-        Args:
-            facts: List of relevant facts from memory
-
-        Returns:
-            Simple, direct answer string
+        Uses ResponseFormatter to format the response properly.
         """
         if not facts:
             return "I don't have that information in my memory yet."
 
-        # For now, return the most relevant fact
-        # Later we can make this smarter
-        most_relevant = facts[0]
-        return most_relevant.get('text', 'Information found but formatting error.')
+        # Use ResponseFormatter to format facts nicely
+        return self.response_formatter.format_direct(facts)
 
     async def _enhanced_answer(
             self,
