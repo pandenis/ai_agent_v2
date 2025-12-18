@@ -277,3 +277,41 @@ class TestQueryAnalyzer:
         for query, pattern in medium_queries:
             result = analyzer.analyze(query)
             assert result.complexity == "medium", f"'{pattern}' should be medium, got {result.complexity}"
+
+    def test_entity_extraction_emails(self):
+        """Test: Should extract email addresses"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+        query = "My email is denis@example.com and backup is test@mail.org"
+
+        # Act
+        result = analyzer.analyze(query)
+
+        # Assert
+        assert "denis@example.com" in result.entities
+        assert "test@mail.org" in result.entities
+
+    def test_entity_extraction_numbers(self):
+        """Test: Should extract significant numbers"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+        query = "I have 5 years of experience and mass was 150 kg"
+
+        # Act
+        result = analyzer.analyze(query)
+
+        # Assert
+        # Should extract numbers with context
+        assert any("5" in e for e in result.entities) or "5 years" in str(result.entities)
+
+    def test_entity_extraction_urls(self):
+        """Test: Should extract URLs"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+        query = "Check https://github.com/project for details"
+
+        # Act
+        result = analyzer.analyze(query)
+
+        # Assert
+        assert any("github.com" in e for e in result.entities)

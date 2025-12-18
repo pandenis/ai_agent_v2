@@ -131,19 +131,46 @@ class QueryAnalyzer:
         return "simple"
 
     def _extract_entities(self, query: str) -> List[str]:
-        """Extract entities (capitalized words and known terms)"""
-        entities = []
-        words = query.split()
+        """Extract entities (emails, URLs, capitalized words, known terms)"""
+        import re
 
-        # Extract capitalized words (like "Python")
-        for word in words:
-            # Remove punctuation
+        entities = []
+
+        # 1. Extract emails
+        email_pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+        emails = re.findall(email_pattern, query)
+        entities.extend(emails)
+
+        # 2. Extract URLs
+        url_pattern = r'https?://[^\s]+'
+        urls = re.findall(url_pattern, query)
+        entities.extend(urls)
+
+        # 3. Extract numbers with context (e.g., "5 years", "150 kg", "$100")
+        number_pattern = r'\$?\d+(?:\.\d+)?(?:\s*(?:years?|months?|days?|hours?|kg|mb|gb|tb|%|dollars?|usd|eur))?'
+        numbers = re.findall(number_pattern, query.lower())
+        for num in numbers:
+            if num.strip() and num.strip() not in entities:
+                entities.append(num.strip())
+
+        # 4. Extract capitalized words (like "Python") - but not first word of sentence
+        words = query.split()
+        for i, word in enumerate(words):
             clean_word = word.strip('?.,!;:')
-            # Check if starts with capital letter
+            # Skip if it's an email or URL (already extracted)
+            if '@' in clean_word or clean_word.startswith('http'):
+                continue
+            # Check if starts with capital letter and not first word
             if clean_word and clean_word[0].isupper():
+                # Skip common first words that aren't real entities
+                if i == 0 and clean_word.lower() in ['my', 'i', 'the', 'a', 'an', 'this', 'that', 'what', 'how', 'why',
+                                                     'when', 'where', 'who', 'which', 'can', 'could', 'would', 'should',
+                                                     'will', 'do', 'does', 'is', 'are', 'was', 'were', 'have', 'has',
+                                                     'had', 'send', 'check', 'call', 'tell', 'give', 'show']:
+                    continue
                 entities.append(clean_word)
 
-        # Extract known technical terms
+        # 5. Extract known technical terms
         known_terms = [
             # Programming
             'bug', 'error', 'issue', 'code', 'function', 'database',
