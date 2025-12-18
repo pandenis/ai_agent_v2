@@ -209,3 +209,35 @@ class TestQueryAnalyzer:
         # Assert
         assert result.confidence >= 0.3
         assert result.confidence < 0.8
+
+    def test_simple_personal_queries(self):
+        """Test: Personal questions about user should be simple"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+
+        personal_queries = [
+            "What is my name?",
+            "Where do I live?",
+            "What is my job?",
+            "Who am I?",
+            "What's my email?",
+        ]
+
+        # Act & Assert
+        for query in personal_queries:
+            result = analyzer.analyze(query)
+            assert result.complexity == "simple", f"'{query}' should be simple, got {result.complexity}"
+            assert result.requires_memory == True
+
+    def test_simple_greetings_explicit(self):
+        """Test: Various greetings should all be simple"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+
+        greetings = ["Hi", "Hello", "Hey there", "Good morning", "Hi Claude"]
+
+        # Act & Assert
+        for greeting in greetings:
+            result = analyzer.analyze(greeting)
+            assert result.complexity == "simple", f"'{greeting}' should be simple"
+            assert result.requires_reasoning == False
