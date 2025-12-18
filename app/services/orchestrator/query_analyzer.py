@@ -280,13 +280,22 @@ class QueryAnalyzer:
     def _calculate_confidence(self, query: str, entities: List[str], topics: List[str]) -> float:
         """Calculate confidence score (0-1) based on query clarity"""
         confidence = 1.0
+        words = query.split()
+        word_count = len(words)
 
-        # Penalize very short queries (vague)
-        if len(query.split()) <= 3:
-            confidence -= 0.2
+        # Penalize very short queries (vague) - scaled by length
+        if word_count == 1:
+            confidence -= 0.5  # Single word = very low confidence
+        elif word_count == 2:
+            confidence -= 0.35  # Two words = low confidence
+        elif word_count <= 3:
+            confidence -= 0.2  # Three words = slight penalty
 
-        # Penalize if no entities found (unclear)
-        if len(entities) == 0:
+        # Penalize if no meaningful entities found (unclear)
+        # Filter out common words that aren't real entities
+        meaningful_entities = [e for e in entities if e.lower() not in
+                               ['help', 'ok', 'yes', 'no', 'hmm', 'hey', 'hi', 'hello']]
+        if len(meaningful_entities) == 0:
             confidence -= 0.2
 
         # Penalize if only "general" topic (not specific)
@@ -297,6 +306,11 @@ class QueryAnalyzer:
         vague_words = ['something', 'anything', 'stuff', 'thing', 'whatever']
         if any(word in query.lower() for word in vague_words):
             confidence -= 0.3
+
+        # Penalize generic "tell me about" patterns (less specific)
+        generic_patterns = ['tell me about', 'what about', 'how about']
+        if any(pattern in query.lower() for pattern in generic_patterns):
+            confidence -= 0.15
 
         # Ensure confidence stays in valid range [0.3, 1.0]
         confidence = max(0.3, min(1.0, confidence))

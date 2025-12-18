@@ -315,3 +315,33 @@ class TestQueryAnalyzer:
 
         # Assert
         assert any("github.com" in e for e in result.entities)
+
+    def test_confidence_very_short_queries(self):
+        """Test: Very short/vague queries should have low confidence"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+
+        low_confidence_queries = [
+            "Help",
+            "Hmm",
+            "Ok",
+            "Yes",
+            "?",
+        ]
+
+        # Act & Assert
+        for query in low_confidence_queries:
+            result = analyzer.analyze(query)
+            assert result.confidence < 0.5, f"'{query}' should have low confidence (<0.5), got {result.confidence}"
+
+    def test_confidence_generic_queries(self):
+        """Test: Generic 'tell me about X' should have medium confidence"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+        query = "Tell me about programming"
+
+        # Act
+        result = analyzer.analyze(query)
+
+        # Assert - should be medium (0.5-0.8), not high
+        assert 0.5 <= result.confidence < 0.8, f"Generic query should have medium confidence, got {result.confidence}"
