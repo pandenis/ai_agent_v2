@@ -42,11 +42,22 @@ class QueryAnalyzer:
     """Analyzes query complexity, intent, and entities"""
 
     # Patterns for complex queries
+    # Patterns for complex queries
     COMPLEX_PATTERNS = [
         "compare",
         "analyze",
         "evaluate",
         "assess",
+        # Comparison patterns
+        "pros and cons",
+        "advantages and disadvantages",
+        "difference between",
+        "trade-off",
+        "trade-offs",
+        # Analysis patterns
+        "implications of",
+        "impact of",
+        "relationship between",
     ]
 
     # Patterns for medium queries

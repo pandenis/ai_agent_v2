@@ -241,3 +241,21 @@ class TestQueryAnalyzer:
             result = analyzer.analyze(greeting)
             assert result.complexity == "simple", f"'{greeting}' should be simple"
             assert result.requires_reasoning == False
+
+    def test_complex_comparison_patterns(self):
+        """Test: Comparison and analysis patterns should be complex"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+
+        complex_queries = [
+            ("What are the pros and cons of Python?", "pros and cons"),
+            ("What is the difference between Java and Python?", "difference between"),
+            ("Explain the advantages and disadvantages of cloud computing", "advantages/disadvantages"),
+            ("What are the trade-offs between speed and accuracy?", "trade-offs"),
+        ]
+
+        # Act & Assert
+        for query, pattern in complex_queries:
+            result = analyzer.analyze(query)
+            assert result.complexity == "complex", f"'{pattern}' pattern should be complex, got {result.complexity}"
+            assert result.requires_reasoning == True
