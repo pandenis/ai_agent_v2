@@ -259,3 +259,21 @@ class TestQueryAnalyzer:
             result = analyzer.analyze(query)
             assert result.complexity == "complex", f"'{pattern}' pattern should be complex, got {result.complexity}"
             assert result.requires_reasoning == True
+
+    def test_medium_instructional_patterns(self):
+        """Test: Instructional and help patterns should be medium complexity"""
+        # Arrange
+        analyzer = QueryAnalyzer()
+
+        medium_queries = [
+            ("Can you help me with Python?", "help me with"),
+            ("What are the best practices for testing?", "best practices"),
+            ("What should I do to improve performance?", "what should I do"),
+            ("Tell me about machine learning", "tell me about"),
+            ("Give me examples of design patterns", "give me examples"),
+        ]
+
+        # Act & Assert
+        for query, pattern in medium_queries:
+            result = analyzer.analyze(query)
+            assert result.complexity == "medium", f"'{pattern}' should be medium, got {result.complexity}"

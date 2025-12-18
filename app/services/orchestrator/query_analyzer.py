@@ -67,6 +67,18 @@ class QueryAnalyzer:
         "what are the steps",
         "explain",
         "why does",
+        # Help patterns
+        "help me with",
+        "can you help",
+        # Instructional patterns
+        "best practices",
+        "what should i do",
+        "tell me about",
+        "give me examples",
+        "show me",
+        # Learning patterns
+        "teach me",
+        "guide me",
     ]
 
     def analyze(self, query: str) -> QueryAnalysis:
