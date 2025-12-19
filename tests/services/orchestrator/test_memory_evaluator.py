@@ -311,3 +311,48 @@ class TestMemoryEvaluator:
 
         # Assert - Denis should be in gaps (not mentioned in facts)
         assert "Denis" in result.gaps, f"'Denis' should be in gaps, got {result.gaps}"
+
+    @pytest.mark.asyncio
+    async def test_confidence_is_dynamic(self):
+        """Test: Confidence should be based on fact quality, not hardcoded"""
+        # Arrange
+        query_analysis = QueryAnalysis(
+            complexity="simple",
+            intent="question",
+            query_type="factual",
+            entities=["Denis"],
+            topics=["general"],
+            requires_memory=True,
+            requires_reasoning=False,
+            confidence=0.9
+        )
+
+        mock_memory_service = AsyncMock()
+        evaluator = MemoryEvaluator(memory_service=mock_memory_service)
+
+        # Scenario 1: High quality facts → high confidence
+        high_quality_facts = [
+            {"text": "User's name is Denis", "importance": 0.95, "confidence": 0.95},
+            {"text": "Denis is a QA Engineer", "importance": 0.90, "confidence": 0.90},
+        ]
+        mock_memory_service.search_facts.return_value = high_quality_facts
+        result_high = await evaluator.evaluate(query_analysis, "test-session")
+
+        # Scenario 2: Low quality facts → low confidence
+        low_quality_facts = [
+            {"text": "Maybe user is Denis", "importance": 0.3, "confidence": 0.3},
+        ]
+        mock_memory_service.search_facts.return_value = low_quality_facts
+        result_low = await evaluator.evaluate(query_analysis, "test-session")
+
+        # Assert: High quality should have higher confidence than low quality
+        assert result_high.confidence > result_low.confidence, \
+            f"High quality ({result_high.confidence}) should be > low quality ({result_low.confidence})"
+
+        # Assert: High quality confidence should be >= 0.8
+        assert result_high.confidence >= 0.8, \
+            f"High quality facts should give confidence >= 0.8, got {result_high.confidence}"
+
+        # Assert: Low quality confidence should be < 0.7
+        assert result_low.confidence < 0.7, \
+            f"Low quality facts should give confidence < 0.7, got {result_low.confidence}"

@@ -65,11 +65,14 @@ class MemoryEvaluator:
         # Identify gaps
         gaps = self._identify_gaps(query_analysis, relevant_facts)
 
+        # Calculate dynamic confidence based on facts quality
+        evaluation_confidence = self._calculate_confidence(relevant_facts)
+
         return MemoryEvaluation(
             coverage_score=coverage_score,
             relevant_facts=relevant_facts,
             gaps=gaps,
-            confidence=0.8  # High confidence in evaluation
+            confidence=evaluation_confidence
         )
 
     async def _search_relevant_facts(self, query_analysis, session_id: str) -> List[dict]:
@@ -163,3 +166,41 @@ class MemoryEvaluator:
                 gaps.append(entity)
 
         return gaps
+
+    def _calculate_confidence(self, relevant_facts: List[dict]) -> float:
+        """Calculate confidence in the evaluation based on fact quality
+
+        Confidence is based on:
+        - Number of facts found
+        - Average importance/confidence of facts
+        """
+        if not relevant_facts:
+            return 0.3  # Low confidence when no facts
+
+        num_facts = len(relevant_facts)
+
+        # Average quality of facts
+        avg_importance = sum(
+            fact.get('importance', 0.5) for fact in relevant_facts
+        ) / num_facts
+
+        avg_fact_confidence = sum(
+            fact.get('confidence', 0.5) for fact in relevant_facts
+        ) / num_facts
+
+        # Quality score (0-1)
+        quality_score = (avg_importance + avg_fact_confidence) / 2
+
+        # Base confidence from fact count
+        if num_facts >= 5:
+            base_confidence = 0.7
+        elif num_facts >= 2:
+            base_confidence = 0.6
+        else:
+            base_confidence = 0.4
+
+        # Final confidence: base + quality bonus (up to +0.3)
+        final_confidence = base_confidence + (quality_score * 0.3)
+
+        # Cap at 0.95 (never 100% confident)
+        return round(min(0.95, final_confidence), 2)
