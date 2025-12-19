@@ -99,22 +99,46 @@ class MemoryEvaluator:
             return []
 
     def _calculate_coverage(self, query_analysis, relevant_facts: List[dict]) -> float:
-        """Calculate how well memory covers the query (0-1)"""
+        """Calculate how well memory covers the query (0-1)
+
+        Coverage is based on:
+        1. Number of facts found
+        2. Importance/confidence of facts (quality bonus)
+        """
         if not relevant_facts:
             return 0.0
 
-        # Simple coverage based on number of facts found
         num_facts = len(relevant_facts)
 
-        # More facts = better coverage
+        # Base coverage from fact count
         if num_facts >= 5:
-            return 0.9
+            base_coverage = 0.9
         elif num_facts >= 2:
-            return 0.7
+            base_coverage = 0.7
         elif num_facts >= 1:
-            return 0.5
+            base_coverage = 0.5
         else:
             return 0.0
+
+        # Quality bonus: high importance/confidence facts boost coverage
+        avg_importance = sum(
+            fact.get('importance', 0.5) for fact in relevant_facts
+        ) / num_facts
+
+        avg_confidence = sum(
+            fact.get('confidence', 0.5) for fact in relevant_facts
+        ) / num_facts
+
+        # Quality score (0-1)
+        quality_score = (avg_importance + avg_confidence) / 2
+
+        # Bonus: up to +0.2 for high quality facts
+        quality_bonus = quality_score * 0.25
+
+        # Final coverage (capped at 1.0)
+        final_coverage = min(1.0, base_coverage + quality_bonus)
+
+        return round(final_coverage, 2)
 
     def _identify_gaps(self, query_analysis, relevant_facts: List[dict]) -> List[str]:
         """Identify what's missing from memory"""

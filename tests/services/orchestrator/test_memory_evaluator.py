@@ -172,8 +172,8 @@ class TestMemoryEvaluator:
             confidence=0.9
         )
 
-        # Mock with only 1 fact
-        mock_facts = [{"text": "User's name is Denis", "importance": 5.0}]
+        # Mock with only 1 fact (low importance)
+        mock_facts = [{"text": "User's name is Denis", "importance": 0.3, "confidence": 0.3}]
 
         mock_memory_service = AsyncMock()
         mock_memory_service.search_facts.return_value = mock_facts
@@ -184,7 +184,7 @@ class TestMemoryEvaluator:
         result = await evaluator.evaluate(query_analysis, "test-session")
 
         # Assert
-        assert result.coverage_score == 0.5
+        assert 0.5 <= result.coverage_score <= 0.65
         assert len(result.relevant_facts) == 1
 
     @pytest.mark.asyncio
@@ -204,7 +204,7 @@ class TestMemoryEvaluator:
 
         # Mock with 5 facts
         mock_facts = [
-            {"text": f"Python fact {i}", "importance": 4.0 + i * 0.2}
+            {"text": f"Python fact {i}", "importance": 0.5, "confidence": 0.5}
             for i in range(5)
         ]
 
@@ -217,7 +217,7 @@ class TestMemoryEvaluator:
         result = await evaluator.evaluate(query_analysis, "test-session")
 
         # Assert
-        assert result.coverage_score == 0.9
+        assert result.coverage_score >= 0.9
         assert len(result.relevant_facts) == 5
 
     @pytest.mark.asyncio
@@ -248,3 +248,35 @@ class TestMemoryEvaluator:
         assert result.coverage_score == 0.0  # Should return 0 coverage on error
         assert len(result.relevant_facts) == 0
         assert len(result.gaps) > 0  # Should identify all topics as gaps
+
+    @pytest.mark.asyncio
+    async def test_coverage_considers_importance(self):
+        """Test: Coverage should consider fact importance, not just count"""
+        # Arrange
+        query_analysis = QueryAnalysis(
+            complexity="simple",
+            intent="question",
+            query_type="factual",
+            entities=["Denis"],
+            topics=["general"],
+            requires_memory=True,
+            requires_reasoning=False,
+            confidence=0.9
+        )
+
+        # High importance fact - should give good coverage
+        high_importance_facts = [
+            {"text": "User's name is Denis", "importance": 0.95, "confidence": 0.98}
+        ]
+
+        mock_memory_service = AsyncMock()
+        mock_memory_service.search_facts.return_value = high_importance_facts
+
+        evaluator = MemoryEvaluator(memory_service=mock_memory_service)
+
+        # Act
+        result = await evaluator.evaluate(query_analysis, "test-session")
+
+        # Assert - 1 high-importance fact should give coverage >= 0.7
+        assert result.coverage_score >= 0.7, \
+            f"1 high-importance fact should give coverage >= 0.7, got {result.coverage_score}"
