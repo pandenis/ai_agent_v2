@@ -280,3 +280,34 @@ class TestMemoryEvaluator:
         # Assert - 1 high-importance fact should give coverage >= 0.7
         assert result.coverage_score >= 0.7, \
             f"1 high-importance fact should give coverage >= 0.7, got {result.coverage_score}"
+
+    @pytest.mark.asyncio
+    async def test_identify_gaps_includes_missing_entities(self):
+        """Test: Gaps should include entities not found in facts"""
+        # Arrange
+        query_analysis = QueryAnalysis(
+            complexity="simple",
+            intent="question",
+            query_type="factual",
+            entities=["Denis", "Python"],
+            topics=["programming"],
+            requires_memory=True,
+            requires_reasoning=False,
+            confidence=0.9
+        )
+
+        # Facts only mention Python, NOT Denis
+        mock_facts = [
+            {"text": "User knows Python programming", "importance": 0.8}
+        ]
+
+        mock_memory_service = AsyncMock()
+        mock_memory_service.search_facts.return_value = mock_facts
+
+        evaluator = MemoryEvaluator(memory_service=mock_memory_service)
+
+        # Act
+        result = await evaluator.evaluate(query_analysis, "test-session")
+
+        # Assert - Denis should be in gaps (not mentioned in facts)
+        assert "Denis" in result.gaps, f"'Denis' should be in gaps, got {result.gaps}"

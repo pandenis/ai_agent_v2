@@ -141,16 +141,25 @@ class MemoryEvaluator:
         return round(final_coverage, 2)
 
     def _identify_gaps(self, query_analysis, relevant_facts: List[dict]) -> List[str]:
-        """Identify what's missing from memory"""
+        """Identify what's missing from memory (topics and entities)"""
         gaps = []
+
+        # Combine all fact texts for searching
+        all_facts_text = " ".join(
+            str(fact.get('text', '')).lower() for fact in relevant_facts
+        )
 
         # Check if we have facts for each topic
         for topic in query_analysis.topics:
-            has_topic_facts = any(
-                topic.lower() in str(fact.get('text', '')).lower()
-                for fact in relevant_facts
-            )
-            if not has_topic_facts:
+            if topic.lower() not in all_facts_text:
                 gaps.append(topic)
+
+        # Check if we have facts for each entity
+        for entity in query_analysis.entities:
+            # Skip common/generic entities
+            if entity.lower() in ['i', 'my', 'me', 'the', 'a', 'an']:
+                continue
+            if entity.lower() not in all_facts_text:
+                gaps.append(entity)
 
         return gaps
