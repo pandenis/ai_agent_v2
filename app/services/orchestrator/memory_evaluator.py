@@ -118,10 +118,8 @@ class MemoryEvaluator:
             base_coverage = 0.9
         elif num_facts >= 2:
             base_coverage = 0.7
-        elif num_facts >= 1:
+        else:  # num_facts >= 1 (guaranteed since we returned early if empty)
             base_coverage = 0.5
-        else:
-            return 0.0
 
         # Quality bonus: high importance/confidence facts boost coverage
         avg_importance = sum(

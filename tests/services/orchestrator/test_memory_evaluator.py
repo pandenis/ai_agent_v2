@@ -356,3 +356,66 @@ class TestMemoryEvaluator:
         # Assert: Low quality confidence should be < 0.7
         assert result_low.confidence < 0.7, \
             f"Low quality facts should give confidence < 0.7, got {result_low.confidence}"
+
+    @pytest.mark.asyncio
+    async def test_empty_search_terms_returns_empty_facts(self):
+        """Test: When no topics and no entities, return empty facts"""
+        # Arrange
+        query_analysis = QueryAnalysis(
+            complexity="simple",
+            intent="statement",
+            query_type="factual",
+            entities=[],  # No entities
+            topics=[],  # No topics
+            requires_memory=False,
+            requires_reasoning=False,
+            confidence=0.5
+        )
+
+        mock_memory_service = AsyncMock()
+        mock_memory_service.search_facts.return_value = []
+
+        evaluator = MemoryEvaluator(memory_service=mock_memory_service)
+
+        # Act
+        result = await evaluator.evaluate(query_analysis, "test-session")
+
+        # Assert
+        assert result.relevant_facts == []
+        assert result.coverage_score == 0.0
+        # search_facts should NOT be called when no search terms
+        mock_memory_service.search_facts.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_gaps_skip_common_entities(self):
+        """Test: Common entities (I, my, the) should not appear in gaps"""
+        # Arrange
+        query_analysis = QueryAnalysis(
+            complexity="simple",
+            intent="question",
+            query_type="factual",
+            entities=["I", "my", "Python", "the"],  # Mix of common and real entities
+            topics=["programming"],
+            requires_memory=True,
+            requires_reasoning=False,
+            confidence=0.9
+        )
+
+        # Facts mention programming but not Python
+        mock_facts = [
+            {"text": "User likes programming", "importance": 0.7, "confidence": 0.7}
+        ]
+
+        mock_memory_service = AsyncMock()
+        mock_memory_service.search_facts.return_value = mock_facts
+
+        evaluator = MemoryEvaluator(memory_service=mock_memory_service)
+
+        # Act
+        result = await evaluator.evaluate(query_analysis, "test-session")
+
+        # Assert - Python should be in gaps, but not I, my, the
+        assert "Python" in result.gaps, "Real entity 'Python' should be in gaps"
+        assert "I" not in result.gaps, "Common word 'I' should NOT be in gaps"
+        assert "my" not in result.gaps, "Common word 'my' should NOT be in gaps"
+        assert "the" not in result.gaps, "Common word 'the' should NOT be in gaps"
