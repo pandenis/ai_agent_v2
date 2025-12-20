@@ -598,6 +598,63 @@ async def test_memory_update_failure_doesnt_break_response(
     assert "text" in result
     assert len(result["text"]) > 0
 
+
+@pytest.mark.asyncio
+async def test_enhanced_fallback_when_no_agent_available(
+        mock_memory_service, mock_agent
+):
+    """
+    Test Case: Enhanced strategy but no agent available
+    Expected: Falls back to direct answer from memory
+    """
+    from app.services.orchestrator.orchestrator import IntelligentOrchestrator
+    from app.services.orchestrator.response_formatter import ResponseFormatter
+    from unittest.mock import Mock
+
+    # Create registry that returns None (no agent available)
+    mock_registry_no_agent = Mock()
+    mock_registry_no_agent.get_agent = Mock(return_value=None)
+    mock_registry_no_agent.get_default_agent = Mock(return_value=None)
+
+    # Create orchestrator with no-agent registry
+    orchestrator_no_agent = IntelligentOrchestrator(
+        memory_service=mock_memory_service,
+        agent_registry=mock_registry_no_agent
+    )
+
+    # Setup: Medium coverage (triggers enhanced) but with facts
+    mock_memory_service.search_facts.return_value = [
+        {"text": "User knows Python programming", "importance": 0.5, "confidence": 0.5},
+        {"text": "User is a developer", "importance": 0.5, "confidence": 0.5}
+    ]
+
+    # Execute: Medium query that would trigger enhanced
+    result = await orchestrator_no_agent.process_query(
+        query="What programming skills do I have?",
+        session_id="test-no-agent"
+    )
+
+    # Assert: Should fallback to memory-based answer
+    assert result is not None
+    assert "text" in result
+    # Should contain info from facts since agent was unavailable
+    assert "Python" in result["text"] or "developer" in result["text"]
+
+
+@pytest.mark.asyncio
+async def test_direct_answer_method_with_empty_facts(
+        orchestrator, mock_memory_service
+):
+    """
+    Test Case: _direct_answer called with empty facts list
+    Expected: Returns default 'no information' message
+    """
+    # Call _direct_answer directly with empty list
+    result = orchestrator._direct_answer([])
+
+    # Assert: Should return default message
+    assert "don't have" in result.lower() or "information" in result.lower()
+
 if __name__ == "__main__":
     # If running this file directly, show the summary
     test_summary()
