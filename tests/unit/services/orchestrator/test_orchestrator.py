@@ -140,13 +140,13 @@ async def test_medium_query_enhanced_answer(orchestrator, mock_memory_service, m
     mock_memory_service.search_facts.return_value = [
         {
             "text": "User is a QA Engineer",
-            "importance": 0.8,
+            "importance": 0.5,
             "confidence": 0.9
         },
         {
             "text": "User loves Python",
-            "importance": 0.7,
-            "confidence": 0.85
+            "importance": 0.4,
+            "confidence": 0.5
         }
     ]
 
