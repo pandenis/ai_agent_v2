@@ -349,3 +349,32 @@ class TestDecisionEngine:
 
             # Assert
             assert result.use_memory is True
+
+    def test_low_confidence_triggers_enhanced_despite_high_coverage(self):
+        """Test: Low memory confidence should trigger enhanced even with high coverage"""
+        # Arrange
+        engine = DecisionEngine()
+        query_analysis = QueryAnalysis(
+            complexity="simple",
+            intent="question",
+            query_type="factual",
+            entities=["Denis"],
+            topics=["general"],
+            requires_memory=True,
+            requires_reasoning=False,
+            confidence=0.9
+        )
+        # High coverage BUT low confidence - can't trust memory!
+        memory_eval = MemoryEvaluation(
+            coverage_score=0.95,
+            relevant_facts=[{"text": "Maybe user is Denis"}],
+            gaps=[],
+            confidence=0.4  # LOW confidence!
+        )
+
+        # Act
+        result = engine.decide(query_analysis, memory_eval)
+
+        # Assert - should NOT use direct because confidence is too low
+        assert result.strategy == "enhanced", \
+            f"Low confidence ({memory_eval.confidence}) should trigger enhanced, got {result.strategy}"

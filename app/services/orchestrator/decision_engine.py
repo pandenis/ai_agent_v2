@@ -96,7 +96,8 @@ class DecisionEngine:
 
         # RULE 1: Direct answer (high coverage + simple)
         if (query_analysis.complexity == "simple"
-                and memory_eval.coverage_score >= 0.9):
+                and memory_eval.coverage_score >= 0.9
+                and memory_eval.confidence >= 0.7):  # Must be confident!
             return Decision(
                 strategy="direct",
                 agent=None,
