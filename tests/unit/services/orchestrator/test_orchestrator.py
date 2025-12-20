@@ -546,6 +546,58 @@ async def test_response_formatter_integration(
 
     print(f"  Test 2: Strategy used = {result['metadata']['strategy']}")
 
+
+@pytest.mark.asyncio
+async def test_direct_answer_no_facts_falls_back_to_ai(
+        orchestrator, mock_memory_service, mock_agent
+):
+    """
+    Test Case: Query with NO facts in memory
+    Expected: Falls back to deep_reasoning (AI) when no memory coverage
+    """
+    # Setup: No facts in memory → coverage = 0
+    mock_memory_service.search_facts.return_value = []
+    mock_agent.process.return_value = "I don't know your name yet. Could you tell me?"
+
+    # Execute with simple query
+    result = await orchestrator.process_query(
+        query="What is my name?",
+        session_id="test-no-facts"
+    )
+
+    # Assert: With 0 coverage, falls back to deep_reasoning (AI)
+    assert result["metadata"]["strategy"] == "deep_reasoning"
+    assert result is not None
+    assert len(result["text"]) > 0
+
+@pytest.mark.asyncio
+async def test_memory_update_failure_doesnt_break_response(
+        orchestrator, mock_memory_service, mock_agent
+):
+    """
+    Test Case: Memory update fails but response should still work
+    Expected: Response returns successfully despite memory failure
+    """
+    # Setup: Facts for query
+    mock_memory_service.search_facts.return_value = [
+        {"text": "User likes Python", "importance": 0.5, "confidence": 0.5}
+    ]
+    mock_agent.process.return_value = "Python is a great language!"
+
+    # Setup: Memory update fails
+    mock_memory_service.add_fact.side_effect = Exception("Database connection error")
+
+    # Execute
+    result = await orchestrator.process_query(
+        query="Tell me about Python",
+        session_id="test-memory-failure"
+    )
+
+    # Assert: Response should still be returned despite memory failure
+    assert result is not None
+    assert "text" in result
+    assert len(result["text"]) > 0
+
 if __name__ == "__main__":
     # If running this file directly, show the summary
     test_summary()
