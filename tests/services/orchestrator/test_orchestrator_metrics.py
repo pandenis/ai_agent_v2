@@ -61,3 +61,29 @@ class TestOrchestratorMetrics:
 
         stats = metrics.get_stats()
         assert stats["avg_response_time_ms"] == 150.0
+
+    def test_get_stats_empty_history(self):
+        """Test: get_stats with no queries tracked"""
+        metrics = OrchestratorMetrics()
+
+        # No queries tracked
+        stats = metrics.get_stats()
+
+        assert stats["total_queries"] == 0
+        assert stats["total_cost_usd"] == 0.0
+        assert stats["avg_response_time_ms"] == 0.0
+
+    def test_track_unknown_strategy(self):
+        """Test: Track query with unknown strategy name"""
+        metrics = OrchestratorMetrics()
+
+        # Unknown strategy (edge case)
+        metrics.track_query(
+            strategy="custom_strategy",
+            elapsed_time_ms=1000,
+            cost_usd=0.001
+        )
+
+        stats = metrics.get_stats()
+        assert stats["total_queries"] == 1
+        assert stats["strategy_counts"]["custom_strategy"] == 1
