@@ -129,12 +129,28 @@ class DecisionEngine:
             )
 
     def _select_agent(self, topics: list) -> str:
-        """Select best agent for topics"""
-        # Use first topic to select agent
-        if topics:
-            first_topic = topics[0]
-            return self.AGENT_MAP.get(first_topic, "llama3")
-        return "llama3"
+        """Select best agent for topics using priority
+
+        Priority (highest first):
+        1. medical - specialized domain
+        2. programming - technical expertise
+        3. creative - creative tasks
+        4. analysis - complex reasoning
+        5. general - fallback
+        """
+        if not topics:
+            return "llama3"
+
+        # Priority order: specialized topics first
+        PRIORITY = ["medical", "programming", "creative", "analysis", "general"]
+
+        # Find highest priority topic that exists
+        for priority_topic in PRIORITY:
+            if priority_topic in topics:
+                return self.AGENT_MAP.get(priority_topic, "llama3")
+
+        # Fallback: use first topic or default
+        return self.AGENT_MAP.get(topics[0], "llama3")
 
 
 # Alias for compatibility with orchestrator

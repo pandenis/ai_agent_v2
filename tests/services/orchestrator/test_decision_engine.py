@@ -378,3 +378,33 @@ class TestDecisionEngine:
         # Assert - should NOT use direct because confidence is too low
         assert result.strategy == "enhanced", \
             f"Low confidence ({memory_eval.confidence}) should trigger enhanced, got {result.strategy}"
+
+    def test_agent_selection_prioritizes_specialized_topics(self):
+        """Test: Agent selection should prioritize specialized topics over general"""
+        # Arrange
+        engine = DecisionEngine()
+
+        # Medical + general → should pick medical_ai (specialized)
+        query_analysis = QueryAnalysis(
+            complexity="medium",
+            intent="question",
+            query_type="factual",
+            entities=["symptoms"],
+            topics=["general", "medical"],  # general first, but medical is specialized!
+            requires_memory=True,
+            requires_reasoning=False,
+            confidence=0.8
+        )
+        memory_eval = MemoryEvaluation(
+            coverage_score=0.75,
+            relevant_facts=[{"text": "health info"}],
+            gaps=[],
+            confidence=0.8
+        )
+
+        # Act
+        result = engine.decide(query_analysis, memory_eval)
+
+        # Assert - should pick medical_ai, not llama3 (general)
+        assert result.agent == "medical_ai", \
+            f"Should prioritize medical over general, got {result.agent}"
