@@ -760,6 +760,30 @@ async def test_deep_reasoning_uses_sorted_context(
     assert crucial_pos < minor_pos or minor_pos == -1, \
         "High-importance facts should appear first in deep reasoning context"
 
+
+@pytest.mark.asyncio
+async def test_orchestrator_tracks_metrics(
+        orchestrator, mock_memory_service, mock_agent
+):
+    """
+    Test Case: Orchestrator should track query metrics
+    Expected: Metrics recorded after each query
+    """
+    # Setup
+    mock_memory_service.search_facts.return_value = [
+        {"text": "Test fact", "importance": 0.9, "confidence": 0.9}
+    ]
+    mock_agent.process.return_value = "Test response"
+
+    # Execute multiple queries
+    await orchestrator.process_query(query="What is my name?", session_id="test-1")
+    await orchestrator.process_query(query="Tell me about Python", session_id="test-2")
+
+    # Assert: Metrics should be tracked
+    assert hasattr(orchestrator, 'metrics'), "Orchestrator should have metrics attribute"
+    stats = orchestrator.metrics.get_stats()
+    assert stats["total_queries"] == 2, "Should track 2 queries"
+
 if __name__ == "__main__":
     # If running this file directly, show the summary
     test_summary()

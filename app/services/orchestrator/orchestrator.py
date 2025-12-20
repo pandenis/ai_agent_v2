@@ -18,6 +18,7 @@ from app.services.orchestrator.query_analyzer import QueryAnalyzer, QueryAnalysi
 from app.services.orchestrator.memory_evaluator import MemoryEvaluator, MemoryEvaluation
 from app.services.orchestrator.decision_engine import DecisionEngine, ResponseStrategy
 from app.services.orchestrator.response_formatter import ResponseFormatter
+from app.services.orchestrator.orchestrator_metrics import OrchestratorMetrics
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,7 @@ class IntelligentOrchestrator:
         self.memory_evaluator = MemoryEvaluator(memory_service)
         self.decision_engine = DecisionEngine()
         self.response_formatter = ResponseFormatter()
+        self.metrics = OrchestratorMetrics()
 
         logger.info("IntelligentOrchestrator initialized successfully")
 
@@ -183,6 +185,14 @@ class IntelligentOrchestrator:
             }
 
             logger.info(f"Query processed in {elapsed_time:.2f}ms using {strategy.strategy} strategy")
+
+            # Track metrics
+            self.metrics.track_query(
+                strategy=strategy.strategy,
+                elapsed_time_ms=elapsed_time,
+                cost_usd=strategy.estimated_cost
+            )
+
             return result
 
         except Exception as e:
