@@ -655,6 +655,31 @@ async def test_direct_answer_method_with_empty_facts(
     # Assert: Should return default message
     assert "don't have" in result.lower() or "information" in result.lower()
 
+
+@pytest.mark.asyncio
+async def test_build_context_sorts_by_importance(orchestrator):
+    """
+    Test Case: Context building should prioritize important facts
+    Expected: High-importance facts appear first in context
+    """
+    # Arrange: Facts with varying importance (out of order)
+    facts = [
+        {"text": "Low importance fact", "importance": 0.3, "confidence": 0.8},
+        {"text": "High importance fact", "importance": 0.95, "confidence": 0.9},
+        {"text": "Medium importance fact", "importance": 0.6, "confidence": 0.85},
+    ]
+
+    # Act: Build context
+    context = orchestrator._build_context(facts)
+
+    # Assert: High importance fact should come first
+    high_pos = context.find("High importance")
+    medium_pos = context.find("Medium importance")
+    low_pos = context.find("Low importance")
+
+    assert high_pos < medium_pos < low_pos, \
+        "Facts should be sorted by importance (highest first)"
+
 if __name__ == "__main__":
     # If running this file directly, show the summary
     test_summary()

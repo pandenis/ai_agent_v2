@@ -335,6 +335,34 @@ class IntelligentOrchestrator:
         # Fallback to any available agent
         return self.agent_registry.get_default_agent()
 
+    def _build_context(self, facts: List[Dict[str, Any]], max_facts: int = 5) -> str:
+        """
+        Build context string from memory facts, sorted by importance.
+
+        Args:
+            facts: List of fact dictionaries with 'text', 'importance', 'confidence'
+            max_facts: Maximum number of facts to include
+
+        Returns:
+            Formatted context string with facts sorted by importance
+        """
+        if not facts:
+            return ""
+
+        # Sort by importance (highest first)
+        sorted_facts = sorted(
+            facts,
+            key=lambda f: f.get('importance', 0.5),
+            reverse=True
+        )
+
+        # Take top N facts
+        top_facts = sorted_facts[:max_facts]
+
+        # Format as context string
+        context_lines = [f"- {fact.get('text', '')}" for fact in top_facts]
+        return "\n".join(context_lines)
+
     async def _extract_and_save_facts(
             self,
             session_id: str,
