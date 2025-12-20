@@ -270,9 +270,9 @@ class IntelligentOrchestrator:
         context_parts = []
 
         # Add memory context
+        # Add memory context (sorted by importance)
         if memory_eval.relevant_facts:
-            facts_text = "\n".join([f"- {fact.get('text', '')}"
-                                    for fact in memory_eval.relevant_facts[:10]])
+            facts_text = self._build_context(memory_eval.relevant_facts, max_facts=10)
             context_parts.append(f"Known information:\n{facts_text}")
 
         # Add information gaps

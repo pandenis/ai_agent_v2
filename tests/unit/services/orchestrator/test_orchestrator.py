@@ -720,6 +720,46 @@ async def test_enhanced_answer_uses_sorted_context(
     assert critical_pos < low_pos or low_pos == -1, \
         "High-importance facts should appear first in context"
 
+
+@pytest.mark.asyncio
+async def test_deep_reasoning_uses_sorted_context(
+        orchestrator, mock_memory_service, mock_agent
+):
+    """
+    Test Case: Deep reasoning should use _build_context for sorted facts
+    Expected: High-importance facts appear first in comprehensive context
+    """
+    # Setup: Facts with varying importance (unsorted)
+    mock_memory_service.search_facts.return_value = [
+        {"text": "Minor detail", "importance": 0.1, "confidence": 0.7},
+        {"text": "Crucial background info", "importance": 0.98, "confidence": 0.95},
+        {"text": "Somewhat relevant fact", "importance": 0.4, "confidence": 0.8},
+    ]
+
+    # Capture what prompt is sent to AI
+    captured_prompt = None
+
+    async def capture_process(prompt):
+        nonlocal captured_prompt
+        captured_prompt = prompt
+        return "Deep analysis response with multiple paragraphs."
+
+    mock_agent.process = capture_process
+
+    # Execute: Complex query triggers deep reasoning
+    result = await orchestrator.process_query(
+        query="Compare and analyze the pros and cons of different approaches",
+        session_id="test-deep-sorted"
+    )
+
+    # Assert: Crucial info should appear before minor detail
+    assert captured_prompt is not None
+    crucial_pos = captured_prompt.find("Crucial background info")
+    minor_pos = captured_prompt.find("Minor detail")
+
+    assert crucial_pos < minor_pos or minor_pos == -1, \
+        "High-importance facts should appear first in deep reasoning context"
+
 if __name__ == "__main__":
     # If running this file directly, show the summary
     test_summary()
