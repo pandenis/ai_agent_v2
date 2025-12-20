@@ -222,11 +222,10 @@ class IntelligentOrchestrator:
         """
         Generate an enhanced answer using AI + memory.
         This is BALANCED - uses AI but with memory context to be more relevant.
-
         Uses ResponseFormatter to format the response with context.
         """
-        # Build context from memory
-        context = "\n".join([f"- {fact.get('text', '')}" for fact in memory_facts[:5]])
+        # Build context from memory (sorted by importance)
+        context = self._build_context(memory_facts, max_facts=5)
 
         # Create enhanced prompt
         enhanced_prompt = f"""Context from previous conversations:

@@ -680,6 +680,46 @@ async def test_build_context_sorts_by_importance(orchestrator):
     assert high_pos < medium_pos < low_pos, \
         "Facts should be sorted by importance (highest first)"
 
+@pytest.mark.asyncio
+async def test_enhanced_answer_uses_sorted_context(
+        orchestrator, mock_memory_service, mock_agent
+):
+    """
+    Test Case: Enhanced answer should use _build_context for sorted facts
+    Expected: High-importance facts are prioritized in AI prompt
+    """
+    # Setup: Facts with varying importance (unsorted)
+    mock_memory_service.search_facts.return_value = [
+        {"text": "Low priority info", "importance": 0.2, "confidence": 0.8},
+        {"text": "Critical user preference", "importance": 0.95, "confidence": 0.9},
+        {"text": "Medium relevance fact", "importance": 0.5, "confidence": 0.85},
+    ]
+
+    # Capture what prompt is sent to AI
+    captured_prompt = None
+
+    async def capture_process(prompt):
+        nonlocal captured_prompt
+        captured_prompt = prompt
+        return "AI response based on context"
+
+    mock_agent.process = capture_process
+
+    # Execute
+    result = await orchestrator.process_query(
+        query="What do you know about my preferences?",
+        session_id="test-sorted-context"
+    )
+
+    # Assert: Critical fact should appear before low priority in context
+    assert captured_prompt is not None
+    critical_pos = captured_prompt.find("Critical user preference")
+    low_pos = captured_prompt.find("Low priority info")
+
+    # Critical should come first (or low might not be included at all)
+    assert critical_pos < low_pos or low_pos == -1, \
+        "High-importance facts should appear first in context"
+
 if __name__ == "__main__":
     # If running this file directly, show the summary
     test_summary()
