@@ -127,3 +127,28 @@ class TestResponseFormatter:
         assert "Climate change" in result
         assert "hurricanes" in result
         assert "Coral reefs" in result
+
+    def test_format_enhanced_without_context(self):
+        """Test: Enhanced answer with empty context_facts"""
+        formatter = ResponseFormatter()
+        ai_response = "Python is a great programming language."
+        context_facts = []  # Empty!
+
+        result = formatter.format_enhanced(ai_response, context_facts)
+
+        # Should include AI response
+        assert "Python" in result
+        # Should NOT include context section (no facts)
+        assert "Based on" not in result
+
+    def test_format_deep_with_source(self):
+        """Test: Deep reasoning with source attribution"""
+        formatter = ResponseFormatter()
+        ai_response = "This is a comprehensive analysis of the topic."
+
+        result = formatter.format_deep(ai_response, include_source=True)
+
+        # Should include response
+        assert "comprehensive analysis" in result
+        # Should include source attribution
+        assert "Deep reasoning" in result or "sources" in result
