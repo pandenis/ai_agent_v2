@@ -812,6 +812,50 @@ async def test_deep_reasoning_uses_reasoning_planner(
         "Deep reasoning should include reasoning_steps from planner"
     assert len(result["metadata"]["reasoning_steps"]) >= 2
 
+
+@pytest.mark.asyncio
+async def test_deep_reasoning_executes_web_search_for_gaps(
+        mock_memory_service, mock_agent
+):
+    """
+    Test Case: Deep reasoning should execute web search when gaps exist
+    Expected: WebSearchService.search() called when plan includes web_search
+    """
+    from unittest.mock import AsyncMock, Mock
+    from app.services.orchestrator.orchestrator import IntelligentOrchestrator
+
+    # Create mock web search service
+    mock_web_search = AsyncMock()
+    mock_web_search.search = AsyncMock(return_value=[
+        {"title": "Inflation Report 2024", "snippet": "Current rate is 3.2%", "url": "http://example.com"}
+    ])
+
+    # Create mock registry
+    mock_registry = Mock()
+    mock_registry.get_agent = Mock(return_value=mock_agent)
+    mock_registry.get_default_agent = Mock(return_value=mock_agent)
+
+    # Create orchestrator with web search service
+    orchestrator = IntelligentOrchestrator(
+        memory_service=mock_memory_service,
+        agent_registry=mock_registry,
+        web_search_service=mock_web_search  # Pass web search service
+    )
+
+    # Setup: Low coverage with gaps to trigger web search
+    mock_memory_service.search_facts.return_value = []  # No facts = gaps
+    mock_agent.process.return_value = "Based on current data, inflation is around 3.2%..."
+
+    # Execute: Query about current events (needs web search)
+    result = await orchestrator.process_query(
+        query="What is the current inflation rate and economic outlook for 2024?",
+        session_id="test-web-search"
+    )
+
+    # Assert: Web search should have been called
+    assert mock_web_search.search.called, \
+        "WebSearchService.search() should be called when plan has web_search step"
+
 if __name__ == "__main__":
     # If running this file directly, show the summary
     test_summary()

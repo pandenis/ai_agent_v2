@@ -37,7 +37,8 @@ class IntelligentOrchestrator:
             self,
             memory_service,  # Handles memory storage/retrieval
             agent_registry,  # Manages AI agents (Mistral, DeepSeek, etc.)
-            fact_extractor=None  # Extracts facts from conversations
+            fact_extractor=None,  # Extracts facts from conversations
+            web_search_service = None  # Web search for external info
     ):
         """
         Initialize the orchestrator with required services.
@@ -51,6 +52,7 @@ class IntelligentOrchestrator:
         self.memory_service = memory_service
         self.agent_registry = agent_registry
         self.fact_extractor = fact_extractor
+        self.web_search_service = web_search_service
 
         # Create instances of our components
         self.query_analyzer = QueryAnalyzer()
@@ -286,17 +288,44 @@ class IntelligentOrchestrator:
         )
         reasoning_steps = [f"{s.step_number}. {s.action}: {s.description}" for s in plan.steps]
 
+        # Execute web search if in plan and service available
+        web_search_results = []
+        if self.web_search_service:
+            for step in plan.steps:
+                if step.action == "web_search" and memory_eval.gaps:
+                    search_query = " ".join(memory_eval.gaps[:2])  # Top 2 gaps
+                    web_search_results = await self.web_search_service.search(
+                        query=search_query,
+                        max_results=3
+                    )
+                    break  # Only one web search per query
+
+        # Build comprehensive context
+        context_parts = []
+        # Add memory context (sorted by importance)
         # Build comprehensive context
         context_parts = []
         # Add memory context (sorted by importance)
         if memory_eval.relevant_facts:
             facts_text = self._build_context(memory_eval.relevant_facts, max_facts=10)
             context_parts.append(f"Known information:\n{facts_text}")
+
         # Add information gaps
         if memory_eval.gaps:
             gaps_text = ", ".join(memory_eval.gaps)
             context_parts.append(f"Information gaps: {gaps_text}")
+
+        # Add web search results
+        if web_search_results:
+            web_text = "\n".join([
+                f"- {r.get('title', '')}: {r.get('snippet', '')}"
+                for r in web_search_results if not r.get('error')
+            ])
+            if web_text:
+                context_parts.append(f"Web search results:\n{web_text}")
+
         context = "\n\n".join(context_parts)
+
         # Create deep reasoning prompt
         deep_prompt = f"""You are analyzing a complex question that requires deep thinking.
     Question: {query}
