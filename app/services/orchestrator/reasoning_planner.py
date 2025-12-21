@@ -70,7 +70,18 @@ class ReasoningPlanner:
             ))
             step_number += 1
 
-        # Step 2: Analyze the problem
+        # Step 2: Web search (if memory has gaps)
+        if memory_eval.gaps:
+            gaps_text = ", ".join(memory_eval.gaps[:3])  # Top 3 gaps
+            steps.append(ReasoningStep(
+                step_number=step_number,
+                action="web_search",
+                description=f"Search for: {gaps_text}",
+                tool="web_search"
+            ))
+            step_number += 1
+
+        # Step 3: Analyze the problem
         steps.append(ReasoningStep(
             step_number=step_number,
             action="analyze",
@@ -79,7 +90,7 @@ class ReasoningPlanner:
         ))
         step_number += 1
 
-        # Step 3: Synthesize final answer (always last)
+        # Step 4: Synthesize final answer (always last)
         steps.append(ReasoningStep(
             step_number=step_number,
             action="synthesize",

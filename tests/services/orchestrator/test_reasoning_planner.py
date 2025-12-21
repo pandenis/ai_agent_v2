@@ -167,3 +167,34 @@ class TestReasoningPlanner:
 
         # Last step should be synthesize
         assert plan.steps[-1].action == "synthesize"
+
+    def test_plan_includes_web_search_when_gaps_exist(self):
+        """Test: Plan includes web_search step when memory has gaps"""
+        planner = ReasoningPlanner()
+        query_analysis = QueryAnalysis(
+            complexity="complex",
+            intent="question",
+            query_type="reasoning",
+            entities=["inflation", "2024"],
+            topics=["economics"],
+            requires_memory=True,
+            requires_reasoning=True,
+            confidence=0.6
+        )
+        memory_eval = MemoryEvaluation(
+            coverage_score=0.2,  # Low coverage
+            relevant_facts=[],
+            gaps=["current inflation rates", "economic forecast"],  # Has gaps!
+            confidence=0.4
+        )
+
+        plan = planner.create_plan(
+            query="What is the current inflation rate and economic outlook?",
+            query_analysis=query_analysis,
+            memory_eval=memory_eval
+        )
+
+        # Should include web_search step to fill gaps
+        actions = [step.action for step in plan.steps]
+        assert "web_search" in actions, \
+            "Plan should include web_search when memory has gaps"
