@@ -784,6 +784,34 @@ async def test_orchestrator_tracks_metrics(
     stats = orchestrator.metrics.get_stats()
     assert stats["total_queries"] == 2, "Should track 2 queries"
 
+
+@pytest.mark.asyncio
+async def test_deep_reasoning_uses_reasoning_planner(
+        orchestrator, mock_memory_service, mock_agent
+):
+    """
+    Test Case: Deep reasoning should use ReasoningPlanner
+    Expected: Plan is created and steps are executed
+    """
+    # Setup: Low coverage to trigger deep reasoning
+    mock_memory_service.search_facts.return_value = [
+        {"text": "User interested in travel", "importance": 0.3, "confidence": 0.5}
+    ]
+    mock_agent.process.return_value = "Comprehensive analysis of Tokyo vs Paris costs..."
+
+    # Execute: Complex query triggers deep reasoning
+    result = await orchestrator.process_query(
+        query="Compare the cost of living between Tokyo and Paris with cultural factors",
+        session_id="test-planner"
+    )
+
+    # Assert: Should use deep_reasoning strategy
+    assert result["metadata"]["strategy"] == "deep_reasoning"
+    # Assert: Should have reasoning_steps in metadata (from planner)
+    assert "reasoning_steps" in result["metadata"], \
+        "Deep reasoning should include reasoning_steps from planner"
+    assert len(result["metadata"]["reasoning_steps"]) >= 2
+
 if __name__ == "__main__":
     # If running this file directly, show the summary
     test_summary()

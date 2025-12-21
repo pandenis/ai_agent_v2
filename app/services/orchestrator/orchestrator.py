@@ -19,6 +19,7 @@ from app.services.orchestrator.memory_evaluator import MemoryEvaluator, MemoryEv
 from app.services.orchestrator.decision_engine import DecisionEngine, ResponseStrategy
 from app.services.orchestrator.response_formatter import ResponseFormatter
 from app.services.orchestrator.orchestrator_metrics import OrchestratorMetrics
+from app.services.orchestrator.reasoning_planner import ReasoningPlanner
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,7 @@ class IntelligentOrchestrator:
         self.decision_engine = DecisionEngine()
         self.response_formatter = ResponseFormatter()
         self.metrics = OrchestratorMetrics()
+        self.reasoning_planner = ReasoningPlanner()
 
         logger.info("IntelligentOrchestrator initialized successfully")
 
@@ -132,7 +134,7 @@ class IntelligentOrchestrator:
             # ==========================================
             # Actually create the response based on the strategy
             logger.debug("Stage 4: Generating response")
-
+            reasoning_steps = []  # Only populated for deep_reasoning
             if strategy.strategy == "direct":
                 # Answer directly from memory (fast, free)
                 response_text = self._direct_answer(memory_eval.relevant_facts)
@@ -148,7 +150,7 @@ class IntelligentOrchestrator:
 
             else:  # deep_reasoning
                 # Deep thinking with AI (slow, thorough)
-                response_text, sources = await self._deep_reasoning_answer(
+                response_text, sources, reasoning_steps = await self._deep_reasoning_answer(
                     query=query,
                     query_analysis=query_analysis,
                     memory_eval=memory_eval,
@@ -180,7 +182,8 @@ class IntelligentOrchestrator:
                     "elapsed_time_ms": round(elapsed_time, 2),
                     "cost_usd": strategy.estimated_cost,
                     "reasoning_depth": strategy.reasoning_depth,
-                    "memory_coverage": round(memory_eval.coverage_score, 2)
+                    "memory_coverage": round(memory_eval.coverage_score, 2),
+                    "reasoning_steps": reasoning_steps
                 }
             }
 
@@ -269,52 +272,47 @@ class IntelligentOrchestrator:
             query_analysis: QueryAnalysis,
             memory_eval: MemoryEvaluation,
             strategy: ResponseStrategy
-    ) -> tuple[str, List[str]]:
+    ) -> tuple[str, List[str], List[str]]:
         """
         Generate a deep, thoughtful answer for complex queries.
         This is SLOW but THOROUGH - uses premium AI with multiple reasoning steps.
-
         Uses ResponseFormatter to preserve paragraph structure.
         """
+        # Create reasoning plan
+        plan = self.reasoning_planner.create_plan(
+            query=query,
+            query_analysis=query_analysis,
+            memory_eval=memory_eval
+        )
+        reasoning_steps = [f"{s.step_number}. {s.action}: {s.description}" for s in plan.steps]
+
         # Build comprehensive context
         context_parts = []
-
-        # Add memory context
         # Add memory context (sorted by importance)
         if memory_eval.relevant_facts:
             facts_text = self._build_context(memory_eval.relevant_facts, max_facts=10)
             context_parts.append(f"Known information:\n{facts_text}")
-
         # Add information gaps
         if memory_eval.gaps:
             gaps_text = ", ".join(memory_eval.gaps)
             context_parts.append(f"Information gaps: {gaps_text}")
-
         context = "\n\n".join(context_parts)
-
         # Create deep reasoning prompt
         deep_prompt = f"""You are analyzing a complex question that requires deep thinking.
-
     Question: {query}
-
     {context}
-
     Please provide a comprehensive, well-reasoned response. Think through this step by step."""
-
         # Use premium agent (e.g., Mixtral, DeepSeek)
         agent = self._select_agent("premium")
-
         if agent:
             ai_response = await agent.process(deep_prompt)
-
             # Format with ResponseFormatter (preserves paragraphs)
             formatted_response = self.response_formatter.format_deep(ai_response)
-
-            return formatted_response, ["memory", agent.name, "deep_reasoning"]
+            return formatted_response, ["memory", agent.name, "deep_reasoning"], reasoning_steps
         else:
             # Fallback
             return "I apologize, but I need a more powerful AI model to answer this complex question properly.", [
-                "error"]
+                "error"], reasoning_steps
 
     def _select_agent(self, preference: str) -> Optional[Any]:
         """
