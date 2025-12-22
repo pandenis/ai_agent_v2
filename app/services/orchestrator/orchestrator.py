@@ -20,6 +20,7 @@ from app.services.orchestrator.decision_engine import DecisionEngine, ResponseSt
 from app.services.orchestrator.response_formatter import ResponseFormatter
 from app.services.orchestrator.orchestrator_metrics import OrchestratorMetrics
 from app.services.orchestrator.reasoning_planner import ReasoningPlanner
+from app.services.orchestrator.synthesis_engine import SynthesisEngine
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,7 @@ class IntelligentOrchestrator:
         self.response_formatter = ResponseFormatter()
         self.metrics = OrchestratorMetrics()
         self.reasoning_planner = ReasoningPlanner()
+        self.synthesis_engine = SynthesisEngine()
 
         logger.info("IntelligentOrchestrator initialized successfully")
 
@@ -137,6 +139,8 @@ class IntelligentOrchestrator:
             # Actually create the response based on the strategy
             logger.debug("Stage 4: Generating response")
             reasoning_steps = []  # Only populated for deep_reasoning
+            synthesis_confidence = None  # Only populated for deep_reasoning
+
             if strategy.strategy == "direct":
                 # Answer directly from memory (fast, free)
                 response_text = self._direct_answer(memory_eval.relevant_facts)
@@ -152,7 +156,7 @@ class IntelligentOrchestrator:
 
             else:  # deep_reasoning
                 # Deep thinking with AI (slow, thorough)
-                response_text, sources, reasoning_steps = await self._deep_reasoning_answer(
+                response_text, sources, reasoning_steps, synthesis_confidence = await self._deep_reasoning_answer(
                     query=query,
                     query_analysis=query_analysis,
                     memory_eval=memory_eval,
@@ -185,7 +189,8 @@ class IntelligentOrchestrator:
                     "cost_usd": strategy.estimated_cost,
                     "reasoning_depth": strategy.reasoning_depth,
                     "memory_coverage": round(memory_eval.coverage_score, 2),
-                    "reasoning_steps": reasoning_steps
+                    "reasoning_steps": reasoning_steps,
+                    "synthesis_confidence": synthesis_confidence if strategy.strategy == "deep_reasoning" else None
                 }
             }
 
@@ -274,7 +279,7 @@ class IntelligentOrchestrator:
             query_analysis: QueryAnalysis,
             memory_eval: MemoryEvaluation,
             strategy: ResponseStrategy
-    ) -> tuple[str, List[str], List[str]]:
+    ) -> tuple[str, List[str], List[str], float]:
         """
         Generate a deep, thoughtful answer for complex queries.
         This is SLOW but THOROUGH - uses premium AI with multiple reasoning steps.
@@ -335,13 +340,21 @@ class IntelligentOrchestrator:
         agent = self._select_agent("premium")
         if agent:
             ai_response = await agent.process(deep_prompt)
+
+            # Synthesize from all sources
+            synthesis_result = self.synthesis_engine.synthesize(
+                memory_facts=memory_eval.relevant_facts,
+                web_results=web_search_results,
+                ai_analysis=ai_response
+            )
+
             # Format with ResponseFormatter (preserves paragraphs)
             formatted_response = self.response_formatter.format_deep(ai_response)
-            return formatted_response, ["memory", agent.name, "deep_reasoning"], reasoning_steps
+            return formatted_response, ["memory", agent.name, "deep_reasoning"], reasoning_steps, synthesis_result.confidence
         else:
             # Fallback
             return "I apologize, but I need a more powerful AI model to answer this complex question properly.", [
-                "error"], reasoning_steps
+                "error"], reasoning_steps, 0.3
 
     def _select_agent(self, preference: str) -> Optional[Any]:
         """

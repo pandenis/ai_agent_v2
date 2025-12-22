@@ -856,6 +856,144 @@ async def test_deep_reasoning_executes_web_search_for_gaps(
     assert mock_web_search.search.called, \
         "WebSearchService.search() should be called when plan has web_search step"
 
+
+@pytest.mark.asyncio
+async def test_deep_reasoning_uses_synthesis_engine(
+        mock_memory_service, mock_agent
+):
+    """
+    Test Case: Deep reasoning should use SynthesisEngine
+    Expected: Response synthesized from multiple sources
+    """
+    from unittest.mock import AsyncMock, Mock
+    from app.services.orchestrator.orchestrator import IntelligentOrchestrator
+
+    # Create mock web search service
+    mock_web_search = AsyncMock()
+    mock_web_search.search = AsyncMock(return_value=[
+        {"title": "Climate Report", "snippet": "Global temperatures rising 1.5°C"}
+    ])
+
+    # Create mock registry
+    mock_registry = Mock()
+    mock_registry.get_agent = Mock(return_value=mock_agent)
+    mock_registry.get_default_agent = Mock(return_value=mock_agent)
+
+    # Create orchestrator
+    orchestrator = IntelligentOrchestrator(
+        memory_service=mock_memory_service,
+        agent_registry=mock_registry,
+        web_search_service=mock_web_search
+    )
+
+    # Setup: Low coverage to trigger deep reasoning
+    mock_memory_service.search_facts.return_value = [
+        {"text": "User interested in environment", "importance": 0.5, "confidence": 0.6}
+    ]
+    mock_agent.process.return_value = "Climate change analysis with multiple factors..."
+
+    # Execute: Complex query triggers deep reasoning with synthesis
+    result = await orchestrator.process_query(
+        query="Analyze the economic impact of climate change on coastal cities",
+        session_id="test-synthesis"
+    )
+
+    # Assert: Should have synthesis metadata
+    assert result["metadata"]["strategy"] == "deep_reasoning"
+    assert "sources" in result["metadata"]
+    assert len(result["metadata"]["sources"]) >= 1
+
+
+@pytest.mark.asyncio
+async def test_deep_reasoning_uses_synthesis_engine(
+        mock_memory_service, mock_agent
+):
+    """
+    Test Case: Deep reasoning should use SynthesisEngine
+    Expected: Response synthesized from multiple sources
+    """
+    from unittest.mock import AsyncMock, Mock
+    from app.services.orchestrator.orchestrator import IntelligentOrchestrator
+
+    # Create mock web search service
+    mock_web_search = AsyncMock()
+    mock_web_search.search = AsyncMock(return_value=[
+        {"title": "Climate Report", "snippet": "Global temperatures rising 1.5°C"}
+    ])
+
+    # Create mock registry
+    mock_registry = Mock()
+    mock_registry.get_agent = Mock(return_value=mock_agent)
+    mock_registry.get_default_agent = Mock(return_value=mock_agent)
+
+    # Create orchestrator
+    orchestrator = IntelligentOrchestrator(
+        memory_service=mock_memory_service,
+        agent_registry=mock_registry,
+        web_search_service=mock_web_search
+    )
+
+    # Setup: Low coverage to trigger deep reasoning
+    mock_memory_service.search_facts.return_value = [
+        {"text": "User interested in environment", "importance": 0.5, "confidence": 0.6}
+    ]
+    mock_agent.process.return_value = "Climate change analysis with multiple factors..."
+
+    # Execute: Complex query triggers deep reasoning with synthesis
+    result = await orchestrator.process_query(
+        query="Analyze the economic impact of climate change on coastal cities",
+        session_id="test-synthesis"
+    )
+
+    # Assert: Should have synthesis metadata
+    assert result["metadata"]["strategy"] == "deep_reasoning"
+    assert "sources" in result["metadata"]
+    assert len(result["metadata"]["sources"]) >= 1
+
+
+@pytest.mark.asyncio
+async def test_deep_reasoning_has_synthesis_confidence(
+        mock_memory_service, mock_agent
+):
+    """
+    Test Case: Deep reasoning should include synthesis_confidence in metadata
+    Expected: metadata contains synthesis_confidence from SynthesisEngine
+    """
+    from unittest.mock import AsyncMock, Mock
+    from app.services.orchestrator.orchestrator import IntelligentOrchestrator
+
+    # Create mock web search
+    mock_web_search = AsyncMock()
+    mock_web_search.search = AsyncMock(return_value=[
+        {"title": "Recipe", "snippet": "Traditional Italian carbonara"}
+    ])
+
+    # Create mock registry
+    mock_registry = Mock()
+    mock_registry.get_agent = Mock(return_value=mock_agent)
+    mock_registry.get_default_agent = Mock(return_value=mock_agent)
+
+    # Create orchestrator
+    orchestrator = IntelligentOrchestrator(
+        memory_service=mock_memory_service,
+        agent_registry=mock_registry,
+        web_search_service=mock_web_search
+    )
+
+    # Setup: Trigger deep reasoning
+    mock_memory_service.search_facts.return_value = []
+    mock_agent.process.return_value = "Here's a detailed recipe analysis..."
+
+    # Execute
+    result = await orchestrator.process_query(
+        query="Compare traditional Italian pasta recipes with modern fusion approaches",
+        session_id="test-synthesis-confidence"
+    )
+
+    # Assert: Should have synthesis_confidence from SynthesisEngine
+    assert "synthesis_confidence" in result["metadata"], \
+        "Deep reasoning should include synthesis_confidence from SynthesisEngine"
+
 if __name__ == "__main__":
     # If running this file directly, show the summary
     test_summary()
