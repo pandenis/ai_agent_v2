@@ -138,3 +138,35 @@ class TestResponseCache:
         # Now verify entries are gone
         assert cache.get("query1") is None
         assert cache.get("query2") is None
+
+    def test_cache_stats_when_empty(self):
+        """Test: Stats return zero hit rate when no operations performed."""
+        # Arrange
+        cache = ResponseCache()
+
+        # Act
+        stats = cache.get_stats()
+
+        # Assert
+        assert stats["hits"] == 0
+        assert stats["misses"] == 0
+        assert stats["hit_rate"] == 0.0
+        assert stats["size"] == 0
+
+    def test_cache_updates_existing_key(self):
+        """Test: Setting same key updates value and moves to most recent."""
+        # Arrange
+        cache = ResponseCache(max_size=2)
+        cache.set("query1", {"answer": "old"})
+        cache.set("query2", {"answer": "second"})
+
+        # Act - update query1 (should move it to end)
+        cache.set("query1", {"answer": "new"})
+
+        # Add third item - should evict query2 (oldest), not query1
+        cache.set("query3", {"answer": "third"})
+
+        # Assert
+        assert cache.get("query1") == {"answer": "new"}
+        assert cache.get("query2") is None  # Evicted
+        assert cache.get("query3") == {"answer": "third"}
