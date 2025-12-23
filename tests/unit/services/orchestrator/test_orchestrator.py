@@ -1101,6 +1101,58 @@ async def test_deep_reasoning_empty_web_results(
     assert result is not None
     assert result["metadata"]["strategy"] == "deep_reasoning"
 
+
+# ==========================================
+# Test: Response Caching
+# ==========================================
+@pytest.mark.asyncio
+async def test_direct_answer_is_cached(mock_memory_service, mock_agent_registry, mock_fact_extractor):
+    """
+    Test Case: Direct answers are cached and reused
+
+    Flow:
+    1. First query → processes normally
+    2. Second identical query → returns from cache (no reprocessing)
+    """
+    from unittest.mock import patch
+
+    orchestrator = IntelligentOrchestrator(
+        memory_service=mock_memory_service,
+        agent_registry=mock_agent_registry,
+        fact_extractor=mock_fact_extractor
+    )
+
+    # Mock MemoryEvaluator to return high coverage
+    # Note: ResponseFormatter expects "text" key in facts
+    mock_memory_eval = MemoryEvaluation(
+        coverage_score=0.95,
+        relevant_facts=[{"text": "User's name is Denis", "importance": 0.9}],
+        gaps=[],
+        confidence=0.9
+    )
+
+    with patch.object(orchestrator.memory_evaluator, 'evaluate', new_callable=AsyncMock) as mock_eval:
+        mock_eval.return_value = mock_memory_eval
+
+        # First call - should process normally
+        result1 = await orchestrator.process_query(
+            query="What is my name?",
+            session_id="test-cache"
+        )
+
+        # Second call - should return from cache
+        result2 = await orchestrator.process_query(
+            query="What is my name?",
+            session_id="test-cache"
+        )
+
+    # Assert both return same answer
+    assert result1["text"] == result2["text"]
+    assert result1["metadata"]["strategy"] == "direct"
+
+    # Assert second call was cached
+    assert result2["metadata"].get("cached") is True
+
 if __name__ == "__main__":
     # If running this file directly, show the summary
     test_summary()

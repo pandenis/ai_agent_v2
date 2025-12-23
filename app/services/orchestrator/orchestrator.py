@@ -21,6 +21,7 @@ from app.services.orchestrator.response_formatter import ResponseFormatter
 from app.services.orchestrator.orchestrator_metrics import OrchestratorMetrics
 from app.services.orchestrator.reasoning_planner import ReasoningPlanner
 from app.services.orchestrator.synthesis_engine import SynthesisEngine
+from app.services.orchestrator.response_cache import ResponseCache
 
 logger = logging.getLogger(__name__)
 
@@ -39,21 +40,24 @@ class IntelligentOrchestrator:
             memory_service,  # Handles memory storage/retrieval
             agent_registry,  # Manages AI agents (Mistral, DeepSeek, etc.)
             fact_extractor=None,  # Extracts facts from conversations
-            web_search_service = None  # Web search for external info
+            web_search_service=None,  # Web search for external info
+            response_cache=None  # Cache for responses
     ):
         """
         Initialize the orchestrator with required services.
-
         Args:
             memory_service: Service for storing/retrieving facts
             agent_registry: Registry of available AI agents
             fact_extractor: Service for extracting facts (optional)
+            web_search_service: Web search for external info (optional)
+            response_cache: Cache for responses (optional, created if not provided)
         """
         # Store the services we need
         self.memory_service = memory_service
         self.agent_registry = agent_registry
         self.fact_extractor = fact_extractor
         self.web_search_service = web_search_service
+        self.response_cache = response_cache or ResponseCache()
 
         # Create instances of our components
         self.query_analyzer = QueryAnalyzer()
@@ -100,6 +104,17 @@ class IntelligentOrchestrator:
 
         try:
             logger.info(f"Processing query for session {session_id}: {query[:50]}...")
+
+            # ==========================================
+            # CHECK CACHE FIRST
+            # ==========================================
+            cached_response = self.response_cache.get(query, context=user_context)
+            if cached_response is not None:
+                logger.info("Cache hit - returning cached response")
+                elapsed_time = (time.time() - start_time) * 1000
+                cached_response["metadata"]["elapsed_time_ms"] = round(elapsed_time, 2)
+                cached_response["metadata"]["cached"] = True
+                return cached_response
 
             # ==========================================
             # STAGE 1: Analyze the Query
@@ -202,6 +217,11 @@ class IntelligentOrchestrator:
                 elapsed_time_ms=elapsed_time,
                 cost_usd=strategy.estimated_cost
             )
+
+            # Cache direct answers for reuse
+            if strategy.strategy == "direct":
+                self.response_cache.set(query, result, context=user_context)
+                logger.debug("Cached direct response")
 
             return result
 
