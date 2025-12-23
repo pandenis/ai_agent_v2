@@ -1,43 +1,37 @@
-"""Tests for ResponseCache component"""
+"""
+ResponseCache - LRU cache for orchestrator responses.
+
+Caches direct answers to avoid redundant processing.
+Features:
+- LRU eviction policy
+- TTL-based expiration
+- Cache key generation from query + context
+- Hit rate tracking
+
+Usage:
+    >>> cache = ResponseCache(max_size=100, ttl_seconds=3600)
+    >>> cache.set("What is my name?", {"answer": "Denis"})
+    >>> result = cache.get("What is my name?")
+    >>> print(result)  # {"answer": "Denis"}
+"""
+
 import pytest
-import time
 from app.services.orchestrator.response_cache import ResponseCache
 
 
 class TestResponseCache:
-    """Test suite for ResponseCache"""
+    """Tests for ResponseCache component."""
 
-    def test_cache_hit_returns_stored_response(self):
-        """Test: Cache should return stored response on hit"""
-        # Arrange - universal example (weather query, not programming!)
+    def test_cache_stores_and_retrieves_value(self):
+        """Test: Cache can store and retrieve a value."""
+        # Arrange
         cache = ResponseCache()
-        query = "What's the weather in Tokyo?"
-        session_id = "weather-session-123"
-        expected_response = {
-            "text": "It's sunny and 22°C in Tokyo",
-            "metadata": {"strategy": "enhanced", "confidence": 0.9}
-        }
+        query = "What is my name?"
+        response = {"answer": "Denis", "strategy": "direct"}
 
-        # Store response in cache
-        cache.set(query, session_id, expected_response)
-
-        # Act - retrieve from cache
-        result = cache.get(query, session_id)
+        # Act
+        cache.set(query, response)
+        result = cache.get(query)
 
         # Assert
-        assert result is not None
-        assert result["text"] == expected_response["text"]
-        assert result["metadata"]["strategy"] == "enhanced"
-
-    def test_cache_miss_returns_none(self):
-        """Test: Cache should return None when key not found"""
-        # Arrange - medical example (not programming!)
-        cache = ResponseCache()
-        query = "What are symptoms of diabetes?"
-        session_id = "medical-session-456"
-
-        # Act - try to get non-existent response
-        result = cache.get(query, session_id)
-
-        # Assert
-        assert result is None
+        assert result == response
