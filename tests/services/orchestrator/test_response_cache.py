@@ -117,3 +117,24 @@ class TestResponseCache:
 
         assert result1 == {"answer": "Salad"}
         assert result2 == {"answer": "Steak"}
+
+    def test_cache_clear_removes_all_entries(self):
+        """Test: Clear removes all cached entries and resets stats."""
+        # Arrange
+        cache = ResponseCache()
+        cache.set("query1", {"answer": "first"})
+        cache.set("query2", {"answer": "second"})
+        cache.get("query1")  # Create a hit
+
+        # Act
+        cache.clear()
+
+        # Assert - check stats FIRST (before get calls add misses)
+        stats = cache.get_stats()
+        assert stats["size"] == 0
+        assert stats["hits"] == 0
+        assert stats["misses"] == 0
+
+        # Now verify entries are gone
+        assert cache.get("query1") is None
+        assert cache.get("query2") is None

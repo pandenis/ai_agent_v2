@@ -88,3 +88,9 @@ class ResponseCache:
             "size": len(self._cache),
             "max_size": self.max_size,
         }
+
+    def clear(self) -> None:
+        """Clear all cached entries and reset stats."""
+        self._cache.clear()
+        self._hits = 0
+        self._misses = 0
