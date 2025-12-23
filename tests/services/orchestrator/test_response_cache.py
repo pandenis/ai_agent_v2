@@ -28,3 +28,16 @@ class TestResponseCache:
         assert result is not None
         assert result["text"] == expected_response["text"]
         assert result["metadata"]["strategy"] == "enhanced"
+
+    def test_cache_miss_returns_none(self):
+        """Test: Cache should return None when key not found"""
+        # Arrange - medical example (not programming!)
+        cache = ResponseCache()
+        query = "What are symptoms of diabetes?"
+        session_id = "medical-session-456"
+
+        # Act - try to get non-existent response
+        result = cache.get(query, session_id)
+
+        # Assert
+        assert result is None
