@@ -65,3 +65,18 @@ class TestResponseCache:
 
         # Assert
         assert result is None  # Should be expired
+
+    def test_cache_evicts_oldest_when_full(self):
+        """Test: Cache evicts least recently used entry when max size exceeded."""
+        # Arrange
+        cache = ResponseCache(max_size=2, ttl_seconds=3600)
+
+        # Act - fill cache beyond capacity
+        cache.set("query1", {"answer": "first"})
+        cache.set("query2", {"answer": "second"})
+        cache.set("query3", {"answer": "third"})  # Should evict query1
+
+        # Assert
+        assert cache.get("query1") is None  # Evicted
+        assert cache.get("query2") == {"answer": "second"}
+        assert cache.get("query3") == {"answer": "third"}
