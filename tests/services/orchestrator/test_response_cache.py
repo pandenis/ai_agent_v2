@@ -98,3 +98,22 @@ class TestResponseCache:
         assert stats["hits"] == 2
         assert stats["misses"] == 2
         assert stats["hit_rate"] == 0.5  # 50%
+
+    def test_cache_differentiates_by_context(self):
+        """Test: Same query with different context stored separately."""
+        # Arrange
+        cache = ResponseCache()
+        query = "What should I eat?"
+        context1 = {"user_preference": "vegetarian"}
+        context2 = {"user_preference": "meat_lover"}
+
+        # Act
+        cache.set(query, {"answer": "Salad"}, context=context1)
+        cache.set(query, {"answer": "Steak"}, context=context2)
+
+        # Assert
+        result1 = cache.get(query, context=context1)
+        result2 = cache.get(query, context=context2)
+
+        assert result1 == {"answer": "Salad"}
+        assert result2 == {"answer": "Steak"}

@@ -15,6 +15,8 @@ Usage:
     >>> print(result)  # {"answer": "Denis"}
 """
 
+import hashlib
+import json
 import time
 from collections import OrderedDict
 from typing import Any, Dict, Optional, Tuple
@@ -31,9 +33,17 @@ class ResponseCache:
         self._hits = 0
         self._misses = 0
 
-    def get(self, query: str) -> Optional[Any]:
+    def _generate_key(self, query: str, context: Optional[Dict] = None) -> str:
+        """Generate cache key from query and context."""
+        key_data = query
+        if context:
+            key_data += json.dumps(context, sort_keys=True)
+        return hashlib.md5(key_data.encode()).hexdigest()
+
+    def get(self, query: str, context: Optional[Dict] = None) -> Optional[Any]:
         """Get cached response for query."""
-        entry = self._cache.get(query)
+        key = self._generate_key(query, context)
+        entry = self._cache.get(key)
         if entry is None:
             self._misses += 1
             return None
@@ -42,27 +52,29 @@ class ResponseCache:
 
         # Check if expired
         if time.time() - timestamp > self.ttl_seconds:
-            del self._cache[query]
+            del self._cache[key]
             self._misses += 1
             return None
 
         # Move to end (most recently used)
-        self._cache.move_to_end(query)
+        self._cache.move_to_end(key)
         self._hits += 1
 
         return value
 
-    def set(self, query: str, response: Any) -> None:
+    def set(self, query: str, response: Any, context: Optional[Dict] = None) -> None:
         """Store response in cache."""
+        key = self._generate_key(query, context)
+
         # If key exists, remove it first (will be re-added at end)
-        if query in self._cache:
-            del self._cache[query]
+        if key in self._cache:
+            del self._cache[key]
 
         # Evict oldest if at capacity
         while len(self._cache) >= self.max_size:
             self._cache.popitem(last=False)  # Remove oldest (first item)
 
-        self._cache[query] = (response, time.time())
+        self._cache[key] = (response, time.time())
 
     def get_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
