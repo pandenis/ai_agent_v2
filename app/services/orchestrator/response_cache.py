@@ -15,7 +15,8 @@ Usage:
     >>> print(result)  # {"answer": "Denis"}
 """
 
-from typing import Any, Dict, Optional
+import time
+from typing import Any, Dict, Optional, Tuple
 
 
 class ResponseCache:
@@ -25,12 +26,23 @@ class ResponseCache:
         """Initialize cache with max size and TTL."""
         self.max_size = max_size
         self.ttl_seconds = ttl_seconds
-        self._cache: Dict[str, Any] = {}
+        self._cache: Dict[str, Tuple[Any, float]] = {}  # value, timestamp
 
     def get(self, query: str) -> Optional[Any]:
         """Get cached response for query."""
-        return self._cache.get(query)
+        entry = self._cache.get(query)
+        if entry is None:
+            return None
+
+        value, timestamp = entry
+
+        # Check if expired
+        if time.time() - timestamp > self.ttl_seconds:
+            del self._cache[query]
+            return None
+
+        return value
 
     def set(self, query: str, response: Any) -> None:
         """Store response in cache."""
-        self._cache[query] = response
+        self._cache[query] = (response, time.time())

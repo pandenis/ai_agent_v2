@@ -35,3 +35,33 @@ class TestResponseCache:
 
         # Assert
         assert result == response
+
+    def test_cache_returns_none_for_missing_key(self):
+        """Test: Cache returns None for non-existent key."""
+        # Arrange
+        cache = ResponseCache()
+
+        # Act
+        result = cache.get("unknown query")
+
+        # Assert
+        assert result is None
+
+    def test_cache_expires_after_ttl(self):
+        """Test: Cache entry expires after TTL seconds."""
+        # Arrange
+        cache = ResponseCache(ttl_seconds=1)  # 1 second TTL
+        query = "What is the weather?"
+        response = {"answer": "Sunny"}
+
+        # Act
+        cache.set(query, response)
+
+        # Simulate time passing
+        import time
+        time.sleep(1.1)  # Wait slightly more than TTL
+
+        result = cache.get(query)
+
+        # Assert
+        assert result is None  # Should be expired
