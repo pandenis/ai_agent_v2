@@ -17,7 +17,7 @@ Usage:
 
 import time
 from collections import OrderedDict
-from typing import Any, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 
 class ResponseCache:
@@ -28,11 +28,14 @@ class ResponseCache:
         self.max_size = max_size
         self.ttl_seconds = ttl_seconds
         self._cache: OrderedDict[str, Tuple[Any, float]] = OrderedDict()
+        self._hits = 0
+        self._misses = 0
 
     def get(self, query: str) -> Optional[Any]:
         """Get cached response for query."""
         entry = self._cache.get(query)
         if entry is None:
+            self._misses += 1
             return None
 
         value, timestamp = entry
@@ -40,10 +43,12 @@ class ResponseCache:
         # Check if expired
         if time.time() - timestamp > self.ttl_seconds:
             del self._cache[query]
+            self._misses += 1
             return None
 
         # Move to end (most recently used)
         self._cache.move_to_end(query)
+        self._hits += 1
 
         return value
 
@@ -58,3 +63,16 @@ class ResponseCache:
             self._cache.popitem(last=False)  # Remove oldest (first item)
 
         self._cache[query] = (response, time.time())
+
+    def get_stats(self) -> Dict[str, Any]:
+        """Get cache statistics."""
+        total = self._hits + self._misses
+        hit_rate = self._hits / total if total > 0 else 0.0
+
+        return {
+            "hits": self._hits,
+            "misses": self._misses,
+            "hit_rate": hit_rate,
+            "size": len(self._cache),
+            "max_size": self.max_size,
+        }

@@ -80,3 +80,21 @@ class TestResponseCache:
         assert cache.get("query1") is None  # Evicted
         assert cache.get("query2") == {"answer": "second"}
         assert cache.get("query3") == {"answer": "third"}
+
+    def test_cache_tracks_hit_rate(self):
+        """Test: Cache tracks hits and misses for statistics."""
+        # Arrange
+        cache = ResponseCache()
+        cache.set("query1", {"answer": "first"})
+
+        # Act
+        cache.get("query1")  # Hit
+        cache.get("query1")  # Hit
+        cache.get("unknown")  # Miss
+        cache.get("missing")  # Miss
+
+        # Assert
+        stats = cache.get_stats()
+        assert stats["hits"] == 2
+        assert stats["misses"] == 2
+        assert stats["hit_rate"] == 0.5  # 50%
