@@ -58,3 +58,19 @@ class TestEdgeCaseHandler:
         # Assert
         assert result.is_ambiguous is False
         assert result.reason is None
+
+    def test_detects_conflicting_facts(self):
+        """Test: Detects conflicting information in memory facts."""
+        # Arrange
+        handler = EdgeCaseHandler()
+        facts = [
+            {"text": "User lives in Moscow", "importance": 0.9},
+            {"text": "User lives in Tokyo", "importance": 0.8},
+        ]
+
+        # Act
+        result = handler.detect_conflicts(facts)
+
+        # Assert
+        assert result.has_conflicts is True
+        assert len(result.conflicts) >= 1
