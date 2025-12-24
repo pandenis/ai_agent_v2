@@ -139,3 +139,21 @@ class TestEdgeCaseHandler:
         assert result.is_timeout is True
         assert result.partial_response == partial_response
         assert "timeout" in result.message.lower()
+
+    def test_detects_multiple_conflicts(self):
+        """Test: Detects all pairs of conflicting facts."""
+        # Arrange
+        handler = EdgeCaseHandler()
+        facts = [
+            {"text": "User lives in Moscow", "importance": 0.9},
+            {"text": "User lives in Tokyo", "importance": 0.8},
+            {"text": "User lives in Paris", "importance": 0.7},
+        ]
+
+        # Act
+        result = handler.detect_conflicts(facts)
+
+        # Assert
+        assert result.has_conflicts is True
+        # 3 facts = 3 conflict pairs: (Moscow,Tokyo), (Moscow,Paris), (Tokyo,Paris)
+        assert len(result.conflicts) == 3
