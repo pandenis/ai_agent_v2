@@ -104,3 +104,19 @@ class TestEdgeCaseHandler:
         # Assert
         assert result.has_gap is True
         assert result.suggestion == "web_search"
+
+    def test_no_gap_when_memory_has_relevant_facts(self):
+        """Test: No gap when memory contains relevant information."""
+        # Arrange
+        handler = EdgeCaseHandler()
+        query = "What is my favorite color?"
+        facts = [
+            {"text": "User's favorite color is blue", "importance": 0.9}
+        ]
+
+        # Act
+        result = handler.evaluate_memory_gap(query, facts)
+
+        # Assert
+        assert result.has_gap is False
+        assert result.suggestion is None
