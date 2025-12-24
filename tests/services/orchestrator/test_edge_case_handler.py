@@ -45,3 +45,16 @@ class TestEdgeCaseHandler:
         # Assert
         assert result.is_ambiguous is True
         assert "short" in result.reason.lower()
+
+    def test_clear_query_not_ambiguous(self):
+        """Test: Clear query is not flagged as ambiguous."""
+        # Arrange
+        handler = EdgeCaseHandler()
+        query = "What is the weather in Tokyo?"
+
+        # Act
+        result = handler.detect_ambiguity(query)
+
+        # Assert
+        assert result.is_ambiguous is False
+        assert result.reason is None
