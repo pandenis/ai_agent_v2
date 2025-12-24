@@ -32,7 +32,13 @@ class EdgeCaseHandler:
 
     def detect_ambiguity(self, query: str) -> AmbiguityResult:
         """Detect if query is ambiguous."""
+        # Check if too short
         words = query.lower().split()
+        if len(words) < 3:
+            return AmbiguityResult(
+                is_ambiguous=True,
+                reason="Query too short to be meaningful"
+            )
 
         for word in words:
             # Remove punctuation

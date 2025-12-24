@@ -32,3 +32,16 @@ class TestEdgeCaseHandler:
         # Assert
         assert result.is_ambiguous is True
         assert "it" in result.reason.lower()
+
+    def test_detects_too_short_query(self):
+        """Test: Detects query that is too short to be meaningful."""
+        # Arrange
+        handler = EdgeCaseHandler()
+        query = "How?"
+
+        # Act
+        result = handler.detect_ambiguity(query)
+
+        # Assert
+        assert result.is_ambiguous is True
+        assert "short" in result.reason.lower()
