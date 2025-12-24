@@ -74,3 +74,19 @@ class TestEdgeCaseHandler:
         # Assert
         assert result.has_conflicts is True
         assert len(result.conflicts) >= 1
+
+    def test_no_conflicts_when_facts_are_compatible(self):
+        """Test: No conflicts when facts are about different topics."""
+        # Arrange
+        handler = EdgeCaseHandler()
+        facts = [
+            {"text": "User lives in Moscow", "importance": 0.9},
+            {"text": "User works at Google", "importance": 0.8},
+        ]
+
+        # Act
+        result = handler.detect_conflicts(facts)
+
+        # Assert
+        assert result.has_conflicts is False
+        assert len(result.conflicts) == 0
