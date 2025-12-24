@@ -120,3 +120,22 @@ class TestEdgeCaseHandler:
         # Assert
         assert result.has_gap is False
         assert result.suggestion is None
+
+    def test_timeout_result_creation(self):
+        """Test: Can create timeout result with partial data."""
+        # Arrange
+        handler = EdgeCaseHandler()
+        partial_response = "Based on available information..."
+        elapsed_time = 15.5  # seconds
+
+        # Act
+        result = handler.create_timeout_response(
+            partial_response=partial_response,
+            elapsed_time=elapsed_time,
+            timeout_limit=15.0
+        )
+
+        # Assert
+        assert result.is_timeout is True
+        assert result.partial_response == partial_response
+        assert "timeout" in result.message.lower()

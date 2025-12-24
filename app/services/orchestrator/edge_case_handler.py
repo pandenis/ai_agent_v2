@@ -13,60 +13,6 @@ Usage:
     >>> print(result.is_ambiguous)  # True
 """
 
-from dataclasses import dataclass
-from typing import Optional
-
-
-@dataclass
-class AmbiguityResult:
-    """Result of ambiguity detection."""
-    is_ambiguous: bool
-    reason: Optional[str] = None
-
-
-class EdgeCaseHandler:
-    """Handles edge cases in query processing."""
-
-    # Pronouns that need context
-    AMBIGUOUS_PRONOUNS = {"it", "this", "that", "they", "them", "he", "she"}
-
-    def detect_ambiguity(self, query: str) -> AmbiguityResult:
-        """Detect if query is ambiguous."""
-        # Check if too short
-        words = query.lower().split()
-        if len(words) < 3:
-            return AmbiguityResult(
-                is_ambiguous=True,
-                reason="Query too short to be meaningful"
-            )
-
-        for word in words:
-            # Remove punctuation
-            clean_word = word.strip("?.,!")
-            if clean_word in self.AMBIGUOUS_PRONOUNS:
-                return AmbiguityResult(
-                    is_ambiguous=True,
-                    reason=f"Unclear reference: '{clean_word}'"
-                )
-
-        return AmbiguityResult(is_ambiguous=False)
-
-
-"""
-EdgeCaseHandler - Handles edge cases in query processing.
-
-Handles:
-- Ambiguous queries (vague, unclear questions)
-- Conflicting information in memory
-- Missing memory for queries
-- Timeout situations
-
-Usage:
-    >>> handler = EdgeCaseHandler()
-    >>> result = handler.detect_ambiguity("What about it?")
-    >>> print(result.is_ambiguous)  # True
-"""
-
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Tuple
 
@@ -84,11 +30,21 @@ class ConflictResult:
     has_conflicts: bool
     conflicts: List[Tuple[Dict, Dict]] = field(default_factory=list)
 
+
 @dataclass
 class MemoryGapResult:
     """Result of memory gap evaluation."""
     has_gap: bool
     suggestion: Optional[str] = None  # "web_search", "ask_user", None
+
+
+@dataclass
+class TimeoutResult:
+    """Result when operation times out."""
+    is_timeout: bool
+    partial_response: Optional[str] = None
+    message: str = ""
+    elapsed_time: float = 0.0
 
 
 class EdgeCaseHandler:
@@ -165,3 +121,17 @@ class EdgeCaseHandler:
             )
 
         return MemoryGapResult(has_gap=False)
+
+    def create_timeout_response(
+        self,
+        partial_response: Optional[str],
+        elapsed_time: float,
+        timeout_limit: float
+    ) -> TimeoutResult:
+        """Create a timeout response with partial data."""
+        return TimeoutResult(
+            is_timeout=True,
+            partial_response=partial_response,
+            message=f"Operation timeout after {elapsed_time:.1f}s (limit: {timeout_limit:.1f}s)",
+            elapsed_time=elapsed_time
+        )
