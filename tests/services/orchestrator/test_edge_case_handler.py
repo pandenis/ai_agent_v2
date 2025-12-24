@@ -90,3 +90,17 @@ class TestEdgeCaseHandler:
         # Assert
         assert result.has_conflicts is False
         assert len(result.conflicts) == 0
+
+    def test_handles_empty_memory(self):
+        """Test: Detects when memory is empty for a query."""
+        # Arrange
+        handler = EdgeCaseHandler()
+        query = "What is my favorite color?"
+        facts = []
+
+        # Act
+        result = handler.evaluate_memory_gap(query, facts)
+
+        # Assert
+        assert result.has_gap is True
+        assert result.suggestion == "web_search"

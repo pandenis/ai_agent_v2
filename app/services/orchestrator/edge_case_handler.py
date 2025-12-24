@@ -84,6 +84,12 @@ class ConflictResult:
     has_conflicts: bool
     conflicts: List[Tuple[Dict, Dict]] = field(default_factory=list)
 
+@dataclass
+class MemoryGapResult:
+    """Result of memory gap evaluation."""
+    has_gap: bool
+    suggestion: Optional[str] = None  # "web_search", "ask_user", None
+
 
 class EdgeCaseHandler:
     """Handles edge cases in query processing."""
@@ -149,3 +155,13 @@ class EdgeCaseHandler:
             has_conflicts=len(conflicts) > 0,
             conflicts=conflicts
         )
+
+    def evaluate_memory_gap(self, query: str, facts: List[Dict]) -> MemoryGapResult:
+        """Evaluate if there's a memory gap for the query."""
+        if not facts:
+            return MemoryGapResult(
+                has_gap=True,
+                suggestion="web_search"
+            )
+
+        return MemoryGapResult(has_gap=False)
