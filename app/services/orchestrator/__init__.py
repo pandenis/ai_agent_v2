@@ -5,6 +5,7 @@ Components:
 - ResponseCache: LRU cache for responses
 - EdgeCaseHandler: Edge case handling
 - CircuitBreaker: Fault tolerance
+- RateLimiter: Request rate control
 - QueryAnalyzer: Query analysis and classification
 - MemoryEvaluator: Memory coverage evaluation
 - DecisionEngine: Strategy selection
@@ -27,6 +28,7 @@ from app.services.orchestrator.circuit_breaker import (
     CircuitState,
     CircuitOpenError,
 )
+from app.services.orchestrator.rate_limiter import RateLimiter
 
 __all__ = [
     "ResponseCache",
@@ -38,4 +40,5 @@ __all__ = [
     "CircuitBreaker",
     "CircuitState",
     "CircuitOpenError",
+    "RateLimiter",
 ]
