@@ -58,3 +58,21 @@ class RateLimiter:
         # Record this request
         self._requests[key].append(now)
         return True
+
+    def get_stats(self, key: str) -> dict:
+        """Get rate limiter statistics for a key."""
+        now = time.time()
+        window_start = now - self.window_seconds
+
+        # Get current requests in window
+        if key not in self._requests:
+            requests_count = 0
+        else:
+            requests_count = len([t for t in self._requests[key] if t > window_start])
+
+        return {
+            "requests_count": requests_count,
+            "max_requests": self.max_requests,
+            "remaining": max(0, self.max_requests - requests_count),
+            "window_seconds": self.window_seconds,
+        }

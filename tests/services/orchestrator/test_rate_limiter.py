@@ -79,3 +79,19 @@ class TestRateLimiter:
 
         # Assert
         assert result is True
+
+    def test_get_stats_returns_limiter_info(self):
+        """Test: Get stats returns rate limiter information."""
+        # Arrange
+        limiter = RateLimiter(max_requests=5, window_seconds=60)
+        limiter.is_allowed("user1")
+        limiter.is_allowed("user1")
+        limiter.is_allowed("user2")
+
+        # Act
+        stats = limiter.get_stats("user1")
+
+        # Assert
+        assert stats["requests_count"] == 2
+        assert stats["max_requests"] == 5
+        assert stats["remaining"] == 3
