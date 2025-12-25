@@ -17,8 +17,8 @@ from typing import Callable, Any
 
 class CircuitState(Enum):
     """Circuit breaker states."""
-    CLOSED = "closed"  # Normal, requests pass through
-    OPEN = "open"  # Blocked, too many failures
+    CLOSED = "closed"      # Normal, requests pass through
+    OPEN = "open"          # Blocked, too many failures
     HALF_OPEN = "half_open"  # Testing recovery
 
 
@@ -36,6 +36,7 @@ class CircuitBreaker:
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout
         self.state = CircuitState.CLOSED
+        self._failure_count = 0
 
     def call(self, func: Callable[[], Any]) -> Any:
         """
@@ -47,4 +48,20 @@ class CircuitBreaker:
         Returns:
             Result of function call
         """
-        return func()
+        try:
+            result = func()
+            self._on_success()
+            return result
+        except Exception as e:
+            self._on_failure()
+            raise e
+
+    def _on_success(self) -> None:
+        """Handle successful call."""
+        self._failure_count = 0
+
+    def _on_failure(self) -> None:
+        """Handle failed call."""
+        self._failure_count += 1
+        if self._failure_count >= self.failure_threshold:
+            self.state = CircuitState.OPEN

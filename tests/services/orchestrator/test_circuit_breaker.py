@@ -40,3 +40,21 @@ class TestCircuitBreaker:
         # Assert
         assert result == "success"
         assert breaker.state == CircuitState.CLOSED
+
+    def test_opens_after_failure_threshold(self):
+        """Test: Circuit opens after reaching failure threshold."""
+        # Arrange
+        breaker = CircuitBreaker(failure_threshold=3)
+
+        def failing_func():
+            raise Exception("Service unavailable")
+
+        # Act - cause 3 failures
+        for _ in range(3):
+            try:
+                breaker.call(failing_func)
+            except Exception:
+                pass
+
+        # Assert
+        assert breaker.state == CircuitState.OPEN
