@@ -61,3 +61,21 @@ class TestRateLimiter:
         # Assert
         assert user1_blocked is True
         assert user2_allowed is True
+
+    def test_allows_after_window_expires(self):
+        """Test: Requests allowed again after window expires."""
+        # Arrange
+        import time
+        limiter = RateLimiter(max_requests=2, window_seconds=0.1)
+
+        # Hit the limit
+        limiter.is_allowed("user1")
+        limiter.is_allowed("user1")
+        assert limiter.is_allowed("user1") is False
+
+        # Act - wait for window to expire
+        time.sleep(0.15)
+        result = limiter.is_allowed("user1")
+
+        # Assert
+        assert result is True
