@@ -4,6 +4,7 @@ Orchestrator services package.
 Components:
 - ResponseCache: LRU cache for responses
 - EdgeCaseHandler: Edge case handling
+- CircuitBreaker: Fault tolerance
 - QueryAnalyzer: Query analysis and classification
 - MemoryEvaluator: Memory coverage evaluation
 - DecisionEngine: Strategy selection
@@ -21,6 +22,11 @@ from app.services.orchestrator.edge_case_handler import (
     MemoryGapResult,
     TimeoutResult,
 )
+from app.services.orchestrator.circuit_breaker import (
+    CircuitBreaker,
+    CircuitState,
+    CircuitOpenError,
+)
 
 __all__ = [
     "ResponseCache",
@@ -29,4 +35,7 @@ __all__ = [
     "ConflictResult",
     "MemoryGapResult",
     "TimeoutResult",
+    "CircuitBreaker",
+    "CircuitState",
+    "CircuitOpenError",
 ]
