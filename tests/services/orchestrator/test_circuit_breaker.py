@@ -106,3 +106,61 @@ class TestCircuitBreaker:
 
         # Assert
         assert breaker.state == CircuitState.HALF_OPEN
+
+    def test_closes_after_successful_call_in_half_open(self):
+        """Test: Circuit closes after successful call in HALF_OPEN state."""
+        # Arrange
+        import time
+        breaker = CircuitBreaker(failure_threshold=2, recovery_timeout=0.1)
+
+        def failing_func():
+            raise Exception("Service unavailable")
+
+        # Open the circuit
+        for _ in range(2):
+            try:
+                breaker.call(failing_func)
+            except Exception:
+                pass
+
+        # Wait for HALF_OPEN
+        time.sleep(0.15)
+        breaker.check_state()
+        assert breaker.state == CircuitState.HALF_OPEN
+
+        # Act - successful call
+        result = breaker.call(lambda: "recovered")
+
+        # Assert
+        assert result == "recovered"
+        assert breaker.state == CircuitState.CLOSED
+
+    def test_reopens_after_failure_in_half_open(self):
+        """Test: Circuit reopens after failure in HALF_OPEN state."""
+        # Arrange
+        import time
+        breaker = CircuitBreaker(failure_threshold=2, recovery_timeout=0.1)
+
+        def failing_func():
+            raise Exception("Service unavailable")
+
+        # Open the circuit
+        for _ in range(2):
+            try:
+                breaker.call(failing_func)
+            except Exception:
+                pass
+
+        # Wait for HALF_OPEN
+        time.sleep(0.15)
+        breaker.check_state()
+        assert breaker.state == CircuitState.HALF_OPEN
+
+        # Act - another failure
+        try:
+            breaker.call(failing_func)
+        except Exception:
+            pass
+
+        # Assert - back to OPEN
+        assert breaker.state == CircuitState.OPEN
