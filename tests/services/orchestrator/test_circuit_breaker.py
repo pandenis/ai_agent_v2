@@ -25,3 +25,18 @@ class TestCircuitBreaker:
 
         # Assert
         assert breaker.state == CircuitState.CLOSED
+
+    def test_successful_call_passes_through(self):
+        """Test: Successful function call returns result."""
+        # Arrange
+        breaker = CircuitBreaker(failure_threshold=3)
+
+        def success_func():
+            return "success"
+
+        # Act
+        result = breaker.call(success_func)
+
+        # Assert
+        assert result == "success"
+        assert breaker.state == CircuitState.CLOSED

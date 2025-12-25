@@ -36,3 +36,15 @@ class CircuitBreaker:
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout
         self.state = CircuitState.CLOSED
+
+    def call(self, func: Callable[[], Any]) -> Any:
+        """
+        Execute function through circuit breaker.
+
+        Args:
+            func: Function to call
+
+        Returns:
+            Result of function call
+        """
+        return func()
