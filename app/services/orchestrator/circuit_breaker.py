@@ -11,8 +11,9 @@ Usage:
     >>> result = breaker.call(some_function)
 """
 
+import time
 from enum import Enum
-from typing import Callable, Any
+from typing import Callable, Any, Optional
 
 
 class CircuitState(Enum):
@@ -42,6 +43,14 @@ class CircuitBreaker:
         self.recovery_timeout = recovery_timeout
         self.state = CircuitState.CLOSED
         self._failure_count = 0
+        self._last_failure_time: Optional[float] = None
+
+    def check_state(self) -> None:
+        """Check and update circuit state based on timeout."""
+        if self.state == CircuitState.OPEN and self._last_failure_time:
+            elapsed = time.time() - self._last_failure_time
+            if elapsed >= self.recovery_timeout:
+                self.state = CircuitState.HALF_OPEN
 
     def call(self, func: Callable[[], Any]) -> Any:
         """
@@ -56,6 +65,8 @@ class CircuitBreaker:
         Raises:
             CircuitOpenError: If circuit is open
         """
+        self.check_state()
+
         if self.state == CircuitState.OPEN:
             raise CircuitOpenError("Circuit is open, call blocked")
 
@@ -70,9 +81,11 @@ class CircuitBreaker:
     def _on_success(self) -> None:
         """Handle successful call."""
         self._failure_count = 0
+        self.state = CircuitState.CLOSED
 
     def _on_failure(self) -> None:
         """Handle failed call."""
         self._failure_count += 1
+        self._last_failure_time = time.time()
         if self._failure_count >= self.failure_threshold:
             self.state = CircuitState.OPEN

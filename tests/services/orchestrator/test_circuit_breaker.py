@@ -79,3 +79,30 @@ class TestCircuitBreaker:
         # Act & Assert - next call should raise CircuitOpenError
         with pytest.raises(CircuitOpenError):
             breaker.call(lambda: "should not execute")
+
+    def test_transitions_to_half_open_after_timeout(self):
+        """Test: Circuit transitions to HALF_OPEN after recovery timeout."""
+        # Arrange
+        import time
+        breaker = CircuitBreaker(failure_threshold=2, recovery_timeout=0.1)
+
+        def failing_func():
+            raise Exception("Service unavailable")
+
+        # Open the circuit
+        for _ in range(2):
+            try:
+                breaker.call(failing_func)
+            except Exception:
+                pass
+
+        assert breaker.state == CircuitState.OPEN
+
+        # Act - wait for recovery timeout
+        time.sleep(0.15)
+
+        # Trigger state check
+        breaker.check_state()
+
+        # Assert
+        assert breaker.state == CircuitState.HALF_OPEN
