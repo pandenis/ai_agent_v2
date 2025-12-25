@@ -12,7 +12,7 @@ Usage:
 """
 
 import pytest
-from app.services.orchestrator.circuit_breaker import CircuitBreaker, CircuitState
+from app.services.orchestrator.circuit_breaker import CircuitBreaker, CircuitState, CircuitOpenError
 
 
 class TestCircuitBreaker:
@@ -58,3 +58,24 @@ class TestCircuitBreaker:
 
         # Assert
         assert breaker.state == CircuitState.OPEN
+
+    def test_blocks_calls_when_open(self):
+        """Test: Calls are blocked when circuit is open."""
+        # Arrange
+        breaker = CircuitBreaker(failure_threshold=2)
+
+        def failing_func():
+            raise Exception("Service unavailable")
+
+        # Open the circuit
+        for _ in range(2):
+            try:
+                breaker.call(failing_func)
+            except Exception:
+                pass
+
+        assert breaker.state == CircuitState.OPEN
+
+        # Act & Assert - next call should raise CircuitOpenError
+        with pytest.raises(CircuitOpenError):
+            breaker.call(lambda: "should not execute")

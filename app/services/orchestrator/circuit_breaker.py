@@ -22,6 +22,11 @@ class CircuitState(Enum):
     HALF_OPEN = "half_open"  # Testing recovery
 
 
+class CircuitOpenError(Exception):
+    """Raised when circuit is open and calls are blocked."""
+    pass
+
+
 class CircuitBreaker:
     """Circuit breaker for fault tolerance."""
 
@@ -47,7 +52,13 @@ class CircuitBreaker:
 
         Returns:
             Result of function call
+
+        Raises:
+            CircuitOpenError: If circuit is open
         """
+        if self.state == CircuitState.OPEN:
+            raise CircuitOpenError("Circuit is open, call blocked")
+
         try:
             result = func()
             self._on_success()
