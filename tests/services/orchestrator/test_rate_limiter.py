@@ -44,3 +44,20 @@ class TestRateLimiter:
 
         # Assert
         assert result is False
+
+    def test_separate_limits_per_user(self):
+        """Test: Each user has separate rate limit."""
+        # Arrange
+        limiter = RateLimiter(max_requests=2, window_seconds=60)
+
+        # Act - user1 hits limit
+        limiter.is_allowed("user1")
+        limiter.is_allowed("user1")
+        user1_blocked = not limiter.is_allowed("user1")
+
+        # user2 should still be allowed
+        user2_allowed = limiter.is_allowed("user2")
+
+        # Assert
+        assert user1_blocked is True
+        assert user2_allowed is True
