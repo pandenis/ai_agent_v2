@@ -89,3 +89,12 @@ class CircuitBreaker:
         self._last_failure_time = time.time()
         if self._failure_count >= self.failure_threshold:
             self.state = CircuitState.OPEN
+
+    def get_stats(self) -> dict:
+        """Get circuit breaker statistics."""
+        return {
+            "state": self.state.value,
+            "failure_count": self._failure_count,
+            "failure_threshold": self.failure_threshold,
+            "recovery_timeout": self.recovery_timeout,
+        }

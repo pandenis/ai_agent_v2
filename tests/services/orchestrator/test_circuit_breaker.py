@@ -164,3 +164,26 @@ class TestCircuitBreaker:
 
         # Assert - back to OPEN
         assert breaker.state == CircuitState.OPEN
+
+    def test_get_stats_returns_circuit_info(self):
+        """Test: Get stats returns circuit breaker information."""
+        # Arrange
+        breaker = CircuitBreaker(failure_threshold=3)
+
+        def failing_func():
+            raise Exception("Error")
+
+        # Cause some failures
+        for _ in range(2):
+            try:
+                breaker.call(failing_func)
+            except Exception:
+                pass
+
+        # Act
+        stats = breaker.get_stats()
+
+        # Assert
+        assert stats["state"] == "closed"
+        assert stats["failure_count"] == 2
+        assert stats["failure_threshold"] == 3
