@@ -41,4 +41,20 @@ class RateLimiter:
         Returns:
             True if allowed, False if rate limited
         """
+        now = time.time()
+
+        # Initialize if new key
+        if key not in self._requests:
+            self._requests[key] = []
+
+        # Remove old requests outside window
+        window_start = now - self.window_seconds
+        self._requests[key] = [t for t in self._requests[key] if t > window_start]
+
+        # Check if under limit
+        if len(self._requests[key]) >= self.max_requests:
+            return False
+
+        # Record this request
+        self._requests[key].append(now)
         return True
