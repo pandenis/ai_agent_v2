@@ -51,3 +51,21 @@ class TestRetryHandler:
         # Assert
         assert result == "success"
         assert call_count == 3
+
+    def test_raises_after_max_retries_exceeded(self):
+        """Test: Raises exception after all retries exhausted."""
+        # Arrange
+        handler = RetryHandler(max_retries=2, base_delay=0.01)
+        call_count = 0
+
+        def always_fail():
+            nonlocal call_count
+            call_count += 1
+            raise ValueError("Permanent failure")
+
+        # Act & Assert
+        with pytest.raises(ValueError, match="Permanent failure"):
+            handler.execute(always_fail)
+
+        # Should have tried 3 times (1 initial + 2 retries)
+        assert call_count == 3
