@@ -36,6 +36,8 @@ class RetryHandler:
         self.base_delay = base_delay
         self.exponential_backoff = exponential_backoff
         self._last_exception: Optional[Exception] = None
+        self._total_attempts = 0
+        self._success = False
 
     def _get_delay(self, attempt: int) -> float:
         """Calculate delay for given attempt number."""
@@ -56,16 +58,28 @@ class RetryHandler:
         Raises:
             Exception: If all retries exhausted
         """
-        attempts = 0
+        self._total_attempts = 0
+        self._success = False
 
-        while attempts <= self.max_retries:
+        while self._total_attempts <= self.max_retries:
             try:
-                return func()
+                self._total_attempts += 1
+                result = func()
+                self._success = True
+                return result
             except Exception as e:
                 self._last_exception = e
-                attempts += 1
-                if attempts <= self.max_retries:
-                    delay = self._get_delay(attempts - 1)
+                if self._total_attempts <= self.max_retries:
+                    delay = self._get_delay(self._total_attempts - 1)
                     time.sleep(delay)
 
         raise self._last_exception
+
+    def get_stats(self) -> dict:
+        """Get retry statistics."""
+        return {
+            "total_attempts": self._total_attempts,
+            "retries_used": max(0, self._total_attempts - 1),
+            "max_retries": self.max_retries,
+            "success": self._success,
+        }

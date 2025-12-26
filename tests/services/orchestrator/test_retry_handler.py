@@ -98,3 +98,27 @@ class TestRetryHandler:
         # Each delay should be roughly double the previous
         assert delay2 > delay1 * 1.5
         assert delay3 > delay2 * 1.5
+
+    def test_get_stats_returns_retry_info(self):
+        """Test: Get stats returns retry information."""
+        # Arrange
+        handler = RetryHandler(max_retries=3, base_delay=0.01)
+
+        call_count = 0
+
+        def fail_twice():
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                raise Exception("Fail")
+            return "success"
+
+        # Act
+        handler.execute(fail_twice)
+        stats = handler.get_stats()
+
+        # Assert
+        assert stats["total_attempts"] == 3
+        assert stats["retries_used"] == 2
+        assert stats["max_retries"] == 3
+        assert stats["success"] is True
