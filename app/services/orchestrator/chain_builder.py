@@ -129,3 +129,31 @@ class ChainBuilder:
                 break  # Prevent infinite loop if dependencies are broken
 
         return groups
+
+    def get_chain_stats(self, chain: ExecutionChain) -> dict:
+        """
+        Get statistics about execution chain.
+
+        Args:
+            chain: Execution chain to analyze
+
+        Returns:
+            Dictionary with chain statistics
+        """
+        parallel_groups = self.get_parallel_groups(chain)
+        max_parallel = max((len(g) for g in parallel_groups), default=0)
+
+        # Estimate time saved by parallel execution
+        # Sequential: N steps, Parallel: number of groups
+        sequential_steps = len(chain.steps)
+        parallel_steps = len(parallel_groups)
+        time_saved_percent = 0
+        if sequential_steps > 0:
+            time_saved_percent = round((1 - parallel_steps / sequential_steps) * 100, 1)
+
+        return {
+            "total_steps": len(chain.steps),
+            "parallel_groups": len(parallel_groups),
+            "max_parallel": max_parallel,
+            "estimated_time_saved": f"{time_saved_percent}%",
+        }

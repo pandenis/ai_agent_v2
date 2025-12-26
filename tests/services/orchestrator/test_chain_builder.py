@@ -130,3 +130,18 @@ class TestChainBuilder:
 
         # Assert
         assert parallel_groups == []
+
+    def test_get_chain_stats(self):
+        """Test: Get statistics about execution chain."""
+        # Arrange
+        builder = ChainBuilder()
+        chain = builder.build(query="Complex query", memory_coverage=0.3)
+
+        # Act
+        stats = builder.get_chain_stats(chain)
+
+        # Assert
+        assert stats["total_steps"] == 4
+        assert stats["parallel_groups"] == 3  # [0,1], [2], [3]
+        assert stats["max_parallel"] == 2  # memory + web_search
+        assert "estimated_time_saved" in stats
