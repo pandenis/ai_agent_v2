@@ -71,32 +71,48 @@ class ChainExecutor:
         start_time = time.time()
         step_results = []
         final_output = None
+        chain_success = True
+        chain_error = None
 
         handler = self._step_handler or self._default_handler
 
         for i, step in enumerate(chain.steps):
             step_start = time.time()
 
-            # Execute step with handler
-            output = await handler(step, step_results)
+            try:
+                # Execute step with handler
+                output = await handler(step, step_results)
 
-            step_result = StepResult(
-                step_index=i,
-                step_type=step.step_type,
-                success=True,
-                output=output,
-                error=None,
-                elapsed_ms=(time.time() - step_start) * 1000
-            )
+                step_result = StepResult(
+                    step_index=i,
+                    step_type=step.step_type,
+                    success=True,
+                    output=output,
+                    error=None,
+                    elapsed_ms=(time.time() - step_start) * 1000
+                )
+                final_output = output
+
+            except Exception as e:
+                step_result = StepResult(
+                    step_index=i,
+                    step_type=step.step_type,
+                    success=False,
+                    output=None,
+                    error=str(e),
+                    elapsed_ms=(time.time() - step_start) * 1000
+                )
+                chain_success = False
+                chain_error = f"Step {i} ({step.step_type}) failed: {str(e)}"
+
             step_results.append(step_result)
-            final_output = output
 
         total_elapsed = (time.time() - start_time) * 1000
 
         return ChainResult(
-            success=True,
+            success=chain_success,
             steps=step_results,
             final_output=final_output,
             total_elapsed_ms=total_elapsed,
-            error=None
+            error=chain_error
         )

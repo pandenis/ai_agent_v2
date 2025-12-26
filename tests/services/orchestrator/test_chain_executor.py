@@ -121,3 +121,35 @@ class TestChainExecutor:
         assert result.success is True
         assert result.steps[0].output == "User likes Python"
         assert "User likes Python" in result.steps[1].output
+
+    @pytest.mark.asyncio
+    async def test_execute_handles_step_failure(self):
+        """Test: Chain handles step failure gracefully."""
+        # Arrange
+        from app.services.orchestrator.chain_builder import ChainStep, ExecutionChain
+        from app.services.orchestrator.chain_executor import ChainExecutor
+
+        chain = ExecutionChain(
+            steps=[
+                ChainStep(step_type="memory", agent="memory", prompt="Get context", depends_on=[]),
+                ChainStep(step_type="web_search", agent="web", prompt="Search", depends_on=[]),
+            ],
+            query="Test query"
+        )
+
+        # Handler that fails on web_search
+        async def failing_handler(step, previous_results):
+            if step.step_type == "web_search":
+                raise Exception("Network error")
+            return "Success"
+
+        executor = ChainExecutor(step_handler=failing_handler)
+
+        # Act
+        result = await executor.execute(chain)
+
+        # Assert
+        assert result.success is False
+        assert result.steps[0].success is True
+        assert result.steps[1].success is False
+        assert "Network error" in result.steps[1].error
