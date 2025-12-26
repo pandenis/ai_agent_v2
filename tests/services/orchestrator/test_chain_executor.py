@@ -63,3 +63,28 @@ class TestChainExecutor:
         assert len(result.steps) == 2
         assert result.final_output == "Final answer"
         assert result.total_elapsed_ms == 300
+
+    @pytest.mark.asyncio
+    async def test_execute_simple_chain(self):
+        """Test: Execute simple single-step chain."""
+        # Arrange
+        from app.services.orchestrator.chain_builder import ChainStep, ExecutionChain
+        from app.services.orchestrator.chain_executor import ChainExecutor
+
+        chain = ExecutionChain(
+            steps=[
+                ChainStep(step_type="direct", agent="memory", prompt="What is my name?", depends_on=[])
+            ],
+            query="What is my name?"
+        )
+
+        executor = ChainExecutor()
+
+        # Act
+        result = await executor.execute(chain)
+
+        # Assert
+        assert result.success is True
+        assert len(result.steps) == 1
+        assert result.steps[0].step_type == "direct"
+        assert result.total_elapsed_ms >= 0
