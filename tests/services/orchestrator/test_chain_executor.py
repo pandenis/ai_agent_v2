@@ -172,6 +172,21 @@ class TestChainExecutor:
         assert len(result.steps) == 0
         assert result.final_output is None
 
+    def test_get_stats_no_executions(self):
+        """Test: Get stats when no executions performed."""
+        # Arrange
+        from app.services.orchestrator.chain_executor import ChainExecutor
+        executor = ChainExecutor()
+
+        # Act
+        stats = executor.get_stats()
+
+        # Assert
+        assert stats["total_executions"] == 0
+        assert stats["successful_executions"] == 0
+        assert stats["failed_executions"] == 0
+        assert stats["avg_elapsed_ms"] == 0.0
+
     @pytest.mark.asyncio
     async def test_get_stats(self):
         """Test: Get execution statistics."""
