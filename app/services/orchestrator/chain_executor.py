@@ -38,10 +38,25 @@ class ChainResult:
 
 
 import time
+from typing import Callable, Optional
 
 
 class ChainExecutor:
     """Executes multi-step chains with parallel support."""
+
+    def __init__(self, step_handler: Optional[Callable] = None):
+        """
+        Initialize executor.
+
+        Args:
+            step_handler: Optional async function to execute steps.
+                         Signature: async def handler(step, previous_results) -> output
+        """
+        self._step_handler = step_handler
+
+    async def _default_handler(self, step, previous_results: List[StepResult]):
+        """Default step handler - simulates execution."""
+        return f"Executed {step.step_type}"
 
     async def execute(self, chain) -> ChainResult:
         """
@@ -57,11 +72,13 @@ class ChainExecutor:
         step_results = []
         final_output = None
 
+        handler = self._step_handler or self._default_handler
+
         for i, step in enumerate(chain.steps):
             step_start = time.time()
 
-            # For now, simulate step execution
-            output = f"Executed {step.step_type}"
+            # Execute step with handler
+            output = await handler(step, step_results)
 
             step_result = StepResult(
                 step_index=i,

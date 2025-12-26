@@ -88,3 +88,36 @@ class TestChainExecutor:
         assert len(result.steps) == 1
         assert result.steps[0].step_type == "direct"
         assert result.total_elapsed_ms >= 0
+
+    @pytest.mark.asyncio
+    async def test_execute_with_step_handler(self):
+        """Test: Execute chain with custom step handler."""
+        # Arrange
+        from app.services.orchestrator.chain_builder import ChainStep, ExecutionChain
+        from app.services.orchestrator.chain_executor import ChainExecutor
+
+        chain = ExecutionChain(
+            steps=[
+                ChainStep(step_type="memory", agent="memory", prompt="Get context", depends_on=[]),
+                ChainStep(step_type="analysis", agent="mistral", prompt="Analyze", depends_on=[0]),
+            ],
+            query="Test query"
+        )
+
+        # Custom handler returns specific output based on step type
+        async def custom_handler(step, previous_results):
+            if step.step_type == "memory":
+                return "User likes Python"
+            elif step.step_type == "analysis":
+                return f"Analysis based on: {previous_results[0].output}"
+            return "Unknown"
+
+        executor = ChainExecutor(step_handler=custom_handler)
+
+        # Act
+        result = await executor.execute(chain)
+
+        # Assert
+        assert result.success is True
+        assert result.steps[0].output == "User likes Python"
+        assert "User likes Python" in result.steps[1].output
