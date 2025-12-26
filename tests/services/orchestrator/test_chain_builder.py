@@ -53,3 +53,21 @@ class TestChainBuilder:
         assert chain.query == "Test query"
         assert chain.steps[0].step_type == "memory"
         assert chain.steps[1].step_type == "analysis"
+
+    def test_build_simple_query_single_step(self):
+        """Test: Simple query with high memory coverage creates single step."""
+        # Arrange
+        from app.services.orchestrator.chain_builder import ChainBuilder
+        builder = ChainBuilder()
+
+        # High coverage = simple direct answer
+        memory_coverage = 0.95
+        query = "What is my name?"
+
+        # Act
+        chain = builder.build(query=query, memory_coverage=memory_coverage)
+
+        # Assert
+        assert len(chain.steps) == 1
+        assert chain.steps[0].step_type == "direct"
+        assert chain.query == query

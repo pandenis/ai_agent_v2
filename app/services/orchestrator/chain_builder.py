@@ -30,3 +30,30 @@ class ExecutionChain:
     """Complete execution chain with ordered steps."""
     steps: List[ChainStep]
     query: str
+
+class ChainBuilder:
+    """Builds multi-step execution chains for complex queries."""
+
+    def build(self, query: str, memory_coverage: float) -> ExecutionChain:
+        """
+        Build execution chain based on query and memory coverage.
+
+        Args:
+            query: User query
+            memory_coverage: Memory coverage score (0.0 - 1.0)
+
+        Returns:
+            ExecutionChain with planned steps
+        """
+        steps = []
+
+        # High coverage = direct answer
+        if memory_coverage >= 0.9:
+            steps.append(ChainStep(
+                step_type="direct",
+                agent="memory",
+                prompt=query,
+                depends_on=[]
+            ))
+
+        return ExecutionChain(steps=steps, query=query)
