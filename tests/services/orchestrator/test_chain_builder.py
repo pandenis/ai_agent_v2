@@ -150,6 +150,21 @@ class TestChainBuilder:
         # Assert - should return empty since no steps can start
         assert parallel_groups == []
 
+    def test_get_chain_stats_empty_chain(self):
+        """Test: Get stats for empty chain."""
+        # Arrange
+        builder = ChainBuilder()
+        chain = ExecutionChain(steps=[], query="Empty")
+
+        # Act
+        stats = builder.get_chain_stats(chain)
+
+        # Assert
+        assert stats["total_steps"] == 0
+        assert stats["parallel_groups"] == 0
+        assert stats["max_parallel"] == 0
+        assert stats["estimated_time_saved"] == "0%"
+
     def test_get_chain_stats(self):
         """Test: Get statistics about execution chain."""
         # Arrange
