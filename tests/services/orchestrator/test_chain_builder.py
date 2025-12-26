@@ -118,3 +118,15 @@ class TestChainBuilder:
         assert len(parallel_groups) >= 2
         assert len(parallel_groups[0]) == 2  # memory + web_search together
         assert parallel_groups[0] == [0, 1]  # step indices
+
+    def test_get_parallel_groups_empty_chain(self):
+        """Test: Empty chain returns empty groups."""
+        # Arrange
+        builder = ChainBuilder()
+        chain = ExecutionChain(steps=[], query="Empty")
+
+        # Act
+        parallel_groups = builder.get_parallel_groups(chain)
+
+        # Assert
+        assert parallel_groups == []
