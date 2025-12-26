@@ -11,7 +11,8 @@ Usage:
     >>> result = handler.execute(some_function)
 """
 
-from typing import Callable, Any
+import time
+from typing import Callable, Any, Optional
 
 
 class RetryHandler:
@@ -27,6 +28,7 @@ class RetryHandler:
         """
         self.max_retries = max_retries
         self.base_delay = base_delay
+        self._last_exception: Optional[Exception] = None
 
     def execute(self, func: Callable[[], Any]) -> Any:
         """
@@ -37,5 +39,19 @@ class RetryHandler:
 
         Returns:
             Result of function call
+
+        Raises:
+            Exception: If all retries exhausted
         """
-        return func()
+        attempts = 0
+
+        while attempts <= self.max_retries:
+            try:
+                return func()
+            except Exception as e:
+                self._last_exception = e
+                attempts += 1
+                if attempts <= self.max_retries:
+                    time.sleep(self.base_delay)
+
+        raise self._last_exception

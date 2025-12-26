@@ -31,3 +31,23 @@ class TestRetryHandler:
 
         # Assert
         assert result == "success"
+
+    def test_retries_on_failure_then_succeeds(self):
+        """Test: Retries on failure and succeeds on subsequent attempt."""
+        # Arrange
+        handler = RetryHandler(max_retries=3, base_delay=0.01)
+        call_count = 0
+
+        def fail_then_succeed():
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                raise Exception("Temporary failure")
+            return "success"
+
+        # Act
+        result = handler.execute(fail_then_succeed)
+
+        # Assert
+        assert result == "success"
+        assert call_count == 3
