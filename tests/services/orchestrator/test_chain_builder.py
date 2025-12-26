@@ -103,3 +103,18 @@ class TestChainBuilder:
         assert "memory" in step_types
         assert "web_search" in step_types
         assert "synthesis" in step_types
+
+    def test_get_parallel_groups(self):
+        """Test: Identifies steps that can run in parallel."""
+        # Arrange
+        builder = ChainBuilder()
+        chain = builder.build(query="Complex query", memory_coverage=0.3)
+
+        # Act
+        parallel_groups = builder.get_parallel_groups(chain)
+
+        # Assert
+        # memory and web_search have no dependencies - can run in parallel
+        assert len(parallel_groups) >= 2
+        assert len(parallel_groups[0]) == 2  # memory + web_search together
+        assert parallel_groups[0] == [0, 1]  # step indices

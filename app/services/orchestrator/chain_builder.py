@@ -97,3 +97,35 @@ class ChainBuilder:
             ))
 
         return ExecutionChain(steps=steps, query=query)
+
+    def get_parallel_groups(self, chain: ExecutionChain) -> List[List[int]]:
+        """
+        Identify groups of steps that can run in parallel.
+
+        Args:
+            chain: Execution chain to analyze
+
+        Returns:
+            List of groups, each group contains step indices that can run in parallel
+        """
+        if not chain.steps:
+            return []
+
+        groups = []
+        executed = set()
+
+        while len(executed) < len(chain.steps):
+            # Find steps whose dependencies are all executed
+            ready = []
+            for i, step in enumerate(chain.steps):
+                if i not in executed:
+                    if all(dep in executed for dep in step.depends_on):
+                        ready.append(i)
+
+            if ready:
+                groups.append(ready)
+                executed.update(ready)
+            else:
+                break  # Prevent infinite loop if dependencies are broken
+
+        return groups
