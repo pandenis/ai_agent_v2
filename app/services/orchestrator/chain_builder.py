@@ -55,5 +55,19 @@ class ChainBuilder:
                 prompt=query,
                 depends_on=[]
             ))
+        # Medium coverage = memory + AI analysis
+        elif memory_coverage >= 0.7:
+            steps.append(ChainStep(
+                step_type="memory",
+                agent="memory",
+                prompt="Retrieve relevant context",
+                depends_on=[]
+            ))
+            steps.append(ChainStep(
+                step_type="analysis",
+                agent="mistral",
+                prompt=query,
+                depends_on=[0]
+            ))
 
         return ExecutionChain(steps=steps, query=query)

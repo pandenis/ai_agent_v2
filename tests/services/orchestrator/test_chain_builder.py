@@ -14,8 +14,7 @@ Usage:
 """
 
 import pytest
-from app.services.orchestrator.chain_builder import ChainStep
-
+from app.services.orchestrator.chain_builder import ChainStep, ExecutionChain, ChainBuilder
 
 class TestChainBuilder:
     """Tests for ChainBuilder component."""
@@ -71,3 +70,19 @@ class TestChainBuilder:
         assert len(chain.steps) == 1
         assert chain.steps[0].step_type == "direct"
         assert chain.query == query
+
+    def test_build_medium_coverage_creates_enhanced_chain(self):
+        """Test: Medium coverage creates memory + AI chain."""
+        # Arrange
+        builder = ChainBuilder()
+        memory_coverage = 0.75
+        query = "Summarize my recent activities"
+
+        # Act
+        chain = builder.build(query=query, memory_coverage=memory_coverage)
+
+        # Assert
+        assert len(chain.steps) == 2
+        assert chain.steps[0].step_type == "memory"
+        assert chain.steps[1].step_type == "analysis"
+        assert chain.steps[1].depends_on == [0]  # Depends on memory step
