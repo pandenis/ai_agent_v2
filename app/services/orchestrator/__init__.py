@@ -6,6 +6,7 @@ Components:
 - EdgeCaseHandler: Edge case handling
 - CircuitBreaker: Fault tolerance
 - RateLimiter: Request rate control
+- RetryHandler: Retry logic with backoff
 - QueryAnalyzer: Query analysis and classification
 - MemoryEvaluator: Memory coverage evaluation
 - DecisionEngine: Strategy selection
@@ -29,6 +30,7 @@ from app.services.orchestrator.circuit_breaker import (
     CircuitOpenError,
 )
 from app.services.orchestrator.rate_limiter import RateLimiter
+from app.services.orchestrator.retry_handler import RetryHandler
 
 __all__ = [
     "ResponseCache",
@@ -41,4 +43,5 @@ __all__ = [
     "CircuitState",
     "CircuitOpenError",
     "RateLimiter",
+    "RetryHandler",
 ]
