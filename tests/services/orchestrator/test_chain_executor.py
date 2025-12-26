@@ -39,3 +39,27 @@ class TestChainExecutor:
         assert result.output == "User context retrieved"
         assert result.error is None
         assert result.elapsed_ms == 150.5
+
+    def test_chain_result_creation(self):
+        """Test: ChainResult holds complete chain execution result."""
+        # Arrange
+        step_results = [
+            StepResult(step_index=0, step_type="memory", success=True, output="data", error=None, elapsed_ms=100),
+            StepResult(step_index=1, step_type="analysis", success=True, output="result", error=None, elapsed_ms=200),
+        ]
+
+        # Act
+        from app.services.orchestrator.chain_executor import ChainResult
+        result = ChainResult(
+            success=True,
+            steps=step_results,
+            final_output="Final answer",
+            total_elapsed_ms=300,
+            error=None
+        )
+
+        # Assert
+        assert result.success is True
+        assert len(result.steps) == 2
+        assert result.final_output == "Final answer"
+        assert result.total_elapsed_ms == 300

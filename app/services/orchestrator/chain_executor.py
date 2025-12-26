@@ -26,3 +26,12 @@ class StepResult:
     output: Any
     error: Optional[str]
     elapsed_ms: float
+
+@dataclass
+class ChainResult:
+    """Result of complete chain execution."""
+    success: bool
+    steps: List[StepResult]
+    final_output: Any
+    total_elapsed_ms: float
+    error: Optional[str]
