@@ -35,3 +35,21 @@ class TestChainBuilder:
         assert step.agent == "gpt-oss"
         assert step.prompt == "Retrieve user context"
         assert step.depends_on == []
+
+    def test_execution_chain_creation(self):
+        """Test: ExecutionChain holds list of steps with metadata."""
+        # Arrange
+        steps = [
+            ChainStep(step_type="memory", agent="gpt-oss", prompt="Get context"),
+            ChainStep(step_type="analysis", agent="mistral", prompt="Analyze"),
+        ]
+
+        # Act
+        from app.services.orchestrator.chain_builder import ExecutionChain
+        chain = ExecutionChain(steps=steps, query="Test query")
+
+        # Assert
+        assert len(chain.steps) == 2
+        assert chain.query == "Test query"
+        assert chain.steps[0].step_type == "memory"
+        assert chain.steps[1].step_type == "analysis"

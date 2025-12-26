@@ -24,3 +24,9 @@ class ChainStep:
     agent: str
     prompt: str
     depends_on: List[int] = field(default_factory=list)
+
+@dataclass
+class ExecutionChain:
+    """Complete execution chain with ordered steps."""
+    steps: List[ChainStep]
+    query: str
