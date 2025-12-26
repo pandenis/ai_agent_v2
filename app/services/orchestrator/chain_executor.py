@@ -36,10 +36,8 @@ class ChainResult:
     total_elapsed_ms: float
     error: Optional[str]
 
-
 import time
 from typing import Callable, Optional
-
 
 class ChainExecutor:
     """Executes multi-step chains with parallel support."""
@@ -53,6 +51,10 @@ class ChainExecutor:
                          Signature: async def handler(step, previous_results) -> output
         """
         self._step_handler = step_handler
+        self._total_executions = 0
+        self._successful_executions = 0
+        self._failed_executions = 0
+        self._total_elapsed_ms = 0.0
 
     async def _default_handler(self, step, previous_results: List[StepResult]):
         """Default step handler - simulates execution."""
@@ -109,6 +111,14 @@ class ChainExecutor:
 
         total_elapsed = (time.time() - start_time) * 1000
 
+        # Update stats
+        self._total_executions += 1
+        self._total_elapsed_ms += total_elapsed
+        if chain_success:
+            self._successful_executions += 1
+        else:
+            self._failed_executions += 1
+
         return ChainResult(
             success=chain_success,
             steps=step_results,
@@ -116,3 +126,16 @@ class ChainExecutor:
             total_elapsed_ms=total_elapsed,
             error=chain_error
         )
+
+    def get_stats(self) -> dict:
+        """Get execution statistics."""
+        avg_elapsed = 0.0
+        if self._total_executions > 0:
+            avg_elapsed = self._total_elapsed_ms / self._total_executions
+
+        return {
+            "total_executions": self._total_executions,
+            "successful_executions": self._successful_executions,
+            "failed_executions": self._failed_executions,
+            "avg_elapsed_ms": round(avg_elapsed, 2),
+        }

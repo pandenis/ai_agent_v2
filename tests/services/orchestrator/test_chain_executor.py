@@ -171,3 +171,29 @@ class TestChainExecutor:
         assert result.success is True
         assert len(result.steps) == 0
         assert result.final_output is None
+
+    @pytest.mark.asyncio
+    async def test_get_stats(self):
+        """Test: Get execution statistics."""
+        # Arrange
+        from app.services.orchestrator.chain_builder import ChainStep, ExecutionChain
+        from app.services.orchestrator.chain_executor import ChainExecutor
+
+        chain = ExecutionChain(
+            steps=[
+                ChainStep(step_type="memory", agent="memory", prompt="Get", depends_on=[]),
+                ChainStep(step_type="analysis", agent="ai", prompt="Analyze", depends_on=[0]),
+            ],
+            query="Test"
+        )
+        executor = ChainExecutor()
+
+        # Act
+        result = await executor.execute(chain)
+        stats = executor.get_stats()
+
+        # Assert
+        assert stats["total_executions"] == 1
+        assert stats["successful_executions"] == 1
+        assert stats["failed_executions"] == 0
+        assert "avg_elapsed_ms" in stats
