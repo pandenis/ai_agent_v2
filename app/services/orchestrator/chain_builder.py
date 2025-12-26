@@ -130,6 +130,25 @@ class ChainBuilder:
 
         return groups
 
+    def test_get_parallel_groups_handles_broken_dependencies(self):
+        """Test: Handles chain with unresolvable dependencies gracefully."""
+        # Arrange
+        builder = ChainBuilder()
+        # Create chain with broken dependency (step 0 depends on step 1, step 1 depends on step 0)
+        broken_chain = ExecutionChain(
+            steps=[
+                ChainStep(step_type="a", agent="x", prompt="A", depends_on=[1]),
+                ChainStep(step_type="b", agent="y", prompt="B", depends_on=[0]),
+            ],
+            query="Broken"
+        )
+
+        # Act
+        parallel_groups = builder.get_parallel_groups(broken_chain)
+
+        # Assert - should return empty since no steps can start
+        assert parallel_groups == []
+
     def get_chain_stats(self, chain: ExecutionChain) -> dict:
         """
         Get statistics about execution chain.
