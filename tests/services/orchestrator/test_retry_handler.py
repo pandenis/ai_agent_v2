@@ -69,3 +69,32 @@ class TestRetryHandler:
 
         # Should have tried 3 times (1 initial + 2 retries)
         assert call_count == 3
+
+    def test_exponential_backoff_delays(self):
+        """Test: Uses exponential backoff between retries."""
+        # Arrange
+        import time
+        handler = RetryHandler(max_retries=3, base_delay=0.05, exponential_backoff=True)
+        timestamps = []
+
+        def fail_and_record():
+            timestamps.append(time.time())
+            raise Exception("Failure")
+
+        # Act
+        try:
+            handler.execute(fail_and_record)
+        except Exception:
+            pass
+
+        # Assert - check delays increase exponentially
+        # Delays should be: 0.05, 0.1, 0.2 (base * 2^attempt)
+        assert len(timestamps) == 4  # 1 initial + 3 retries
+
+        delay1 = timestamps[1] - timestamps[0]
+        delay2 = timestamps[2] - timestamps[1]
+        delay3 = timestamps[3] - timestamps[2]
+
+        # Each delay should be roughly double the previous
+        assert delay2 > delay1 * 1.5
+        assert delay3 > delay2 * 1.5
