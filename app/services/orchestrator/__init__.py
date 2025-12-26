@@ -8,6 +8,7 @@ Components:
 - RateLimiter: Request rate control
 - RetryHandler: Retry logic with backoff
 - ChainBuilder: Multi-step execution planning
+- ChainExecutor: Chain execution with error handling
 """
 
 from app.services.orchestrator.response_cache import ResponseCache
@@ -30,6 +31,11 @@ from app.services.orchestrator.chain_builder import (
     ChainStep,
     ExecutionChain,
 )
+from app.services.orchestrator.chain_executor import (
+    ChainExecutor,
+    StepResult,
+    ChainResult,
+)
 
 __all__ = [
     "ResponseCache",
@@ -46,4 +52,7 @@ __all__ = [
     "ChainBuilder",
     "ChainStep",
     "ExecutionChain",
+    "ChainExecutor",
+    "StepResult",
+    "ChainResult",
 ]
