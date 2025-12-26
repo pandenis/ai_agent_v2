@@ -7,13 +7,7 @@ Components:
 - CircuitBreaker: Fault tolerance
 - RateLimiter: Request rate control
 - RetryHandler: Retry logic with backoff
-- QueryAnalyzer: Query analysis and classification
-- MemoryEvaluator: Memory coverage evaluation
-- DecisionEngine: Strategy selection
-- ResponseFormatter: Response formatting
-- OrchestratorMetrics: Performance tracking
-- ReasoningPlanner: Multi-step reasoning
-- SynthesisEngine: Multi-source synthesis
+- ChainBuilder: Multi-step execution planning
 """
 
 from app.services.orchestrator.response_cache import ResponseCache
@@ -31,6 +25,11 @@ from app.services.orchestrator.circuit_breaker import (
 )
 from app.services.orchestrator.rate_limiter import RateLimiter
 from app.services.orchestrator.retry_handler import RetryHandler
+from app.services.orchestrator.chain_builder import (
+    ChainBuilder,
+    ChainStep,
+    ExecutionChain,
+)
 
 __all__ = [
     "ResponseCache",
@@ -44,4 +43,7 @@ __all__ = [
     "CircuitOpenError",
     "RateLimiter",
     "RetryHandler",
+    "ChainBuilder",
+    "ChainStep",
+    "ExecutionChain",
 ]
