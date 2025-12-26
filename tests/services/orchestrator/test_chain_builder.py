@@ -86,3 +86,20 @@ class TestChainBuilder:
         assert chain.steps[0].step_type == "memory"
         assert chain.steps[1].step_type == "analysis"
         assert chain.steps[1].depends_on == [0]  # Depends on memory step
+
+    def test_build_low_coverage_creates_deep_reasoning_chain(self):
+        """Test: Low coverage creates full chain with web search."""
+        # Arrange
+        builder = ChainBuilder()
+        memory_coverage = 0.3
+        query = "Compare market trends with my investment strategy"
+
+        # Act
+        chain = builder.build(query=query, memory_coverage=memory_coverage)
+
+        # Assert
+        assert len(chain.steps) >= 3
+        step_types = [s.step_type for s in chain.steps]
+        assert "memory" in step_types
+        assert "web_search" in step_types
+        assert "synthesis" in step_types

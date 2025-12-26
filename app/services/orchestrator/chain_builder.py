@@ -69,5 +69,31 @@ class ChainBuilder:
                 prompt=query,
                 depends_on=[0]
             ))
+        # Low coverage = full chain with web search
+        else:
+            steps.append(ChainStep(
+                step_type="memory",
+                agent="memory",
+                prompt="Retrieve available context",
+                depends_on=[]
+            ))
+            steps.append(ChainStep(
+                step_type="web_search",
+                agent="web",
+                prompt=f"Search for: {query}",
+                depends_on=[]
+            ))
+            steps.append(ChainStep(
+                step_type="analysis",
+                agent="mixtral",
+                prompt=query,
+                depends_on=[0, 1]
+            ))
+            steps.append(ChainStep(
+                step_type="synthesis",
+                agent="mixtral",
+                prompt="Synthesize final answer",
+                depends_on=[2]
+            ))
 
         return ExecutionChain(steps=steps, query=query)
