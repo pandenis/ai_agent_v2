@@ -153,3 +153,21 @@ class TestChainExecutor:
         assert result.steps[0].success is True
         assert result.steps[1].success is False
         assert "Network error" in result.steps[1].error
+
+    @pytest.mark.asyncio
+    async def test_execute_empty_chain(self):
+        """Test: Execute empty chain returns success with no steps."""
+        # Arrange
+        from app.services.orchestrator.chain_builder import ExecutionChain
+        from app.services.orchestrator.chain_executor import ChainExecutor
+
+        chain = ExecutionChain(steps=[], query="Empty")
+        executor = ChainExecutor()
+
+        # Act
+        result = await executor.execute(chain)
+
+        # Assert
+        assert result.success is True
+        assert len(result.steps) == 0
+        assert result.final_output is None
