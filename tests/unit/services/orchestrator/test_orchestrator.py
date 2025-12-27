@@ -1394,3 +1394,31 @@ class TestOrchestratorChainIntegration:
         # Assert
         assert result["text"] == "[]" or result["text"] == "No response generated"
         assert "web" in result["sources"]
+
+    @pytest.mark.asyncio
+    async def test_execute_chain_unknown_step_type(self, mock_memory_service, mock_agent_registry):
+        """Test: _execute_chain handles unknown step type gracefully"""
+        # Arrange
+        from app.services.orchestrator.chain_builder import ExecutionChain, ChainStep
+
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory_service,
+            agent_registry=mock_agent_registry
+        )
+
+        chain = ExecutionChain(
+            query="Test query",
+            steps=[
+                ChainStep(step_type="unknown_type", agent="some_agent", prompt="test", depends_on=[])
+            ]
+        )
+
+        memory_eval = Mock()
+        memory_eval.relevant_facts = []
+
+        # Act
+        result = await orchestrator._execute_chain(chain, memory_eval)
+
+        # Assert
+        assert "Executed unknown_type" in result["text"]
+        assert "some_agent" in result["sources"]
