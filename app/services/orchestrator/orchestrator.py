@@ -473,6 +473,23 @@ class IntelligentOrchestrator:
             # Don't fail the whole request if memory update fails
             logger.warning(f"Failed to update memory: {str(e)}")
 
+    async def _execute_chain(self, chain, memory_eval) -> dict:
+        """
+        Execute a chain of steps using ChainExecutor.
+
+        Args:
+            chain: ExecutionChain from ChainBuilder
+            memory_eval: Memory evaluation results
+
+        Returns:
+            Dictionary with response text and sources
+        """
+        # Minimal implementation - will be expanded
+        return {
+            "text": "Chain executed",
+            "sources": []
+        }
+
 
 # ==========================================
 # Convenience Functions

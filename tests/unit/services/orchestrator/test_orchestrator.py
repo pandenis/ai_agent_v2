@@ -1188,3 +1188,16 @@ class TestOrchestratorChainIntegration:
         # Assert
         assert hasattr(orchestrator, 'chain_executor')
         assert orchestrator.chain_executor is not None
+
+    @pytest.mark.asyncio
+    async def test_orchestrator_has_execute_chain_method(self, mock_memory_service, mock_agent_registry):
+        """Test: Orchestrator has _execute_chain method"""
+        # Arrange
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory_service,
+            agent_registry=mock_agent_registry
+        )
+
+        # Assert
+        assert hasattr(orchestrator, '_execute_chain')
+        assert callable(orchestrator._execute_chain)
