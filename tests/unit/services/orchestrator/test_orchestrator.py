@@ -1364,3 +1364,33 @@ class TestOrchestratorChainIntegration:
         # Assert
         assert "Synthesized answer" in result["text"]
         assert "mixtral" in result["sources"]
+
+    @pytest.mark.asyncio
+    async def test_execute_chain_web_search_without_service(self, mock_memory_service, mock_agent_registry):
+        """Test: _execute_chain handles web_search when no service configured"""
+        # Arrange
+        from app.services.orchestrator.chain_builder import ExecutionChain, ChainStep
+
+        # No web_search_service provided
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory_service,
+            agent_registry=mock_agent_registry,
+            web_search_service=None
+        )
+
+        chain = ExecutionChain(
+            query="Search query",
+            steps=[
+                ChainStep(step_type="web_search", agent="web", prompt="search term", depends_on=[])
+            ]
+        )
+
+        memory_eval = Mock()
+        memory_eval.relevant_facts = []
+
+        # Act
+        result = await orchestrator._execute_chain(chain, memory_eval)
+
+        # Assert
+        assert result["text"] == "[]" or result["text"] == "No response generated"
+        assert "web" in result["sources"]
