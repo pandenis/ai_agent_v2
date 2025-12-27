@@ -486,6 +486,47 @@ class IntelligentOrchestrator:
         """
         sources = []
         context_from_memory = ""
+        web_results = []
+
+        async def step_handler(step, previous_results):
+            """Handle each step type."""
+            nonlocal context_from_memory, web_results
+
+            if step.step_type == "direct":
+                sources.append("memory")
+                return self._direct_answer(memory_eval.relevant_facts)
+            elif step.step_type == "memory":
+                sources.append("memory")
+                context_from_memory = self._build_context(memory_eval.relevant_facts, max_facts=5)
+                return context_from_memory
+            elif step.step_type == "web_search":
+                sources.append("web")
+                if self.web_search_service:
+                    web_results = await self.web_search_service.search(step.prompt)
+                    return web_results
+                return []
+            elif step.step_type == "analysis":
+                sources.append(step.agent)
+                agent = self.agent_registry.get_agent(step.agent)
+                prompt = step.prompt
+                if context_from_memory:
+                    prompt = f"Context:\n{context_from_memory}\n\nQuestion: {step.prompt}"
+                response = await agent.process(prompt)
+                return response
+            else:
+                # Default: return step type as placeholder
+                sources.append(step.agent)
+                return f"Executed {step.step_type}"
+
+        # Execute chain with custom handler
+        from app.services.orchestrator.chain_executor import ChainExecutor
+        executor = ChainExecutor(step_handler=step_handler)
+        result = await executor.execute(chain)
+
+        return {
+            "text": result.final_output or "No response generated",
+            "sources": sources
+        }
 
         async def step_handler(step, previous_results):
             """Handle each step type."""

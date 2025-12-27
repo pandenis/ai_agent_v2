@@ -1294,3 +1294,38 @@ class TestOrchestratorChainIntegration:
         # Assert
         assert "AI generated response" in result["text"]
         mock_agent.process.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_execute_chain_handles_web_search_step(self, mock_memory_service, mock_agent_registry):
+        """Test: _execute_chain handles web_search step"""
+        # Arrange
+        from app.services.orchestrator.chain_builder import ExecutionChain, ChainStep
+
+        mock_web_search = AsyncMock()
+        mock_web_search.search = AsyncMock(return_value=[
+            {"title": "Quantum Computing Guide", "snippet": "Quantum computers use qubits..."}
+        ])
+
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory_service,
+            agent_registry=mock_agent_registry,
+            web_search_service=mock_web_search
+        )
+
+        # Create chain with web_search step
+        chain = ExecutionChain(
+            query="Latest quantum computing news",
+            steps=[
+                ChainStep(step_type="web_search", agent="web", prompt="quantum computing news", depends_on=[])
+            ]
+        )
+
+        memory_eval = Mock()
+        memory_eval.relevant_facts = []
+
+        # Act
+        result = await orchestrator._execute_chain(chain, memory_eval)
+
+        # Assert
+        assert "web" in result["sources"]
+        mock_web_search.search.assert_called_once()
