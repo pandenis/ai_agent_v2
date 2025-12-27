@@ -1261,3 +1261,36 @@ class TestOrchestratorChainIntegration:
         # Assert
         assert "text" in result
         assert "mistral" in result["sources"] or "analysis" in str(result)
+
+    @pytest.mark.asyncio
+    async def test_execute_chain_calls_ai_agent_for_analysis(self, mock_memory_service, mock_agent_registry):
+        """Test: _execute_chain actually calls AI agent for analysis step"""
+        # Arrange
+        from app.services.orchestrator.chain_builder import ExecutionChain, ChainStep
+
+        mock_agent = AsyncMock()
+        mock_agent.process = AsyncMock(return_value="AI generated response about quantum computing")
+        mock_agent_registry.get_agent = Mock(return_value=mock_agent)
+
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory_service,
+            agent_registry=mock_agent_registry
+        )
+
+        # Create chain with analysis step
+        chain = ExecutionChain(
+            query="Explain quantum computing",
+            steps=[
+                ChainStep(step_type="analysis", agent="mistral", prompt="Explain quantum computing", depends_on=[])
+            ]
+        )
+
+        memory_eval = Mock()
+        memory_eval.relevant_facts = []
+
+        # Act
+        result = await orchestrator._execute_chain(chain, memory_eval)
+
+        # Assert
+        assert "AI generated response" in result["text"]
+        mock_agent.process.assert_called_once()

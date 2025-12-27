@@ -485,25 +485,33 @@ class IntelligentOrchestrator:
             Dictionary with response text and sources
         """
         sources = []
+        context_from_memory = ""
 
         async def step_handler(step, previous_results):
             """Handle each step type."""
+            nonlocal context_from_memory
+
             if step.step_type == "direct":
                 sources.append("memory")
                 return self._direct_answer(memory_eval.relevant_facts)
             elif step.step_type == "memory":
                 sources.append("memory")
-                return self._build_context(memory_eval.relevant_facts, max_facts=5)
+                context_from_memory = self._build_context(memory_eval.relevant_facts, max_facts=5)
+                return context_from_memory
+            elif step.step_type == "analysis":
+                sources.append(step.agent)
+                agent = self.agent_registry.get_agent(step.agent)
+                prompt = step.prompt
+                if context_from_memory:
+                    prompt = f"Context:\n{context_from_memory}\n\nQuestion: {step.prompt}"
+                response = await agent.process(prompt)
+                return response
             else:
                 # Default: return step type as placeholder
                 sources.append(step.agent)
                 return f"Executed {step.step_type}"
 
-        # Execute chain with our handler
-        result = await self.chain_executor.execute(chain)
-
-        # But we need to use OUR handler, not default
-        # Re-execute with custom handler
+        # Execute chain with custom handler
         from app.services.orchestrator.chain_executor import ChainExecutor
         executor = ChainExecutor(step_handler=step_handler)
         result = await executor.execute(chain)
