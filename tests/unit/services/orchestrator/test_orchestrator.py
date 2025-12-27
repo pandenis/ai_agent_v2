@@ -1156,3 +1156,23 @@ async def test_direct_answer_is_cached(mock_memory_service, mock_agent_registry,
 if __name__ == "__main__":
     # If running this file directly, show the summary
     test_summary()
+
+
+# ==========================================
+# Task 20: Chain Integration Tests
+# ==========================================
+
+class TestOrchestratorChainIntegration:
+    """Test ChainBuilder and ChainExecutor integration with Orchestrator"""
+
+    def test_orchestrator_has_chain_builder(self, mock_memory_service, mock_agent_registry):
+        """Test: Orchestrator initializes with ChainBuilder"""
+        # Arrange & Act
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory_service,
+            agent_registry=mock_agent_registry
+        )
+
+        # Assert
+        assert hasattr(orchestrator, 'chain_builder')
+        assert orchestrator.chain_builder is not None
