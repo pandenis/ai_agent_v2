@@ -1329,3 +1329,38 @@ class TestOrchestratorChainIntegration:
         # Assert
         assert "web" in result["sources"]
         mock_web_search.search.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_execute_chain_handles_synthesis_step(self, mock_memory_service, mock_agent_registry):
+        """Test: _execute_chain handles synthesis step combining results"""
+        # Arrange
+        from app.services.orchestrator.chain_builder import ExecutionChain, ChainStep
+
+        mock_agent = AsyncMock()
+        mock_agent.process = AsyncMock(return_value="Synthesized answer combining all sources")
+        mock_agent_registry.get_agent = Mock(return_value=mock_agent)
+
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory_service,
+            agent_registry=mock_agent_registry
+        )
+
+        # Create chain with synthesis step
+        chain = ExecutionChain(
+            query="Complex question",
+            steps=[
+                ChainStep(step_type="memory", agent="memory", prompt="context", depends_on=[]),
+                ChainStep(step_type="analysis", agent="mistral", prompt="analyze", depends_on=[0]),
+                ChainStep(step_type="synthesis", agent="mixtral", prompt="synthesize", depends_on=[1])
+            ]
+        )
+
+        memory_eval = Mock()
+        memory_eval.relevant_facts = [{"content": "Some fact", "importance": 0.8}]
+
+        # Act
+        result = await orchestrator._execute_chain(chain, memory_eval)
+
+        # Assert
+        assert "Synthesized answer" in result["text"]
+        assert "mixtral" in result["sources"]
