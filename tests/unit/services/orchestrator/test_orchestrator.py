@@ -1176,3 +1176,15 @@ class TestOrchestratorChainIntegration:
         # Assert
         assert hasattr(orchestrator, 'chain_builder')
         assert orchestrator.chain_builder is not None
+
+    def test_orchestrator_has_chain_executor(self, mock_memory_service, mock_agent_registry):
+        """Test: Orchestrator initializes with ChainExecutor"""
+        # Arrange & Act
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory_service,
+            agent_registry=mock_agent_registry
+        )
+
+        # Assert
+        assert hasattr(orchestrator, 'chain_executor')
+        assert orchestrator.chain_executor is not None

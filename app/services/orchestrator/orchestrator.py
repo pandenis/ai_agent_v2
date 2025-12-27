@@ -23,6 +23,7 @@ from app.services.orchestrator.reasoning_planner import ReasoningPlanner
 from app.services.orchestrator.synthesis_engine import SynthesisEngine
 from app.services.orchestrator.response_cache import ResponseCache
 from app.services.orchestrator.chain_builder import ChainBuilder
+from app.services.orchestrator.chain_executor import ChainExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,7 @@ class IntelligentOrchestrator:
         self.reasoning_planner = ReasoningPlanner()
         self.synthesis_engine = SynthesisEngine()
         self.chain_builder = ChainBuilder()
+        self.chain_executor = ChainExecutor()
 
         logger.info("IntelligentOrchestrator initialized successfully")
 
