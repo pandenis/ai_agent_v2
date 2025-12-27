@@ -1231,3 +1231,33 @@ class TestOrchestratorChainIntegration:
         assert "text" in result
         assert "sources" in result
         assert len(result["sources"]) > 0  # Should have at least one source
+
+    @pytest.mark.asyncio
+    async def test_execute_chain_handles_analysis_step(self, mock_memory_service, mock_agent_registry):
+        """Test: _execute_chain handles analysis step with AI agent"""
+        # Arrange
+        from app.services.orchestrator.chain_builder import ExecutionChain, ChainStep
+
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory_service,
+            agent_registry=mock_agent_registry
+        )
+
+        # Create chain with analysis step
+        chain = ExecutionChain(
+            query="Explain quantum computing",
+            steps=[
+                ChainStep(step_type="memory", agent="memory", prompt="context", depends_on=[]),
+                ChainStep(step_type="analysis", agent="mistral", prompt="Explain quantum computing", depends_on=[0])
+            ]
+        )
+
+        memory_eval = Mock()
+        memory_eval.relevant_facts = []
+
+        # Act
+        result = await orchestrator._execute_chain(chain, memory_eval)
+
+        # Assert
+        assert "text" in result
+        assert "mistral" in result["sources"] or "analysis" in str(result)
