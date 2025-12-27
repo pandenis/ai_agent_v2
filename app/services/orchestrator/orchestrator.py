@@ -484,10 +484,33 @@ class IntelligentOrchestrator:
         Returns:
             Dictionary with response text and sources
         """
-        # Minimal implementation - will be expanded
+        sources = []
+
+        async def step_handler(step, previous_results):
+            """Handle each step type."""
+            if step.step_type == "direct":
+                sources.append("memory")
+                return self._direct_answer(memory_eval.relevant_facts)
+            elif step.step_type == "memory":
+                sources.append("memory")
+                return self._build_context(memory_eval.relevant_facts, max_facts=5)
+            else:
+                # Default: return step type as placeholder
+                sources.append(step.agent)
+                return f"Executed {step.step_type}"
+
+        # Execute chain with our handler
+        result = await self.chain_executor.execute(chain)
+
+        # But we need to use OUR handler, not default
+        # Re-execute with custom handler
+        from app.services.orchestrator.chain_executor import ChainExecutor
+        executor = ChainExecutor(step_handler=step_handler)
+        result = await executor.execute(chain)
+
         return {
-            "text": "Chain executed",
-            "sources": []
+            "text": result.final_output or "No response generated",
+            "sources": sources
         }
 
 

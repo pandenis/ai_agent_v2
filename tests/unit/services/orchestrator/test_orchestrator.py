@@ -1201,3 +1201,33 @@ class TestOrchestratorChainIntegration:
         # Assert
         assert hasattr(orchestrator, '_execute_chain')
         assert callable(orchestrator._execute_chain)
+
+    @pytest.mark.asyncio
+    async def test_execute_chain_uses_chain_executor(self, mock_memory_service, mock_agent_registry):
+        """Test: _execute_chain uses ChainExecutor to run steps"""
+        # Arrange
+        from app.services.orchestrator.chain_builder import ChainBuilder, ExecutionChain, ChainStep
+
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory_service,
+            agent_registry=mock_agent_registry
+        )
+
+        # Create a simple chain
+        chain = ExecutionChain(
+            query="What is the weather?",
+            steps=[
+                ChainStep(step_type="direct", agent="memory", prompt="What is the weather?", depends_on=[])
+            ]
+        )
+
+        memory_eval = Mock()
+        memory_eval.relevant_facts = [{"content": "Weather is sunny", "importance": 0.9}]
+
+        # Act
+        result = await orchestrator._execute_chain(chain, memory_eval)
+
+        # Assert
+        assert "text" in result
+        assert "sources" in result
+        assert len(result["sources"]) > 0  # Should have at least one source
