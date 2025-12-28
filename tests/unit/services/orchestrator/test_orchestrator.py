@@ -1441,3 +1441,27 @@ class TestOrchestratorChainIntegration:
 
         assert "text" in result
         assert "metadata" in result
+
+    @pytest.mark.asyncio
+    async def test_process_query_with_chains_uses_chain_builder(self, mock_memory_service, mock_agent_registry):
+        """Test: process_query with use_chains=True uses ChainBuilder"""
+        # Arrange
+        mock_memory_service.search_facts = AsyncMock(return_value=[
+            {"content": "User likes sunny weather", "importance": 0.9}
+        ])
+
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory_service,
+            agent_registry=mock_agent_registry
+        )
+
+        # Act
+        result = await orchestrator.process_query(
+            query="What is my favorite weather?",
+            session_id="test-session",
+            use_chains=True
+        )
+
+        # Assert
+        assert "text" in result
+        assert result["metadata"].get("chain_executed") == True

@@ -154,6 +154,47 @@ class IntelligentOrchestrator:
             logger.info(f"Selected strategy: {strategy.strategy}")
 
             # ==========================================
+            # STAGE 4: Generate Response (Chain Mode)
+            # ==========================================
+            if use_chains:
+                logger.debug("Stage 4: Executing chain")
+                chain = self.chain_builder.build(query, memory_eval.coverage_score)
+                chain_result = await self._execute_chain(chain, memory_eval)
+
+                elapsed_time = (time.time() - start_time) * 1000
+
+                result = {
+                    "text": chain_result["text"],
+                    "metadata": {
+                        "strategy": strategy.strategy,
+                        "confidence": query_analysis.confidence,
+                        "sources": chain_result["sources"],
+                        "elapsed_time_ms": round(elapsed_time, 2),
+                        "cost_usd": strategy.estimated_cost,
+                        "reasoning_depth": strategy.reasoning_depth,
+                        "memory_coverage": round(memory_eval.coverage_score, 2),
+                        "chain_executed": True,
+                        "chain_steps": len(chain.steps)
+                    }
+                }
+
+                # Update memory
+                await self._extract_and_save_facts(
+                    session_id=session_id,
+                    query=query,
+                    response=chain_result["text"]
+                )
+
+                # Track metrics
+                self.metrics.track_query(
+                    strategy=strategy.strategy,
+                    elapsed_time_ms=elapsed_time,
+                    cost_usd=strategy.estimated_cost
+                )
+
+                return result
+
+            # ==========================================
             # STAGE 4: Generate Response
             # ==========================================
             # Actually create the response based on the strategy
