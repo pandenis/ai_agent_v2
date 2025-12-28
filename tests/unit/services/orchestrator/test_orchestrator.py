@@ -1422,3 +1422,22 @@ class TestOrchestratorChainIntegration:
         # Assert
         assert "Executed unknown_type" in result["text"]
         assert "some_agent" in result["sources"]
+
+    @pytest.mark.asyncio
+    async def test_process_query_accepts_use_chains_parameter(self, mock_memory_service, mock_agent_registry):
+        """Test: process_query accepts use_chains parameter"""
+        # Arrange
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory_service,
+            agent_registry=mock_agent_registry
+        )
+
+        # Act & Assert - should not raise TypeError
+        result = await orchestrator.process_query(
+            query="What is the weather?",
+            session_id="test-session",
+            use_chains=True
+        )
+
+        assert "text" in result
+        assert "metadata" in result

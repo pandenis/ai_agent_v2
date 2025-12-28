@@ -78,7 +78,8 @@ class IntelligentOrchestrator:
             self,
             query: str,
             session_id: str,
-            user_context: Optional[Dict[str, Any]] = None
+            user_context: Optional[Dict[str, Any]] = None,
+            use_chains: bool = False
     ) -> Dict[str, Any]:
         """
         Main method - processes a user query through all stages.
