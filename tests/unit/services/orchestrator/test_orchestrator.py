@@ -1465,3 +1465,26 @@ class TestOrchestratorChainIntegration:
         # Assert
         assert "text" in result
         assert result["metadata"].get("chain_executed") == True
+
+    @pytest.mark.asyncio
+    async def test_process_query_without_chains_uses_old_logic(self, mock_memory_service, mock_agent_registry):
+        """Test: process_query with use_chains=False uses original logic (backward compatible)"""
+        # Arrange
+        mock_memory_service.search_facts = AsyncMock(return_value=[
+            {"content": "User likes coffee", "importance": 0.95}
+        ])
+
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory_service,
+            agent_registry=mock_agent_registry
+        )
+
+        # Act - default is use_chains=False
+        result = await orchestrator.process_query(
+            query="What do I like?",
+            session_id="test-session"
+        )
+
+        # Assert - chain_executed should NOT be in metadata
+        assert "text" in result
+        assert result["metadata"].get("chain_executed") is None
