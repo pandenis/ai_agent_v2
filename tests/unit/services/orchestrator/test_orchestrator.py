@@ -1519,3 +1519,38 @@ class TestOrchestratorChainIntegration:
         assert result["metadata"]["chain_executed"] == True
         assert result["metadata"]["chain_steps"] == 1  # Direct = 1 step
         assert "memory" in result["metadata"]["sources"]
+
+    @pytest.mark.asyncio
+    async def test_process_query_chains_enhanced_strategy(self, mock_memory_service, mock_agent_registry):
+        """Test: process_query with chains handles medium coverage (enhanced - 2 steps)"""
+        # Arrange
+        mock_agent = AsyncMock()
+        mock_agent.process = AsyncMock(return_value="AI enhanced response")
+        mock_agent_registry.get_agent = Mock(return_value=mock_agent)
+
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory_service,
+            agent_registry=mock_agent_registry
+        )
+
+        # Mock memory evaluator to return medium coverage
+        mock_eval = Mock()
+        mock_eval.coverage_score = 0.75  # Medium coverage
+        mock_eval.confidence = 0.7
+        mock_eval.relevant_facts = [{"content": "Some context", "importance": 0.8}]
+        mock_eval.gaps = ["missing details"]
+        mock_eval.has_sufficient_coverage = True
+
+        orchestrator.memory_evaluator.evaluate = AsyncMock(return_value=mock_eval)
+
+        # Act
+        result = await orchestrator.process_query(
+            query="Tell me about my project",
+            session_id="test-session",
+            use_chains=True
+        )
+
+        # Assert
+        assert result["metadata"]["chain_executed"] == True
+        assert result["metadata"]["chain_steps"] == 2  # Enhanced = 2 steps
+        assert "mistral" in result["metadata"]["sources"]
