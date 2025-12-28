@@ -1554,3 +1554,44 @@ class TestOrchestratorChainIntegration:
         assert result["metadata"]["chain_executed"] == True
         assert result["metadata"]["chain_steps"] == 2  # Enhanced = 2 steps
         assert "mistral" in result["metadata"]["sources"]
+
+    @pytest.mark.asyncio
+    async def test_process_query_chains_deep_reasoning_strategy(self, mock_memory_service, mock_agent_registry):
+        """Test: process_query with chains handles low coverage (deep reasoning - 4 steps)"""
+        # Arrange
+        mock_agent = AsyncMock()
+        mock_agent.process = AsyncMock(return_value="Deep reasoning response")
+        mock_agent_registry.get_agent = Mock(return_value=mock_agent)
+
+        mock_web_search = AsyncMock()
+        mock_web_search.search = AsyncMock(return_value=[
+            {"title": "Research result", "snippet": "Useful info"}
+        ])
+
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory_service,
+            agent_registry=mock_agent_registry,
+            web_search_service=mock_web_search
+        )
+
+        # Mock memory evaluator to return low coverage
+        mock_eval = Mock()
+        mock_eval.coverage_score = 0.3  # Low coverage
+        mock_eval.confidence = 0.4
+        mock_eval.relevant_facts = []
+        mock_eval.gaps = ["no information available"]
+        mock_eval.has_sufficient_coverage = False
+
+        orchestrator.memory_evaluator.evaluate = AsyncMock(return_value=mock_eval)
+
+        # Act
+        result = await orchestrator.process_query(
+            query="What are the latest AI trends?",
+            session_id="test-session",
+            use_chains=True
+        )
+
+        # Assert
+        assert result["metadata"]["chain_executed"] == True
+        assert result["metadata"]["chain_steps"] == 4  # Deep reasoning = 4 steps
+        assert "web" in result["metadata"]["sources"]
