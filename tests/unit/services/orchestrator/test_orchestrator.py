@@ -1631,3 +1631,29 @@ class TestOrchestratorChainIntegration:
 
         # Assert
         assert result2["metadata"].get("cached") == True
+
+    @pytest.mark.asyncio
+    async def test_process_query_chains_handles_error(self, mock_memory_service, mock_agent_registry):
+        """Test: process_query with chains handles errors gracefully"""
+        # Arrange
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory_service,
+            agent_registry=mock_agent_registry
+        )
+
+        # Mock memory evaluator to raise an error
+        orchestrator.memory_evaluator.evaluate = AsyncMock(
+            side_effect=Exception("Memory service unavailable")
+        )
+
+        # Act
+        result = await orchestrator.process_query(
+            query="What causes the error?",
+            session_id="test-session",
+            use_chains=True
+        )
+
+        # Assert - should return error response, not crash
+        assert "text" in result
+        assert result["metadata"]["strategy"] == "error"
+        assert "error" in result["metadata"]
