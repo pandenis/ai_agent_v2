@@ -1595,3 +1595,39 @@ class TestOrchestratorChainIntegration:
         assert result["metadata"]["chain_executed"] == True
         assert result["metadata"]["chain_steps"] == 4  # Deep reasoning = 4 steps
         assert "web" in result["metadata"]["sources"]
+
+    @pytest.mark.asyncio
+    async def test_process_query_chains_uses_cache(self, mock_memory_service, mock_agent_registry):
+        """Test: process_query with chains returns cached response on second call"""
+        # Arrange
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory_service,
+            agent_registry=mock_agent_registry
+        )
+
+        # Mock high coverage for direct (cacheable) response
+        mock_eval = Mock()
+        mock_eval.coverage_score = 0.95
+        mock_eval.confidence = 0.9
+        mock_eval.relevant_facts = [{"content": "Cached fact", "importance": 0.95}]
+        mock_eval.gaps = []
+        mock_eval.has_sufficient_coverage = True
+
+        orchestrator.memory_evaluator.evaluate = AsyncMock(return_value=mock_eval)
+
+        # Act - first call
+        result1 = await orchestrator.process_query(
+            query="What is cached?",
+            session_id="test-session",
+            use_chains=True
+        )
+
+        # Act - second call (should be cached)
+        result2 = await orchestrator.process_query(
+            query="What is cached?",
+            session_id="test-session",
+            use_chains=True
+        )
+
+        # Assert
+        assert result2["metadata"].get("cached") == True

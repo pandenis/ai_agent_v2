@@ -192,6 +192,11 @@ class IntelligentOrchestrator:
                     cost_usd=strategy.estimated_cost
                 )
 
+                # Cache direct chain answers for reuse (1 step = direct)
+                if len(chain.steps) == 1:
+                    self.response_cache.set(query, result, context=user_context)
+                    logger.debug("Cached chain direct response")
+
                 return result
 
             # ==========================================
