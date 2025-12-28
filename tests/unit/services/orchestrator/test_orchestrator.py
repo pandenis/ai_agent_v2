@@ -1488,3 +1488,34 @@ class TestOrchestratorChainIntegration:
         # Assert - chain_executed should NOT be in metadata
         assert "text" in result
         assert result["metadata"].get("chain_executed") is None
+
+    @pytest.mark.asyncio
+    async def test_process_query_chains_direct_strategy(self, mock_memory_service, mock_agent_registry):
+        """Test: process_query with chains handles high coverage (direct answer)"""
+        # Arrange
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory_service,
+            agent_registry=mock_agent_registry
+        )
+
+        # Mock memory evaluator to return high coverage with all required attributes
+        mock_eval = Mock()
+        mock_eval.coverage_score = 0.95
+        mock_eval.confidence = 0.9
+        mock_eval.relevant_facts = [{"content": "User's name is Denis", "importance": 0.95}]
+        mock_eval.gaps = []
+        mock_eval.has_sufficient_coverage = True
+
+        orchestrator.memory_evaluator.evaluate = AsyncMock(return_value=mock_eval)
+
+        # Act
+        result = await orchestrator.process_query(
+            query="What is my name?",
+            session_id="test-session",
+            use_chains=True
+        )
+
+        # Assert
+        assert result["metadata"]["chain_executed"] == True
+        assert result["metadata"]["chain_steps"] == 1  # Direct = 1 step
+        assert "memory" in result["metadata"]["sources"]
