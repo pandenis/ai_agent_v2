@@ -42,3 +42,20 @@ class TestFeedbackCollector:
         assert collector._feedbacks[0]["response_id"] == "resp-123"
         assert collector._feedbacks[0]["thumbs_up"] == True
         assert collector._feedbacks[0]["strategy"] == "direct"
+
+    def test_add_rating_feedback(self):
+        """Test: Add star rating feedback (1-5)."""
+        # Arrange
+        collector = FeedbackCollector()
+
+        # Act
+        collector.add_feedback(
+            response_id="resp-456",
+            rating=4,
+            strategy="enhanced"
+        )
+
+        # Assert
+        assert len(collector._feedbacks) == 1
+        assert collector._feedbacks[0]["rating"] == 4
+        assert collector._feedbacks[0]["strategy"] == "enhanced"
