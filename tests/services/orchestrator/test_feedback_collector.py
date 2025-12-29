@@ -171,3 +171,19 @@ class TestFeedbackCollector:
         # Assert
         assert best["strategy"] == "enhanced"
         assert best["satisfaction_rate"] == 1.0
+
+    def test_get_stats_when_empty(self):
+        """Test: get_stats returns zeros when no feedback."""
+        # Arrange
+        collector = FeedbackCollector()
+
+        # Act
+        stats = collector.get_stats()
+
+        # Assert
+        assert stats["total_feedbacks"] == 0
+        assert stats["thumbs_up_count"] == 0
+        assert stats["thumbs_down_count"] == 0
+        assert stats["average_rating"] == 0.0
+        assert stats["satisfaction_rate"] == 0.0
+        assert stats["by_strategy"] == {}
