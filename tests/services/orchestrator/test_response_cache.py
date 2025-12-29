@@ -218,3 +218,22 @@ class TestResponseCache:
         assert cache.get("query1") == {"answer": "direct"}
         assert cache.get("query2") == {"answer": "enhanced"}
         assert cache.get("query3") == {"answer": "deep"}
+
+    def test_invalidate_by_strategy(self):
+        """Test: Invalidate all entries with specific strategy."""
+        # Arrange
+        cache = ResponseCache()
+        cache.set("query1", {"answer": "direct"}, strategy="direct")
+        cache.set("query2", {"answer": "enhanced"}, strategy="enhanced")
+        cache.set("query3", {"answer": "deep"}, strategy="deep_reasoning")
+        cache.set("query4", {"answer": "direct2"}, strategy="direct")
+
+        # Act - invalidate all direct strategy entries
+        removed_count = cache.invalidate_by_strategy("direct")
+
+        # Assert
+        assert removed_count == 2
+        assert cache.get("query1") is None
+        assert cache.get("query4") is None
+        assert cache.get("query2") == {"answer": "enhanced"}
+        assert cache.get("query3") == {"answer": "deep"}

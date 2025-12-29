@@ -33,6 +33,7 @@ class ResponseCache:
         self._hits = 0
         self._misses = 0
         self._query_to_key: Dict[str, str] = {}  # Maps original query to cache key
+        self._key_to_strategy: Dict[str, str] = {}  # Maps cache key to strategy
 
     def _generate_key(self, query: str, context: Optional[Dict] = None) -> str:
         """Generate cache key from query and context."""
@@ -77,6 +78,9 @@ class ResponseCache:
 
         self._cache[key] = (response, time.time())
         self._query_to_key[query] = key
+
+        if strategy:
+            self._key_to_strategy[key] = strategy
 
     def get_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
@@ -124,8 +128,35 @@ class ResponseCache:
 
         return len(keys_to_remove)
 
+    def invalidate_by_strategy(self, strategy: str) -> int:
+        """
+        Invalidate all cache entries with specific strategy.
+
+        Args:
+            strategy: Strategy type to invalidate (direct, enhanced, deep_reasoning)
+
+        Returns:
+            Number of entries removed
+        """
+        keys_to_remove = [
+            key for key, strat in self._key_to_strategy.items()
+            if strat == strategy
+        ]
+
+        for key in keys_to_remove:
+            if key in self._cache:
+                del self._cache[key]
+            del self._key_to_strategy[key]
+            # Also clean up query_to_key
+            queries_to_remove = [q for q, k in self._query_to_key.items() if k == key]
+            for query in queries_to_remove:
+                del self._query_to_key[query]
+
+        return len(keys_to_remove)
+
     def clear(self) -> None:
         """Clear all cached entries and reset stats."""
         self._cache.clear()
         self._hits = 0
         self._misses = 0
+
