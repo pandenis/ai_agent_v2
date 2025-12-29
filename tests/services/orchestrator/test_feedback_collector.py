@@ -116,3 +116,20 @@ class TestFeedbackCollector:
         assert stats["by_strategy"]["enhanced"]["count"] == 1
         assert stats["by_strategy"]["enhanced"]["thumbs_down"] == 1
         assert stats["by_strategy"]["deep_reasoning"]["count"] == 1
+
+    def test_get_stats_includes_average_rating(self):
+        """Test: get_stats includes average rating overall and per strategy."""
+        # Arrange
+        collector = FeedbackCollector()
+        collector.add_feedback(response_id="r1", strategy="direct", rating=5)
+        collector.add_feedback(response_id="r2", strategy="direct", rating=4)
+        collector.add_feedback(response_id="r3", strategy="enhanced", rating=3)
+        collector.add_feedback(response_id="r4", strategy="enhanced", rating=5)
+
+        # Act
+        stats = collector.get_stats()
+
+        # Assert
+        assert stats["average_rating"] == 4.25  # (5+4+3+5) / 4
+        assert stats["by_strategy"]["direct"]["average_rating"] == 4.5  # (5+4) / 2
+        assert stats["by_strategy"]["enhanced"]["average_rating"] == 4.0  # (3+5) / 2
