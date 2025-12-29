@@ -96,3 +96,23 @@ class TestFeedbackCollector:
         assert stats["total_feedbacks"] == 3
         assert stats["thumbs_up_count"] == 2
         assert stats["thumbs_down_count"] == 1
+
+    def test_get_stats_per_strategy(self):
+        """Test: get_stats includes metrics per strategy."""
+        # Arrange
+        collector = FeedbackCollector()
+        collector.add_feedback(response_id="r1", strategy="direct", thumbs_up=True)
+        collector.add_feedback(response_id="r2", strategy="direct", thumbs_up=True)
+        collector.add_feedback(response_id="r3", strategy="enhanced", thumbs_up=False)
+        collector.add_feedback(response_id="r4", strategy="deep_reasoning", rating=5)
+
+        # Act
+        stats = collector.get_stats()
+
+        # Assert
+        assert "by_strategy" in stats
+        assert stats["by_strategy"]["direct"]["count"] == 2
+        assert stats["by_strategy"]["direct"]["thumbs_up"] == 2
+        assert stats["by_strategy"]["enhanced"]["count"] == 1
+        assert stats["by_strategy"]["enhanced"]["thumbs_down"] == 1
+        assert stats["by_strategy"]["deep_reasoning"]["count"] == 1

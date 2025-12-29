@@ -68,8 +68,22 @@ class FeedbackCollector:
         thumbs_up_count = sum(1 for f in self._feedbacks if f.get("thumbs_up") is True)
         thumbs_down_count = sum(1 for f in self._feedbacks if f.get("thumbs_up") is False)
 
+        # Calculate per-strategy stats
+        by_strategy: Dict[str, Dict[str, int]] = {}
+        for feedback in self._feedbacks:
+            strategy = feedback["strategy"]
+            if strategy not in by_strategy:
+                by_strategy[strategy] = {"count": 0, "thumbs_up": 0, "thumbs_down": 0}
+
+            by_strategy[strategy]["count"] += 1
+            if feedback.get("thumbs_up") is True:
+                by_strategy[strategy]["thumbs_up"] += 1
+            elif feedback.get("thumbs_up") is False:
+                by_strategy[strategy]["thumbs_down"] += 1
+
         return {
             "total_feedbacks": len(self._feedbacks),
             "thumbs_up_count": thumbs_up_count,
             "thumbs_down_count": thumbs_down_count,
+            "by_strategy": by_strategy,
         }
