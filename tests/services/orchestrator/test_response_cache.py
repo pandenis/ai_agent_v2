@@ -170,3 +170,22 @@ class TestResponseCache:
         assert cache.get("query1") == {"answer": "new"}
         assert cache.get("query2") is None  # Evicted
         assert cache.get("query3") == {"answer": "third"}
+
+    def test_invalidate_by_prefix(self):
+        """Test: Invalidate all entries matching a prefix."""
+        # Arrange
+        cache = ResponseCache()
+        cache.set("weather:london", {"temp": "15C"})
+        cache.set("weather:paris", {"temp": "18C"})
+        cache.set("news:tech", {"headline": "AI news"})
+        cache.set("news:sports", {"headline": "Football"})
+
+        # Act - invalidate all weather queries
+        removed_count = cache.invalidate_by_prefix("weather:")
+
+        # Assert
+        assert removed_count == 2
+        assert cache.get("weather:london") is None
+        assert cache.get("weather:paris") is None
+        assert cache.get("news:tech") == {"headline": "AI news"}
+        assert cache.get("news:sports") == {"headline": "Football"}

@@ -32,6 +32,7 @@ class ResponseCache:
         self._cache: OrderedDict[str, Tuple[Any, float]] = OrderedDict()
         self._hits = 0
         self._misses = 0
+        self._query_to_key: Dict[str, str] = {}  # Maps original query to cache key
 
     def _generate_key(self, query: str, context: Optional[Dict] = None) -> str:
         """Generate cache key from query and context."""
@@ -75,6 +76,7 @@ class ResponseCache:
             self._cache.popitem(last=False)  # Remove oldest (first item)
 
         self._cache[key] = (response, time.time())
+        self._query_to_key[query] = key
 
     def get_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
@@ -88,6 +90,33 @@ class ResponseCache:
             "size": len(self._cache),
             "max_size": self.max_size,
         }
+
+    def invalidate_by_prefix(self, prefix: str) -> int:
+        """
+        Invalidate all cache entries where query starts with prefix.
+
+        Args:
+            prefix: Query prefix to match
+
+        Returns:
+            Number of entries removed
+        """
+        keys_to_remove = []
+        queries_to_remove = []
+
+        for query, key in self._query_to_key.items():
+            if query.startswith(prefix):
+                keys_to_remove.append(key)
+                queries_to_remove.append(query)
+
+        for key in keys_to_remove:
+            if key in self._cache:
+                del self._cache[key]
+
+        for query in queries_to_remove:
+            del self._query_to_key[query]
+
+        return len(keys_to_remove)
 
     def clear(self) -> None:
         """Clear all cached entries and reset stats."""
