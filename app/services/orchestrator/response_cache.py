@@ -92,6 +92,11 @@ class ResponseCache:
         for key, (value, timestamp) in self._cache.items():
             estimated_bytes += len(json.dumps(value)) if isinstance(value, dict) else len(str(value))
 
+        # Calculate strategy distribution
+        strategy_distribution: Dict[str, int] = {}
+        for strategy in self._key_to_strategy.values():
+            strategy_distribution[strategy] = strategy_distribution.get(strategy, 0) + 1
+
         return {
             "hits": self._hits,
             "misses": self._misses,
@@ -99,6 +104,7 @@ class ResponseCache:
             "size": len(self._cache),
             "max_size": self.max_size,
             "estimated_bytes": estimated_bytes,
+            "strategy_distribution": strategy_distribution,
         }
 
     def invalidate_by_prefix(self, prefix: str) -> int:

@@ -237,3 +237,22 @@ class TestResponseCache:
         assert cache.get("query4") is None
         assert cache.get("query2") == {"answer": "enhanced"}
         assert cache.get("query3") == {"answer": "deep"}
+
+    def test_get_stats_includes_strategy_distribution(self):
+        """Test: Stats include count of entries by strategy."""
+        # Arrange
+        cache = ResponseCache()
+        cache.set("q1", {"a": "1"}, strategy="direct")
+        cache.set("q2", {"a": "2"}, strategy="direct")
+        cache.set("q3", {"a": "3"}, strategy="enhanced")
+        cache.set("q4", {"a": "4"}, strategy="deep_reasoning")
+        cache.set("q5", {"a": "5"})  # No strategy
+
+        # Act
+        stats = cache.get_stats()
+
+        # Assert
+        assert "strategy_distribution" in stats
+        assert stats["strategy_distribution"]["direct"] == 2
+        assert stats["strategy_distribution"]["enhanced"] == 1
+        assert stats["strategy_distribution"]["deep_reasoning"] == 1
