@@ -148,3 +148,26 @@ class TestFeedbackCollector:
 
         # Assert
         assert stats["satisfaction_rate"] == 0.75  # 3 positive / 4 total
+
+    def test_get_best_strategy(self):
+        """Test: get_best_strategy returns strategy with highest satisfaction."""
+        # Arrange
+        collector = FeedbackCollector()
+        # Direct: 1/2 = 50% satisfaction
+        collector.add_feedback(response_id="r1", strategy="direct", thumbs_up=True)
+        collector.add_feedback(response_id="r2", strategy="direct", thumbs_up=False)
+        # Enhanced: 3/3 = 100% satisfaction
+        collector.add_feedback(response_id="r3", strategy="enhanced", thumbs_up=True)
+        collector.add_feedback(response_id="r4", strategy="enhanced", thumbs_up=True)
+        collector.add_feedback(response_id="r5", strategy="enhanced", thumbs_up=True)
+        # Deep reasoning: 2/3 = 67% satisfaction
+        collector.add_feedback(response_id="r6", strategy="deep_reasoning", thumbs_up=True)
+        collector.add_feedback(response_id="r7", strategy="deep_reasoning", thumbs_up=True)
+        collector.add_feedback(response_id="r8", strategy="deep_reasoning", thumbs_up=False)
+
+        # Act
+        best = collector.get_best_strategy()
+
+        # Assert
+        assert best["strategy"] == "enhanced"
+        assert best["satisfaction_rate"] == 1.0

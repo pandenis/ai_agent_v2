@@ -109,3 +109,32 @@ class FeedbackCollector:
             "satisfaction_rate": satisfaction_rate,
             "by_strategy": by_strategy,
         }
+
+    def get_best_strategy(self) -> Dict[str, Any]:
+        """
+        Get the strategy with highest satisfaction rate.
+
+        Returns:
+            Dictionary with best strategy and its satisfaction rate
+        """
+        stats = self.get_stats()
+        by_strategy = stats.get("by_strategy", {})
+
+        if not by_strategy:
+            return {"strategy": None, "satisfaction_rate": 0.0}
+
+        best_strategy = None
+        best_rate = -1.0
+
+        for strategy, data in by_strategy.items():
+            total = data["thumbs_up"] + data["thumbs_down"]
+            if total > 0:
+                rate = data["thumbs_up"] / total
+                if rate > best_rate:
+                    best_rate = rate
+                    best_strategy = strategy
+
+        return {
+            "strategy": best_strategy,
+            "satisfaction_rate": best_rate if best_rate >= 0 else 0.0
+        }
