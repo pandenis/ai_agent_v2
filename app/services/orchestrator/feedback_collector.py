@@ -44,6 +44,10 @@ class FeedbackCollector:
             rating: Star rating 1-5
             comment: Optional text feedback
         """
+        # Validate rating range
+        if rating is not None and (rating < 1 or rating > 5):
+            raise ValueError("Rating must be between 1 and 5")
+
         feedback = {
             "response_id": response_id,
             "strategy": strategy,

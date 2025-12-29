@@ -59,3 +59,24 @@ class TestFeedbackCollector:
         assert len(collector._feedbacks) == 1
         assert collector._feedbacks[0]["rating"] == 4
         assert collector._feedbacks[0]["strategy"] == "enhanced"
+
+    def test_add_feedback_validates_rating_range(self):
+        """Test: Rating must be between 1 and 5."""
+        # Arrange
+        collector = FeedbackCollector()
+
+        # Act & Assert - rating too high
+        with pytest.raises(ValueError, match="Rating must be between 1 and 5"):
+            collector.add_feedback(
+                response_id="resp-789",
+                rating=6,
+                strategy="direct"
+            )
+
+        # Act & Assert - rating too low
+        with pytest.raises(ValueError, match="Rating must be between 1 and 5"):
+            collector.add_feedback(
+                response_id="resp-789",
+                rating=0,
+                strategy="direct"
+            )
