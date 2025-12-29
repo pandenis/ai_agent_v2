@@ -189,3 +189,17 @@ class TestResponseCache:
         assert cache.get("weather:paris") is None
         assert cache.get("news:tech") == {"headline": "AI news"}
         assert cache.get("news:sports") == {"headline": "Football"}
+
+    def test_get_stats_includes_estimated_bytes(self):
+        """Test: Stats include estimated memory usage in bytes."""
+        # Arrange
+        cache = ResponseCache()
+        cache.set("query1", {"answer": "short"})
+        cache.set("query2", {"answer": "a much longer response text here"})
+
+        # Act
+        stats = cache.get_stats()
+
+        # Assert
+        assert "estimated_bytes" in stats
+        assert stats["estimated_bytes"] > 0

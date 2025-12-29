@@ -83,12 +83,18 @@ class ResponseCache:
         total = self._hits + self._misses
         hit_rate = self._hits / total if total > 0 else 0.0
 
+        # Estimate memory usage
+        estimated_bytes = 0
+        for key, (value, timestamp) in self._cache.items():
+            estimated_bytes += len(json.dumps(value)) if isinstance(value, dict) else len(str(value))
+
         return {
             "hits": self._hits,
             "misses": self._misses,
             "hit_rate": hit_rate,
             "size": len(self._cache),
             "max_size": self.max_size,
+            "estimated_bytes": estimated_bytes,
         }
 
     def invalidate_by_prefix(self, prefix: str) -> int:
