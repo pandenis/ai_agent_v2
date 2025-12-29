@@ -24,3 +24,21 @@ class TestFeedbackCollector:
         # Assert
         assert collector is not None
         assert hasattr(collector, 'add_feedback')
+
+    def test_add_thumbs_feedback(self):
+        """Test: Add thumbs up/down feedback for a response."""
+        # Arrange
+        collector = FeedbackCollector()
+
+        # Act
+        collector.add_feedback(
+            response_id="resp-123",
+            thumbs_up=True,
+            strategy="direct"
+        )
+
+        # Assert
+        assert len(collector._feedbacks) == 1
+        assert collector._feedbacks[0]["response_id"] == "resp-123"
+        assert collector._feedbacks[0]["thumbs_up"] == True
+        assert collector._feedbacks[0]["strategy"] == "direct"

@@ -26,6 +26,30 @@ class FeedbackCollector:
         """Initialize feedback collector."""
         self._feedbacks: List[Dict[str, Any]] = []
 
-    def add_feedback(self):
-        """Add feedback for a response."""
-        pass
+    def add_feedback(
+            self,
+            response_id: str,
+            strategy: str,
+            thumbs_up: Optional[bool] = None,
+            rating: Optional[int] = None,
+            comment: Optional[str] = None
+    ) -> None:
+        """
+        Add feedback for a response.
+
+        Args:
+            response_id: Unique identifier for the response
+            strategy: Strategy used (direct, enhanced, deep_reasoning)
+            thumbs_up: True for positive, False for negative
+            rating: Star rating 1-5
+            comment: Optional text feedback
+        """
+        feedback = {
+            "response_id": response_id,
+            "strategy": strategy,
+            "thumbs_up": thumbs_up,
+            "rating": rating,
+            "comment": comment,
+            "timestamp": datetime.now()
+        }
+        self._feedbacks.append(feedback)
