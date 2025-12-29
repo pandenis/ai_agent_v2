@@ -97,10 +97,15 @@ class FeedbackCollector:
             ratings_list = data.pop("ratings")
             data["average_rating"] = sum(ratings_list) / len(ratings_list) if ratings_list else 0.0
 
+            # Calculate satisfaction rate
+        thumbs_feedbacks = thumbs_up_count + thumbs_down_count
+        satisfaction_rate = thumbs_up_count / thumbs_feedbacks if thumbs_feedbacks > 0 else 0.0
+
         return {
             "total_feedbacks": len(self._feedbacks),
             "thumbs_up_count": thumbs_up_count,
             "thumbs_down_count": thumbs_down_count,
             "average_rating": average_rating,
+            "satisfaction_rate": satisfaction_rate,
             "by_strategy": by_strategy,
         }

@@ -133,3 +133,18 @@ class TestFeedbackCollector:
         assert stats["average_rating"] == 4.25  # (5+4+3+5) / 4
         assert stats["by_strategy"]["direct"]["average_rating"] == 4.5  # (5+4) / 2
         assert stats["by_strategy"]["enhanced"]["average_rating"] == 4.0  # (3+5) / 2
+
+    def test_get_stats_includes_satisfaction_rate(self):
+        """Test: get_stats includes satisfaction rate (positive / total)."""
+        # Arrange
+        collector = FeedbackCollector()
+        collector.add_feedback(response_id="r1", strategy="direct", thumbs_up=True)
+        collector.add_feedback(response_id="r2", strategy="direct", thumbs_up=True)
+        collector.add_feedback(response_id="r3", strategy="direct", thumbs_up=True)
+        collector.add_feedback(response_id="r4", strategy="enhanced", thumbs_up=False)
+
+        # Act
+        stats = collector.get_stats()
+
+        # Assert
+        assert stats["satisfaction_rate"] == 0.75  # 3 positive / 4 total
