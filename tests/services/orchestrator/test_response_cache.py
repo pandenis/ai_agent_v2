@@ -203,3 +203,18 @@ class TestResponseCache:
         # Assert
         assert "estimated_bytes" in stats
         assert stats["estimated_bytes"] > 0
+
+    def test_cache_with_strategy_tag(self):
+        """Test: Cache entries can be tagged with strategy for selective retrieval."""
+        # Arrange
+        cache = ResponseCache()
+
+        # Act - set with strategy tags
+        cache.set("query1", {"answer": "direct"}, strategy="direct")
+        cache.set("query2", {"answer": "enhanced"}, strategy="enhanced")
+        cache.set("query3", {"answer": "deep"}, strategy="deep_reasoning")
+
+        # Assert - all retrievable
+        assert cache.get("query1") == {"answer": "direct"}
+        assert cache.get("query2") == {"answer": "enhanced"}
+        assert cache.get("query3") == {"answer": "deep"}

@@ -63,7 +63,7 @@ class ResponseCache:
 
         return value
 
-    def set(self, query: str, response: Any, context: Optional[Dict] = None) -> None:
+    def set(self, query: str, response: Any, context: Optional[Dict] = None, strategy: Optional[str] = None) -> None:
         """Store response in cache."""
         key = self._generate_key(query, context)
 
