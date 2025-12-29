@@ -80,3 +80,19 @@ class TestFeedbackCollector:
                 rating=0,
                 strategy="direct"
             )
+
+    def test_get_stats_returns_basic_metrics(self):
+        """Test: get_stats returns basic feedback metrics."""
+        # Arrange
+        collector = FeedbackCollector()
+        collector.add_feedback(response_id="r1", strategy="direct", thumbs_up=True)
+        collector.add_feedback(response_id="r2", strategy="direct", thumbs_up=False)
+        collector.add_feedback(response_id="r3", strategy="enhanced", thumbs_up=True)
+
+        # Act
+        stats = collector.get_stats()
+
+        # Assert
+        assert stats["total_feedbacks"] == 3
+        assert stats["thumbs_up_count"] == 2
+        assert stats["thumbs_down_count"] == 1

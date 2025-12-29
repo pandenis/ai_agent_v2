@@ -57,3 +57,19 @@ class FeedbackCollector:
             "timestamp": datetime.now()
         }
         self._feedbacks.append(feedback)
+
+    def get_stats(self) -> Dict[str, Any]:
+        """
+        Get feedback statistics.
+
+        Returns:
+            Dictionary with feedback metrics
+        """
+        thumbs_up_count = sum(1 for f in self._feedbacks if f.get("thumbs_up") is True)
+        thumbs_down_count = sum(1 for f in self._feedbacks if f.get("thumbs_up") is False)
+
+        return {
+            "total_feedbacks": len(self._feedbacks),
+            "thumbs_up_count": thumbs_up_count,
+            "thumbs_down_count": thumbs_down_count,
+        }
