@@ -36,6 +36,7 @@ from app.services.orchestrator.chain_executor import (
     StepResult,
     ChainResult,
 )
+from app.services.orchestrator.feedback_collector import FeedbackCollector
 
 __all__ = [
     "ResponseCache",
@@ -55,4 +56,5 @@ __all__ = [
     "ChainExecutor",
     "StepResult",
     "ChainResult",
+    "FeedbackCollector",
 ]
