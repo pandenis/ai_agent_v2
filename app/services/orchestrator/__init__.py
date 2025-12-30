@@ -11,6 +11,7 @@ Components:
 - ChainExecutor: Chain execution with error handling
 - FeedbackCollector: User feedback collection
 - ABTestingService: A/B testing framework
+- AnalyticsDashboard: Comprehensive analytics
 """
 
 from app.services.orchestrator.response_cache import ResponseCache
@@ -44,6 +45,7 @@ from app.services.orchestrator.ab_testing import (
     Experiment,
     ExperimentResult,
 )
+from app.services.orchestrator.analytics_dashboard import AnalyticsDashboard
 
 __all__ = [
     "ResponseCache",
@@ -67,4 +69,5 @@ __all__ = [
     "ABTestingService",
     "Experiment",
     "ExperimentResult",
+    "AnalyticsDashboard",
 ]
