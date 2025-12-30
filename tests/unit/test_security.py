@@ -74,3 +74,18 @@ class TestValidatePrompt:
 
             assert exc_info.value.status_code == 400
             assert "dangerous" in exc_info.value.detail.lower()
+
+    def test_command_substitution_raises_exception(self):
+        """Test: Command substitution patterns raise HTTPException 400."""
+        dangerous_prompts = [
+            "$(whoami)",
+            "Hello $(cat /etc/passwd)",
+            "$(rm -rf /)",
+        ]
+
+        for prompt in dangerous_prompts:
+            with pytest.raises(HTTPException) as exc_info:
+                SecurityValidator.validate_prompt(prompt)
+
+            assert exc_info.value.status_code == 400
+            assert "dangerous" in exc_info.value.detail.lower()
