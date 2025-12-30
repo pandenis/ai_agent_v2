@@ -275,3 +275,25 @@ class TestABTestingService:
         assert result["is_significant"] is True
         assert result["best_variant"] == "direct"
         assert result["rate_difference"] == pytest.approx(0.3, rel=0.01)
+
+    def test_get_variant_experiment_not_found(self):
+        """Test: get_variant raises error for unknown experiment."""
+        # Arrange
+        from app.services.orchestrator.ab_testing import ABTestingService
+
+        service = ABTestingService()
+
+        # Act & Assert
+        with pytest.raises(ValueError, match="not found"):
+            service.get_variant("nonexistent_exp", user_id="user_1")
+
+    def test_get_variant_experiment_not_found(self):
+        """Test: get_variant raises error for unknown experiment."""
+        # Arrange
+        from app.services.orchestrator.ab_testing import ABTestingService
+
+        service = ABTestingService()
+
+        # Act & Assert
+        with pytest.raises(ValueError, match="not found"):
+            service.get_variant("nonexistent_exp", user_id="user_1")
