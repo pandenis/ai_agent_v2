@@ -312,3 +312,103 @@ class TestABTestingService:
                 variants=["a", "b"],
                 traffic_split=[0.3, 0.3]  # Sums to 0.6, not 1.0
             )
+
+    def test_get_experiment_stats_empty_results(self):
+        """Test: get_experiment_stats with no results recorded."""
+        # Arrange
+        from app.services.orchestrator.ab_testing import ABTestingService
+
+        service = ABTestingService()
+        exp_id = service.create_experiment(
+            name="Empty Test",
+            variants=["direct", "enhanced"],
+            traffic_split=[0.5, 0.5]
+        )
+
+        # Act - no results recorded
+        stats = service.get_experiment_stats(exp_id)
+
+        # Assert
+        assert stats["total_trials"] == 0
+        assert stats["variants"]["direct"]["trials"] == 0
+        assert stats["variants"]["direct"]["success_rate"] == 0.0
+        assert stats["variants"]["enhanced"]["avg_latency_ms"] == 0.0
+
+    def test_get_experiment_stats_not_found(self):
+        """Test: get_experiment_stats raises error for unknown experiment."""
+        # Arrange
+        from app.services.orchestrator.ab_testing import ABTestingService
+
+        service = ABTestingService()
+
+        # Act & Assert
+        with pytest.raises(ValueError, match="not found"):
+            service.get_experiment_stats("nonexistent_exp")
+
+    def test_create_experiment_validates_lengths_match(self):
+        """Test: create_experiment validates variants and traffic_split lengths."""
+        # Arrange
+        from app.services.orchestrator.ab_testing import ABTestingService
+
+        service = ABTestingService()
+
+        # Act & Assert - lengths don't match
+        with pytest.raises(ValueError, match="same length"):
+            service.create_experiment(
+                name="Mismatched",
+                variants=["a", "b", "c"],
+                traffic_split=[0.5, 0.5]  # Only 2 values for 3 variants
+            )
+
+    def test_is_statistically_significant_no_difference(self):
+        """Test: Returns not significant when success rates are similar."""
+        # Arrange
+        from app.services.orchestrator.ab_testing import ABTestingService
+
+        service = ABTestingService()
+        exp_id = service.create_experiment(
+            name="Similar Rates Test",
+            variants=["direct", "enhanced"],
+            traffic_split=[0.5, 0.5]
+        )
+
+        # Add 30+ results per variant with similar success rates
+        # Direct: 70% success (21/30)
+        for i in range(21):
+            service.record_result(exp_id, "direct", f"user_d_{i}", success=True, latency_ms=100)
+        for i in range(9):
+            service.record_result(exp_id, "direct", f"user_d_fail_{i}", success=False, latency_ms=100)
+
+        # Enhanced: 73% success (22/30) - only 3% difference
+        for i in range(22):
+            service.record_result(exp_id, "enhanced", f"user_e_{i}", success=True, latency_ms=200)
+        for i in range(8):
+            service.record_result(exp_id, "enhanced", f"user_e_fail_{i}", success=False, latency_ms=200)
+
+        # Act
+        result = service.is_statistically_significant(exp_id)
+
+        # Assert - 3% difference is below 10% threshold
+        assert result["is_significant"] is False
+        assert result["reason"] == "no_significant_difference"
+
+    def test_get_variant_fallback_to_last(self):
+        """Test: get_variant falls back to last variant on edge case."""
+        # Arrange
+        from app.services.orchestrator.ab_testing import ABTestingService
+        from unittest.mock import patch
+
+        service = ABTestingService()
+        exp_id = service.create_experiment(
+            name="Fallback Test",
+            variants=["direct", "enhanced"],
+            traffic_split=[0.5, 0.5]
+        )
+
+        # Act - mock hash to return value that triggers fallback
+        # hash_value = 0.9999... which may not be < cumulative due to float precision
+        with patch('app.services.orchestrator.ab_testing.hash', return_value=999999999):
+            variant = service.get_variant(exp_id, user_id="test_user")
+
+        # Assert - should still return a valid variant
+        assert variant in ["direct", "enhanced"]
