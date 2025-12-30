@@ -113,3 +113,43 @@ class TestABTestingService:
 
         # Assert
         assert variant in ["direct", "enhanced", "deep_reasoning"]
+
+    def test_get_variant_consistent_for_same_user(self):
+        """Test: Same user always gets the same variant."""
+        # Arrange
+        from app.services.orchestrator.ab_testing import ABTestingService
+
+        service = ABTestingService()
+        exp_id = service.create_experiment(
+            name="Consistency Test",
+            variants=["direct", "enhanced"],
+            traffic_split=[0.5, 0.5]
+        )
+
+        # Act - call multiple times for same user
+        variant1 = service.get_variant(exp_id, user_id="user_456")
+        variant2 = service.get_variant(exp_id, user_id="user_456")
+        variant3 = service.get_variant(exp_id, user_id="user_456")
+
+        # Assert - should always be the same
+        assert variant1 == variant2 == variant3
+
+    def test_get_variant_consistent_for_same_user(self):
+        """Test: Same user always gets the same variant."""
+        # Arrange
+        from app.services.orchestrator.ab_testing import ABTestingService
+
+        service = ABTestingService()
+        exp_id = service.create_experiment(
+            name="Consistency Test",
+            variants=["direct", "enhanced"],
+            traffic_split=[0.5, 0.5]
+        )
+
+        # Act - call multiple times for same user
+        variant1 = service.get_variant(exp_id, user_id="user_456")
+        variant2 = service.get_variant(exp_id, user_id="user_456")
+        variant3 = service.get_variant(exp_id, user_id="user_456")
+
+        # Assert - should always be the same
+        assert variant1 == variant2 == variant3
