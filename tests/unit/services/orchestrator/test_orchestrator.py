@@ -1728,3 +1728,50 @@ class TestOrchestratorABTesting:
         # Verify that a result was recorded
         assert len(ab_service.results) == 1
         assert ab_service.results[0].experiment_id == exp_id
+
+    @pytest.mark.asyncio
+    async def test_ab_variant_overrides_strategy(self):
+        """Test: A/B variant overrides DecisionEngine strategy."""
+        # Arrange
+        from unittest.mock import Mock, AsyncMock
+        from app.services.orchestrator.orchestrator import IntelligentOrchestrator
+        from app.services.orchestrator.ab_testing import ABTestingService
+
+        mock_memory = Mock()
+        mock_memory.get_facts = AsyncMock(return_value=[
+            {"text": "User likes Python", "importance": 0.9}
+        ])
+        
+        mock_agent = Mock()
+        mock_agent.name = "mistral"
+        mock_agent.process = AsyncMock(return_value="Enhanced AI response")
+        
+        mock_registry = Mock()
+        mock_registry.get_agent = Mock(return_value=mock_agent)
+        mock_registry.get_default_agent = Mock(return_value=mock_agent)
+
+        ab_service = ABTestingService()
+        # Create experiment with only "enhanced" variant (100% traffic)
+        exp_id = ab_service.create_experiment(
+            name="Force Enhanced",
+            variants=["enhanced"],
+            traffic_split=[1.0]
+        )
+
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory,
+            agent_registry=mock_registry,
+            ab_testing_service=ab_service
+        )
+
+        # Act
+        result = await orchestrator.process_query(
+            query="Tell me about Python",
+            session_id="test_session",
+            user_id="user_abc",
+            ab_experiment_id=exp_id
+        )
+
+        # Assert - should use "enhanced" strategy from A/B, not DecisionEngine
+        assert result["metadata"]["strategy"] == "enhanced"
+        assert result["metadata"].get("ab_variant") == "enhanced"

@@ -164,6 +164,13 @@ class IntelligentOrchestrator:
                 query_analysis=query_analysis,
                 memory_eval=memory_eval
             )
+
+            # A/B Testing: Override strategy if variant is active
+            if ab_variant and ab_variant in ["direct", "enhanced", "deep_reasoning"]:
+                original_strategy = strategy.strategy
+                strategy.strategy = ab_variant
+                logger.info(f"A/B Testing: Overriding strategy '{original_strategy}' -> '{ab_variant}'")
+
             logger.info(f"Selected strategy: {strategy.strategy}")
 
             # ==========================================
@@ -269,7 +276,8 @@ class IntelligentOrchestrator:
                     "reasoning_depth": strategy.reasoning_depth,
                     "memory_coverage": round(memory_eval.coverage_score, 2),
                     "reasoning_steps": reasoning_steps,
-                    "synthesis_confidence": synthesis_confidence if strategy.strategy == "deep_reasoning" else None
+                    "synthesis_confidence": synthesis_confidence if strategy.strategy == "deep_reasoning" else None,
+                    "ab_variant": ab_variant
                 }
             }
 
