@@ -44,3 +44,12 @@ class TestAgentsEndpoints:
         data = response.json()
         assert "selected_agent" in data
         assert "confidence" in data
+
+    def test_select_agent_invalid_input_returns_400(self):
+        """Test: POST /agents/select with invalid input returns 400."""
+        response = client.post(
+            "/api/v1/agents/select",
+            json={"prompt": ""}  # Empty prompt
+        )
+
+        assert response.status_code == 400
