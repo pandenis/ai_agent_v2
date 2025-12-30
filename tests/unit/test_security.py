@@ -106,3 +106,23 @@ class TestValidatePrompt:
 
             assert exc_info.value.status_code == 400
             assert "dangerous" in exc_info.value.detail.lower()
+
+    def test_valid_prompt_returns_stripped(self):
+        """Test: Valid prompt returns stripped string."""
+        result = SecurityValidator.validate_prompt("  Hello, how are you?  ")
+
+        assert result == "Hello, how are you?"
+
+    def test_valid_prompt_with_normal_text(self):
+        """Test: Normal text passes validation."""
+        prompts = [
+            "What is the weather today?",
+            "Explain quantum physics",
+            "Write a poem about cats",
+            "How do I cook pasta?",
+            "Расскажи о Python",  # Russian text
+        ]
+
+        for prompt in prompts:
+            result = SecurityValidator.validate_prompt(prompt)
+            assert result == prompt.strip()
