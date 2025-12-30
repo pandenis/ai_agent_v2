@@ -9,6 +9,8 @@ Components:
 - RetryHandler: Retry logic with backoff
 - ChainBuilder: Multi-step execution planning
 - ChainExecutor: Chain execution with error handling
+- FeedbackCollector: User feedback collection
+- ABTestingService: A/B testing framework
 """
 
 from app.services.orchestrator.response_cache import ResponseCache
@@ -37,6 +39,11 @@ from app.services.orchestrator.chain_executor import (
     ChainResult,
 )
 from app.services.orchestrator.feedback_collector import FeedbackCollector
+from app.services.orchestrator.ab_testing import (
+    ABTestingService,
+    Experiment,
+    ExperimentResult,
+)
 
 __all__ = [
     "ResponseCache",
@@ -57,4 +64,7 @@ __all__ = [
     "StepResult",
     "ChainResult",
     "FeedbackCollector",
+    "ABTestingService",
+    "Experiment",
+    "ExperimentResult",
 ]
