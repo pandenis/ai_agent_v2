@@ -32,3 +32,15 @@ class TestAgentsEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert "agents" in data or "status" in data
+
+    def test_select_agent_success(self):
+        """Test: POST /agents/select returns selected agent."""
+        response = client.post(
+            "/api/v1/agents/select",
+            json={"prompt": "What is the weather today?"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "selected_agent" in data
+        assert "confidence" in data
