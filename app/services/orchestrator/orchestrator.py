@@ -82,7 +82,9 @@ class IntelligentOrchestrator:
             query: str,
             session_id: str,
             user_context: Optional[Dict[str, Any]] = None,
-            use_chains: bool = False
+            use_chains: bool = False,
+            user_id: Optional[str] = None,
+            ab_experiment_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Main method - processes a user query through all stages.
@@ -112,6 +114,14 @@ class IntelligentOrchestrator:
 
         try:
             logger.info(f"Processing query for session {session_id}: {query[:50]}...")
+
+            # ==========================================
+            # A/B TESTING: Get variant if experiment active
+            # ==========================================
+            ab_variant = None
+            if self.ab_testing_service and ab_experiment_id and user_id:
+                ab_variant = self.ab_testing_service.get_variant(ab_experiment_id, user_id)
+                logger.info(f"A/B Testing: Using variant '{ab_variant}' for experiment {ab_experiment_id}")
 
             # ==========================================
             # CHECK CACHE FIRST
@@ -276,6 +286,19 @@ class IntelligentOrchestrator:
             if strategy.strategy == "direct":
                 self.response_cache.set(query, result, context=user_context)
                 logger.debug("Cached direct response")
+
+            # ==========================================
+            # A/B TESTING: Record result
+            # ==========================================
+            if self.ab_testing_service and ab_experiment_id and user_id and ab_variant:
+                self.ab_testing_service.record_result(
+                    experiment_id=ab_experiment_id,
+                    variant=ab_variant,
+                    user_id=user_id,
+                    success=True,  # Query completed successfully
+                    latency_ms=elapsed_time
+                )
+                logger.debug(f"A/B Testing: Recorded result for variant '{ab_variant}'")
 
             return result
 

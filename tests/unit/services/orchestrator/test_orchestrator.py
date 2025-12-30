@@ -1681,3 +1681,50 @@ class TestOrchestratorABTesting:
 
         # Assert
         assert orchestrator.ab_testing_service is ab_service
+
+    @pytest.mark.asyncio
+    async def test_process_query_uses_ab_testing_variant(self):
+        """Test: process_query uses A/B testing variant when experiment is active."""
+        # Arrange
+        from unittest.mock import Mock, AsyncMock
+        from app.services.orchestrator.orchestrator import IntelligentOrchestrator
+        from app.services.orchestrator.ab_testing import ABTestingService
+
+        mock_memory = Mock()
+        mock_memory.get_facts = AsyncMock(return_value=[])
+        
+        mock_agent = Mock()
+        mock_agent.name = "mistral"
+        mock_agent.process = AsyncMock(return_value="AI response")
+        
+        mock_registry = Mock()
+        mock_registry.get_agent = Mock(return_value=mock_agent)
+        mock_registry.get_default_agent = Mock(return_value=mock_agent)
+
+        ab_service = ABTestingService()
+        exp_id = ab_service.create_experiment(
+            name="Strategy Test",
+            variants=["direct", "enhanced"],
+            traffic_split=[0.5, 0.5]
+        )
+
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory,
+            agent_registry=mock_registry,
+            ab_testing_service=ab_service
+        )
+
+        # Act
+        result = await orchestrator.process_query(
+            query="What is the weather?",
+            session_id="test_session",
+            user_id="user_123",
+            ab_experiment_id=exp_id
+        )
+
+        # Assert
+        assert result is not None
+        assert "metadata" in result
+        # Verify that a result was recorded
+        assert len(ab_service.results) == 1
+        assert ab_service.results[0].experiment_id == exp_id
