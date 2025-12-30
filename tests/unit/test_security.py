@@ -126,3 +126,55 @@ class TestValidatePrompt:
         for prompt in prompts:
             result = SecurityValidator.validate_prompt(prompt)
             assert result == prompt.strip()
+
+
+class TestValidateSessionId:
+    """Tests for validate_session_id method."""
+
+    def test_too_short_session_id_raises_exception(self):
+        """Test: Session ID < 8 chars raises HTTPException 400."""
+        with pytest.raises(HTTPException) as exc_info:
+            SecurityValidator.validate_session_id("abc123")  # 6 chars
+
+        assert exc_info.value.status_code == 400
+        assert "invalid" in exc_info.value.detail.lower()
+
+    def test_too_long_session_id_raises_exception(self):
+        """Test: Session ID > 64 chars raises HTTPException 400."""
+        long_id = "a" * 65
+
+        with pytest.raises(HTTPException) as exc_info:
+            SecurityValidator.validate_session_id(long_id)
+
+        assert exc_info.value.status_code == 400
+        assert "invalid" in exc_info.value.detail.lower()
+
+    def test_invalid_characters_raises_exception(self):
+        """Test: Invalid characters raise HTTPException 400."""
+        invalid_ids = [
+            "session@123",  # @ symbol
+            "session 123",  # Space
+            "session.123",  # Dot
+            "session/123",  # Slash
+            "session#123",  # Hash
+        ]
+
+        for session_id in invalid_ids:
+            with pytest.raises(HTTPException) as exc_info:
+                SecurityValidator.validate_session_id(session_id)
+
+            assert exc_info.value.status_code == 400
+
+    def test_valid_session_id_returns_id(self):
+        """Test: Valid session IDs pass validation."""
+        valid_ids = [
+            "abcd1234",  # 8 chars - minimum
+            "session_123",  # Underscore allowed
+            "session-123",  # Hyphen allowed
+            "ABC123xyz",  # Mixed case
+            "a" * 64,  # 64 chars - maximum
+        ]
+
+        for session_id in valid_ids:
+            result = SecurityValidator.validate_session_id(session_id)
+            assert result == session_id
