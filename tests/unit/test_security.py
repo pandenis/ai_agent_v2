@@ -42,3 +42,18 @@ class TestValidatePrompt:
 
         assert exc_info.value.status_code == 400
         assert "too long" in exc_info.value.detail.lower()
+
+    def test_control_characters_raises_exception(self):
+        """Test: Control characters raise HTTPException 400."""
+        dangerous_prompts = [
+            "Hello\x00World",  # Null byte
+            "Test\x07text",  # Bell character
+            "Data\x1fhere",  # Unit separator
+        ]
+
+        for prompt in dangerous_prompts:
+            with pytest.raises(HTTPException) as exc_info:
+                SecurityValidator.validate_prompt(prompt)
+
+            assert exc_info.value.status_code == 400
+            assert "dangerous" in exc_info.value.detail.lower()
