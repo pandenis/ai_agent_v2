@@ -191,3 +191,60 @@ class ABTestingService:
             "total_trials": len(exp_results),
             "variants": variants_stats
         }
+
+    def is_statistically_significant(
+        self,
+        experiment_id: str,
+        min_samples_per_variant: int = 30,
+        confidence_level: float = 0.95
+    ) -> dict:
+        """Check if experiment results are statistically significant.
+        
+        Uses a simple approach: requires minimum samples per variant
+        and checks if success rate difference exceeds threshold.
+        
+        Args:
+            experiment_id: ID of the experiment
+            min_samples_per_variant: Minimum trials per variant (default: 30)
+            confidence_level: Required confidence level (default: 0.95)
+            
+        Returns:
+            Dictionary with significance analysis
+        """
+        stats = self.get_experiment_stats(experiment_id)
+        variants_stats = stats["variants"]
+        
+        # Check minimum samples
+        for variant, data in variants_stats.items():
+            if data["trials"] < min_samples_per_variant:
+                return {
+                    "is_significant": False,
+                    "reason": "insufficient_data",
+                    "min_required": min_samples_per_variant,
+                    "current_trials": {v: d["trials"] for v, d in variants_stats.items()}
+                }
+        
+        # Get success rates
+        success_rates = {v: d["success_rate"] for v, d in variants_stats.items()}
+        
+        # Find best and worst variants
+        best_variant = max(success_rates, key=success_rates.get)
+        worst_variant = min(success_rates, key=success_rates.get)
+        
+        rate_difference = success_rates[best_variant] - success_rates[worst_variant]
+        
+        # Simple significance threshold based on confidence level
+        # For 95% confidence, require at least 10% difference
+        threshold = 0.10 if confidence_level >= 0.95 else 0.05
+        
+        is_significant = rate_difference >= threshold
+        
+        return {
+            "is_significant": is_significant,
+            "reason": "significant_difference" if is_significant else "no_significant_difference",
+            "best_variant": best_variant,
+            "worst_variant": worst_variant,
+            "rate_difference": rate_difference,
+            "threshold": threshold,
+            "success_rates": success_rates
+        }

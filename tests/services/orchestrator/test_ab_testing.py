@@ -219,3 +219,26 @@ class TestABTestingService:
         assert stats["variants"]["enhanced"]["trials"] == 2
         assert stats["variants"]["enhanced"]["successes"] == 1
         assert stats["variants"]["enhanced"]["success_rate"] == pytest.approx(0.5)
+
+    def test_is_statistically_significant_not_enough_data(self):
+        """Test: Returns False when not enough data for significance."""
+        # Arrange
+        from app.services.orchestrator.ab_testing import ABTestingService
+
+        service = ABTestingService()
+        exp_id = service.create_experiment(
+            name="Significance Test",
+            variants=["direct", "enhanced"],
+            traffic_split=[0.5, 0.5]
+        )
+
+        # Only 2 results - not enough data
+        service.record_result(exp_id, "direct", "user_1", success=True, latency_ms=100)
+        service.record_result(exp_id, "enhanced", "user_2", success=False, latency_ms=200)
+
+        # Act
+        result = service.is_statistically_significant(exp_id)
+
+        # Assert
+        assert result["is_significant"] is False
+        assert result["reason"] == "insufficient_data"
