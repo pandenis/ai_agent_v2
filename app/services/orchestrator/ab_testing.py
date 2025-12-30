@@ -86,3 +86,34 @@ class ABTestingService:
         self.experiments[exp_id] = experiment
         
         return exp_id
+
+    def get_variant(self, experiment_id: str, user_id: str) -> str:
+        """Get variant for a user in an experiment.
+        
+        Uses consistent hashing based on user_id to ensure
+        the same user always gets the same variant.
+        
+        Args:
+            experiment_id: ID of the experiment
+            user_id: Unique user identifier
+            
+        Returns:
+            Selected variant name
+        """
+        experiment = self.experiments.get(experiment_id)
+        if not experiment:
+            raise ValueError(f"Experiment {experiment_id} not found")
+        
+        # Consistent hash based on user_id + experiment_id
+        hash_input = f"{experiment_id}:{user_id}"
+        hash_value = hash(hash_input) % 1000 / 1000.0  # 0.0 to 0.999
+        
+        # Select variant based on traffic split
+        cumulative = 0.0
+        for variant, split in zip(experiment.variants, experiment.traffic_split):
+            cumulative += split
+            if hash_value < cumulative:
+                return variant
+        
+        # Fallback to last variant
+        return experiment.variants[-1]

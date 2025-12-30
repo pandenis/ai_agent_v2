@@ -95,3 +95,21 @@ class TestABTestingService:
         assert exp_id in service.experiments
         assert service.experiments[exp_id].name == "Strategy Comparison"
         assert service.experiments[exp_id].variants == ["direct", "enhanced"]
+
+    def test_get_variant_returns_valid_variant(self):
+        """Test: get_variant returns one of the defined variants."""
+        # Arrange
+        from app.services.orchestrator.ab_testing import ABTestingService
+
+        service = ABTestingService()
+        exp_id = service.create_experiment(
+            name="Test Experiment",
+            variants=["direct", "enhanced", "deep_reasoning"],
+            traffic_split=[0.5, 0.3, 0.2]
+        )
+
+        # Act
+        variant = service.get_variant(exp_id, user_id="user_123")
+
+        # Assert
+        assert variant in ["direct", "enhanced", "deep_reasoning"]
