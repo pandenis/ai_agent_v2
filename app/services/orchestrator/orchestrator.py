@@ -24,6 +24,7 @@ from app.services.orchestrator.synthesis_engine import SynthesisEngine
 from app.services.orchestrator.response_cache import ResponseCache
 from app.services.orchestrator.chain_builder import ChainBuilder
 from app.services.orchestrator.chain_executor import ChainExecutor
+from app.services.orchestrator.ab_testing import ABTestingService
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,8 @@ class IntelligentOrchestrator:
             agent_registry,  # Manages AI agents (Mistral, DeepSeek, etc.)
             fact_extractor=None,  # Extracts facts from conversations
             web_search_service=None,  # Web search for external info
-            response_cache=None  # Cache for responses
+            response_cache=None,  # Cache for responses
+            ab_testing_service=None  # A/B testing service
     ):
         """
         Initialize the orchestrator with required services.
@@ -60,6 +62,7 @@ class IntelligentOrchestrator:
         self.fact_extractor = fact_extractor
         self.web_search_service = web_search_service
         self.response_cache = response_cache or ResponseCache()
+        self.ab_testing_service = ab_testing_service
 
         # Create instances of our components
         self.query_analyzer = QueryAnalyzer()

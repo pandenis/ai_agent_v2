@@ -1657,3 +1657,27 @@ class TestOrchestratorChainIntegration:
         assert "text" in result
         assert result["metadata"]["strategy"] == "error"
         assert "error" in result["metadata"]
+
+class TestOrchestratorABTesting:
+    """Tests for A/B Testing integration in Orchestrator."""
+
+    def test_orchestrator_accepts_ab_testing_service(self):
+        """Test: Orchestrator can be initialized with ABTestingService."""
+        # Arrange
+        from unittest.mock import Mock
+        from app.services.orchestrator.orchestrator import IntelligentOrchestrator
+        from app.services.orchestrator.ab_testing import ABTestingService
+
+        mock_memory = Mock()
+        mock_registry = Mock()
+        ab_service = ABTestingService()
+
+        # Act
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory,
+            agent_registry=mock_registry,
+            ab_testing_service=ab_service
+        )
+
+        # Assert
+        assert orchestrator.ab_testing_service is ab_service
