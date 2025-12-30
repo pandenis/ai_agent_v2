@@ -78,3 +78,11 @@ class TestSessionEndpoints:
         data = response.json()
         assert "session_id" in data
         assert data["agent_name"] == "mistral"
+
+    def test_get_sessions_returns_list(self):
+        """Test: GET /sessions returns list of sessions."""
+        response = client.get("/api/v1/sessions")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
