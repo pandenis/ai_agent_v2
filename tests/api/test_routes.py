@@ -155,3 +155,16 @@ class TestSessionEndpoints:
         data = response.json()
         assert data["session_id"] == session_id
         assert "facts" in data
+
+class TestMemoryEndpoints:
+    """Tests for /memory/* endpoints."""
+
+    def test_get_facts_returns_list(self):
+        """Test: GET /memory/facts returns facts list."""
+        response = client.get("/api/v1/memory/facts")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "facts" in data
+        assert "total" in data
+        assert "has_more" in data
