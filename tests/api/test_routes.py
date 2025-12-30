@@ -180,3 +180,13 @@ class TestMemoryEndpoints:
         response = client.delete("/api/v1/memory/facts/nonexistent-fact-id")
 
         assert response.status_code == 404
+
+    def test_get_memory_stats_returns_stats(self):
+        """Test: GET /memory/stats returns statistics."""
+        response = client.get("/api/v1/memory/stats")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "total_facts" in data
+        assert "facts_by_type" in data
+        assert "avg_importance" in data
