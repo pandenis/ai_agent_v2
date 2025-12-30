@@ -297,3 +297,18 @@ class TestABTestingService:
         # Act & Assert
         with pytest.raises(ValueError, match="not found"):
             service.get_variant("nonexistent_exp", user_id="user_1")
+
+    def test_create_experiment_validates_traffic_split(self):
+        """Test: create_experiment validates traffic_split sums to 1.0."""
+        # Arrange
+        from app.services.orchestrator.ab_testing import ABTestingService
+
+        service = ABTestingService()
+
+        # Act & Assert - traffic split doesn't sum to 1.0
+        with pytest.raises(ValueError, match="sum to 1.0"):
+            service.create_experiment(
+                name="Invalid Split",
+                variants=["a", "b"],
+                traffic_split=[0.3, 0.3]  # Sums to 0.6, not 1.0
+            )

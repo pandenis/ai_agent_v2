@@ -71,8 +71,19 @@ class ABTestingService:
             
         Returns:
             Experiment ID
+            
+        Raises:
+            ValueError: If traffic_split doesn't sum to 1.0 or lengths don't match
         """
         import uuid
+        
+        # Validate traffic split sums to 1.0
+        if abs(sum(traffic_split) - 1.0) > 0.001:
+            raise ValueError(f"traffic_split must sum to 1.0, got {sum(traffic_split)}")
+        
+        # Validate lengths match
+        if len(variants) != len(traffic_split):
+            raise ValueError(f"variants and traffic_split must have same length")
         
         exp_id = f"exp_{uuid.uuid4().hex[:8]}"
         
