@@ -21,3 +21,14 @@ class TestHealthEndpoint:
 
         assert response.status_code == 200
         assert response.json()["status"] == "healthy"
+
+class TestAgentsEndpoints:
+    """Tests for /agents/* endpoints."""
+
+    def test_get_agents_status_returns_200(self):
+        """Test: GET /agents/status returns agent statuses."""
+        response = client.get("/api/v1/agents/status")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "agents" in data or "status" in data
