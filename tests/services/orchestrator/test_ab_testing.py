@@ -242,3 +242,36 @@ class TestABTestingService:
         # Assert
         assert result["is_significant"] is False
         assert result["reason"] == "insufficient_data"
+
+    def test_is_statistically_significant_with_clear_winner(self):
+        """Test: Returns True when there's a clear winner with enough data."""
+        # Arrange
+        from app.services.orchestrator.ab_testing import ABTestingService
+
+        service = ABTestingService()
+        exp_id = service.create_experiment(
+            name="Clear Winner Test",
+            variants=["direct", "enhanced"],
+            traffic_split=[0.5, 0.5]
+        )
+
+        # Add 30+ results per variant with clear difference
+        # Direct: 90% success rate (27/30)
+        for i in range(27):
+            service.record_result(exp_id, "direct", f"user_d_{i}", success=True, latency_ms=100)
+        for i in range(3):
+            service.record_result(exp_id, "direct", f"user_d_fail_{i}", success=False, latency_ms=100)
+
+        # Enhanced: 60% success rate (18/30)
+        for i in range(18):
+            service.record_result(exp_id, "enhanced", f"user_e_{i}", success=True, latency_ms=200)
+        for i in range(12):
+            service.record_result(exp_id, "enhanced", f"user_e_fail_{i}", success=False, latency_ms=200)
+
+        # Act
+        result = service.is_statistically_significant(exp_id)
+
+        # Assert
+        assert result["is_significant"] is True
+        assert result["best_variant"] == "direct"
+        assert result["rate_difference"] == pytest.approx(0.3, rel=0.01)
