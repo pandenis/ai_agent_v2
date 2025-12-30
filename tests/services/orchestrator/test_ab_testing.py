@@ -74,3 +74,24 @@ class TestABTestingService:
         assert service is not None
         assert service.experiments == {}
         assert service.results == []
+
+    def test_create_experiment(self):
+        """Test: Create experiment with variants and traffic split."""
+        # Arrange
+        from app.services.orchestrator.ab_testing import ABTestingService
+
+        service = ABTestingService()
+
+        # Act
+        exp_id = service.create_experiment(
+            name="Strategy Comparison",
+            variants=["direct", "enhanced"],
+            traffic_split=[0.5, 0.5]
+        )
+
+        # Assert
+        assert exp_id is not None
+        assert exp_id.startswith("exp_")
+        assert exp_id in service.experiments
+        assert service.experiments[exp_id].name == "Strategy Comparison"
+        assert service.experiments[exp_id].variants == ["direct", "enhanced"]

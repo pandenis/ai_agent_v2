@@ -55,3 +55,34 @@ class ABTestingService:
         """Initialize A/B testing service."""
         self.experiments: dict = {}
         self.results: list = []
+
+    def create_experiment(
+        self,
+        name: str,
+        variants: List[str],
+        traffic_split: List[float]
+    ) -> str:
+        """Create a new A/B test experiment.
+        
+        Args:
+            name: Human-readable experiment name
+            variants: List of variant names (e.g., ["direct", "enhanced"])
+            traffic_split: Traffic percentage for each variant (must sum to 1.0)
+            
+        Returns:
+            Experiment ID
+        """
+        import uuid
+        
+        exp_id = f"exp_{uuid.uuid4().hex[:8]}"
+        
+        experiment = Experiment(
+            experiment_id=exp_id,
+            name=name,
+            variants=variants,
+            traffic_split=traffic_split
+        )
+        
+        self.experiments[exp_id] = experiment
+        
+        return exp_id
