@@ -132,3 +132,9 @@ class TestSessionEndpoints:
         assert data["session_id"] == session_id
         assert "messages" in data
         assert isinstance(data["messages"], list)
+
+    def test_get_session_facts_not_found_returns_404(self):
+        """Test: GET /sessions/{id}/facts with invalid session returns 404."""
+        response = client.get("/api/v1/sessions/nonexistent-id/facts")
+
+        assert response.status_code == 404
