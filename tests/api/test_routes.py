@@ -53,3 +53,13 @@ class TestAgentsEndpoints:
         )
 
         assert response.status_code == 400
+
+    def test_select_agent_invalid_task_type_returns_400(self):
+        """Test: POST /agents/select with invalid task_type returns 400."""
+        response = client.post(
+            "/api/v1/agents/select",
+            json={"prompt": "Hello world", "task_type": "invalid_type"}
+        )
+
+        assert response.status_code == 400
+        assert "Invalid task_type" in response.json()["detail"]
