@@ -41,3 +41,30 @@ class AnalyticsDashboard:
         """
         self.metrics = metrics or OrchestratorMetrics()
         self.feedback_collector = feedback_collector or FeedbackCollector()
+
+    def get_query_stats(self) -> Dict[str, Any]:
+        """Get overall query statistics.
+        
+        Returns:
+            Dictionary with query statistics:
+            - total_queries: Total number of queries processed
+            - successful_queries: Number of successful queries
+            - failed_queries: Number of failed queries
+            - success_rate: Success rate (0.0 to 1.0)
+        """
+        metrics_summary = self.metrics.get_stats()
+        
+        total = metrics_summary.get("total_queries", 0)
+        # For now, assume all tracked queries are successful
+        # Failed queries would be tracked separately
+        successful = total
+        failed = 0
+        
+        success_rate = successful / total if total > 0 else 0.0
+        
+        return {
+            "total_queries": total,
+            "successful_queries": successful,
+            "failed_queries": failed,
+            "success_rate": success_rate
+        }
