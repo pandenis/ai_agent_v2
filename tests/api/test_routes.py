@@ -114,3 +114,21 @@ class TestSessionEndpoints:
         response = client.get("/api/v1/sessions/nonexistent-id/messages")
 
         assert response.status_code == 404
+
+    def test_get_session_messages_success(self):
+        """Test: GET /sessions/{id}/messages returns messages list."""
+        # First create a session
+        create_response = client.post(
+            "/api/v1/sessions",
+            json={"agent_name": "test-agent"}
+        )
+        session_id = create_response.json()["session_id"]
+
+        # Get messages (empty but valid)
+        response = client.get(f"/api/v1/sessions/{session_id}/messages")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["session_id"] == session_id
+        assert "messages" in data
+        assert isinstance(data["messages"], list)
