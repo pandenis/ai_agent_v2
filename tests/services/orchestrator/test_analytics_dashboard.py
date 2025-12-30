@@ -108,3 +108,39 @@ class TestAnalyticsDashboard:
         assert distribution["strategies"]["enhanced"]["percentage"] == pytest.approx(30.0)
         assert distribution["strategies"]["deep_reasoning"]["count"] == 2
         assert distribution["strategies"]["deep_reasoning"]["percentage"] == pytest.approx(20.0)
+
+    def test_get_cost_analytics_empty(self):
+        """Test: get_cost_analytics returns zeros when no data."""
+        # Arrange
+        dashboard = AnalyticsDashboard()
+
+        # Act
+        costs = dashboard.get_cost_analytics()
+
+        # Assert
+        assert costs["total_cost_usd"] == 0.0
+        assert costs["avg_cost_per_query"] == 0.0
+        assert costs["cost_by_strategy"] == {}
+
+    def test_get_cost_analytics_with_data(self):
+        """Test: get_cost_analytics returns correct cost breakdown."""
+        # Arrange
+        from app.services.orchestrator.orchestrator_metrics import OrchestratorMetrics
+        
+        metrics = OrchestratorMetrics()
+        # direct: free, enhanced: $0.001 each, deep: $0.005 each
+        metrics.track_query(strategy="direct", elapsed_time_ms=100, cost_usd=0.0)
+        metrics.track_query(strategy="direct", elapsed_time_ms=100, cost_usd=0.0)
+        metrics.track_query(strategy="enhanced", elapsed_time_ms=2000, cost_usd=0.001)
+        metrics.track_query(strategy="enhanced", elapsed_time_ms=2000, cost_usd=0.001)
+        metrics.track_query(strategy="deep_reasoning", elapsed_time_ms=10000, cost_usd=0.005)
+        
+        dashboard = AnalyticsDashboard(metrics=metrics)
+
+        # Act
+        costs = dashboard.get_cost_analytics()
+
+        # Assert
+        # Total: 0 + 0 + 0.001 + 0.001 + 0.005 = 0.007
+        assert costs["total_cost_usd"] == pytest.approx(0.007)
+        assert costs["avg_cost_per_query"] == pytest.approx(0.0014)  # 0.007 / 5

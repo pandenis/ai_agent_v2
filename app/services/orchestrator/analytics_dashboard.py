@@ -100,3 +100,44 @@ class AnalyticsDashboard:
             "total": total,
             "strategies": strategies
         }
+
+    def get_cost_analytics(self) -> Dict[str, Any]:
+        """Get cost analytics breakdown.
+        
+        Returns:
+            Dictionary with cost analytics:
+            - total_cost_usd: Total cost in USD
+            - avg_cost_per_query: Average cost per query
+            - cost_by_strategy: Cost breakdown by strategy
+        """
+        metrics_stats = self.metrics.get_stats()
+        
+        total_cost = metrics_stats.get("total_cost_usd", 0.0)
+        total_queries = metrics_stats.get("total_queries", 0)
+        
+        avg_cost = total_cost / total_queries if total_queries > 0 else 0.0
+        
+        # Calculate cost by strategy from tracked data
+        strategy_counts = metrics_stats.get("strategy_counts", {})
+        cost_by_strategy = {}
+        
+        # Estimate costs based on typical rates
+        cost_rates = {
+            "direct": 0.0,
+            "enhanced": 0.001,
+            "deep_reasoning": 0.005
+        }
+        
+        for strategy, count in strategy_counts.items():
+            if count > 0:
+                estimated_cost = count * cost_rates.get(strategy, 0.001)
+                cost_by_strategy[strategy] = {
+                    "count": count,
+                    "estimated_cost_usd": estimated_cost
+                }
+        
+        return {
+            "total_cost_usd": total_cost,
+            "avg_cost_per_query": avg_cost,
+            "cost_by_strategy": cost_by_strategy
+        }
