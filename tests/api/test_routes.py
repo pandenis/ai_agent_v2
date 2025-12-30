@@ -218,3 +218,18 @@ class TestWebSearchEndpoint:
         )
 
         assert response.status_code == 400
+
+class TestChatEndpoints:
+    """Tests for /chat/* endpoints."""
+
+    def test_enhanced_chat_invalid_message_returns_400(self):
+        """Test: POST /chat/enhanced with empty message returns 400."""
+        response = client.post(
+            "/api/v1/chat/enhanced",
+            json={
+                "session_id": "test-session-12345678",
+                "message": ""
+            }
+        )
+
+        assert response.status_code == 400
