@@ -58,3 +58,19 @@ class TestExperimentResult:
         assert result.user_id == "user_123"
         assert result.success is True
         assert result.latency_ms == 150.5
+
+
+class TestABTestingService:
+    """Tests for ABTestingService."""
+
+    def test_service_creation(self):
+        """Test: ABTestingService can be instantiated."""
+        # Arrange & Act
+        from app.services.orchestrator.ab_testing import ABTestingService
+
+        service = ABTestingService()
+
+        # Assert
+        assert service is not None
+        assert service.experiments == {}
+        assert service.results == []

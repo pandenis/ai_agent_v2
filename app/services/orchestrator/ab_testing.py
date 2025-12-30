@@ -46,3 +46,12 @@ class ExperimentResult:
     user_id: str
     success: bool
     latency_ms: float
+
+
+class ABTestingService:
+    """Service for managing A/B testing experiments."""
+    
+    def __init__(self):
+        """Initialize A/B testing service."""
+        self.experiments: dict = {}
+        self.results: list = []
