@@ -144,3 +144,39 @@ class TestAnalyticsDashboard:
         # Total: 0 + 0 + 0.001 + 0.001 + 0.005 = 0.007
         assert costs["total_cost_usd"] == pytest.approx(0.007)
         assert costs["avg_cost_per_query"] == pytest.approx(0.0014)  # 0.007 / 5
+
+    def test_get_performance_metrics_empty(self):
+        """Test: get_performance_metrics returns zeros when no data."""
+        # Arrange
+        dashboard = AnalyticsDashboard()
+
+        # Act
+        perf = dashboard.get_performance_metrics()
+
+        # Assert
+        assert perf["avg_latency_ms"] == 0.0
+        assert perf["total_queries"] == 0
+        assert perf["latency_by_strategy"] == {}
+
+    def test_get_performance_metrics_with_data(self):
+        """Test: get_performance_metrics returns correct latency stats."""
+        # Arrange
+        from app.services.orchestrator.orchestrator_metrics import OrchestratorMetrics
+        
+        metrics = OrchestratorMetrics()
+        # direct: fast, enhanced: medium, deep: slow
+        metrics.track_query(strategy="direct", elapsed_time_ms=100, cost_usd=0.0)
+        metrics.track_query(strategy="direct", elapsed_time_ms=200, cost_usd=0.0)
+        metrics.track_query(strategy="enhanced", elapsed_time_ms=2000, cost_usd=0.001)
+        metrics.track_query(strategy="enhanced", elapsed_time_ms=3000, cost_usd=0.001)
+        metrics.track_query(strategy="deep_reasoning", elapsed_time_ms=15000, cost_usd=0.005)
+        
+        dashboard = AnalyticsDashboard(metrics=metrics)
+
+        # Act
+        perf = dashboard.get_performance_metrics()
+
+        # Assert
+        # Avg: (100+200+2000+3000+15000) / 5 = 4060ms
+        assert perf["avg_latency_ms"] == pytest.approx(4060.0)
+        assert perf["total_queries"] == 5

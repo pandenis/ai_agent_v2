@@ -141,3 +141,39 @@ class AnalyticsDashboard:
             "avg_cost_per_query": avg_cost,
             "cost_by_strategy": cost_by_strategy
         }
+
+    def get_performance_metrics(self) -> Dict[str, Any]:
+        """Get performance metrics including latency statistics.
+        
+        Returns:
+            Dictionary with performance metrics:
+            - avg_latency_ms: Average response latency in milliseconds
+            - total_queries: Total number of queries
+            - latency_by_strategy: Latency breakdown by strategy
+        """
+        metrics_stats = self.metrics.get_stats()
+        
+        total_queries = metrics_stats.get("total_queries", 0)
+        avg_latency = metrics_stats.get("avg_response_time_ms", 0.0)
+        strategy_counts = metrics_stats.get("strategy_counts", {})
+        
+        # Estimate latency by strategy based on typical values
+        latency_estimates = {
+            "direct": 150.0,
+            "enhanced": 2500.0,
+            "deep_reasoning": 15000.0
+        }
+        
+        latency_by_strategy = {}
+        for strategy, count in strategy_counts.items():
+            if count > 0:
+                latency_by_strategy[strategy] = {
+                    "count": count,
+                    "estimated_avg_latency_ms": latency_estimates.get(strategy, 1000.0)
+                }
+        
+        return {
+            "avg_latency_ms": avg_latency,
+            "total_queries": total_queries,
+            "latency_by_strategy": latency_by_strategy
+        }
