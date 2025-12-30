@@ -30,3 +30,15 @@ class TestValidatePrompt:
 
         assert exc_info.value.status_code == 400
         assert "empty" in exc_info.value.detail.lower()
+
+    def test_too_long_prompt_raises_exception(self):
+        """Test: Prompt exceeding max length raises HTTPException 400."""
+        from app.core.config import settings
+
+        long_prompt = "a" * (settings.max_prompt_length + 1)
+
+        with pytest.raises(HTTPException) as exc_info:
+            SecurityValidator.validate_prompt(long_prompt)
+
+        assert exc_info.value.status_code == 400
+        assert "too long" in exc_info.value.detail.lower()
