@@ -177,3 +177,31 @@ class AnalyticsDashboard:
             "total_queries": total_queries,
             "latency_by_strategy": latency_by_strategy
         }
+
+    def get_dashboard_summary(self) -> Dict[str, Any]:
+        """Get comprehensive dashboard summary combining all metrics.
+        
+        Returns:
+            Dictionary with complete dashboard data:
+            - query_stats: Query statistics
+            - strategy_distribution: Strategy breakdown
+            - cost_analytics: Cost analysis
+            - performance_metrics: Performance data
+            - user_satisfaction: Feedback summary
+        """
+        # Get feedback stats
+        feedback_stats = self.feedback_collector.get_stats()
+        
+        return {
+            "query_stats": self.get_query_stats(),
+            "strategy_distribution": self.get_strategy_distribution(),
+            "cost_analytics": self.get_cost_analytics(),
+            "performance_metrics": self.get_performance_metrics(),
+            "user_satisfaction": {
+                "total_feedbacks": feedback_stats.get("total_feedbacks", 0),
+                "average_rating": feedback_stats.get("average_rating", 0.0),
+                "satisfaction_rate": feedback_stats.get("satisfaction_rate", 0.0),
+                "thumbs_up_count": feedback_stats.get("thumbs_up_count", 0),
+                "thumbs_down_count": feedback_stats.get("thumbs_down_count", 0)
+            }
+        }

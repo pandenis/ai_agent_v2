@@ -180,3 +180,33 @@ class TestAnalyticsDashboard:
         # Avg: (100+200+2000+3000+15000) / 5 = 4060ms
         assert perf["avg_latency_ms"] == pytest.approx(4060.0)
         assert perf["total_queries"] == 5
+
+    def test_get_dashboard_summary(self):
+        """Test: get_dashboard_summary returns comprehensive summary."""
+        # Arrange
+        from app.services.orchestrator.orchestrator_metrics import OrchestratorMetrics
+        from app.services.orchestrator.feedback_collector import FeedbackCollector
+        
+        metrics = OrchestratorMetrics()
+        metrics.track_query(strategy="direct", elapsed_time_ms=100, cost_usd=0.0)
+        metrics.track_query(strategy="enhanced", elapsed_time_ms=2000, cost_usd=0.001)
+        metrics.track_query(strategy="deep_reasoning", elapsed_time_ms=10000, cost_usd=0.005)
+        
+        feedback = FeedbackCollector()
+        feedback.add_feedback(response_id="q1", rating=5, strategy="direct", thumbs_up=True)
+        feedback.add_feedback(response_id="q2", rating=4, strategy="enhanced", thumbs_up=True)
+        
+        dashboard = AnalyticsDashboard(metrics=metrics, feedback_collector=feedback)
+
+        # Act
+        summary = dashboard.get_dashboard_summary()
+
+        # Assert
+        assert "query_stats" in summary
+        assert "strategy_distribution" in summary
+        assert "cost_analytics" in summary
+        assert "performance_metrics" in summary
+        assert "user_satisfaction" in summary
+        
+        assert summary["query_stats"]["total_queries"] == 3
+        assert summary["user_satisfaction"]["total_feedbacks"] == 2
