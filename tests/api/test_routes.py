@@ -233,3 +233,16 @@ class TestChatEndpoints:
         )
 
         assert response.status_code == 400
+
+    def test_enhanced_chat_invalid_session_id_returns_400(self):
+        """Test: POST /chat/enhanced with invalid session_id returns 400."""
+        response = client.post(
+            "/api/v1/chat/enhanced",
+            json={
+                "session_id": "bad",  # Too short
+                "message": "Hello world"
+            }
+        )
+
+        assert response.status_code == 400
+        assert "session" in response.json()["detail"].lower()
