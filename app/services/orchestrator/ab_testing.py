@@ -35,3 +35,14 @@ class Experiment:
     name: str
     variants: List[str]
     traffic_split: List[float]
+
+
+@dataclass
+class ExperimentResult:
+    """Result of a single experiment trial."""
+    
+    experiment_id: str
+    variant: str
+    user_id: str
+    success: bool
+    latency_ms: float

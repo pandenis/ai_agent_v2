@@ -34,3 +34,27 @@ class TestExperiment:
         assert experiment.name == "Strategy Comparison"
         assert experiment.variants == ["direct", "enhanced"]
         assert experiment.traffic_split == [0.5, 0.5]
+
+
+class TestExperimentResult:
+    """Tests for ExperimentResult dataclass."""
+
+    def test_experiment_result_creation(self):
+        """Test: ExperimentResult stores single trial outcome."""
+        # Arrange & Act
+        from app.services.orchestrator.ab_testing import ExperimentResult
+
+        result = ExperimentResult(
+            experiment_id="exp_001",
+            variant="direct",
+            user_id="user_123",
+            success=True,
+            latency_ms=150.5
+        )
+
+        # Assert
+        assert result.experiment_id == "exp_001"
+        assert result.variant == "direct"
+        assert result.user_id == "user_123"
+        assert result.success is True
+        assert result.latency_ms == 150.5
