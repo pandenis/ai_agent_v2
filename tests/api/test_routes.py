@@ -63,3 +63,18 @@ class TestAgentsEndpoints:
 
         assert response.status_code == 400
         assert "Invalid task_type" in response.json()["detail"]
+
+class TestSessionEndpoints:
+    """Tests for /sessions/* endpoints."""
+
+    def test_create_session_success(self):
+        """Test: POST /sessions creates new session."""
+        response = client.post(
+            "/api/v1/sessions",
+            json={"agent_name": "mistral"}
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert "session_id" in data
+        assert data["agent_name"] == "mistral"
