@@ -153,3 +153,31 @@ class TestABTestingService:
 
         # Assert - should always be the same
         assert variant1 == variant2 == variant3
+
+    def test_record_result(self):
+        """Test: Record experiment result for a user."""
+        # Arrange
+        from app.services.orchestrator.ab_testing import ABTestingService
+
+        service = ABTestingService()
+        exp_id = service.create_experiment(
+            name="Record Test",
+            variants=["direct", "enhanced"],
+            traffic_split=[0.5, 0.5]
+        )
+
+        # Act
+        service.record_result(
+            experiment_id=exp_id,
+            variant="direct",
+            user_id="user_789",
+            success=True,
+            latency_ms=120.5
+        )
+
+        # Assert
+        assert len(service.results) == 1
+        assert service.results[0].experiment_id == exp_id
+        assert service.results[0].variant == "direct"
+        assert service.results[0].success is True
+        assert service.results[0].latency_ms == 120.5

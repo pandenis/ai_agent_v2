@@ -117,3 +117,30 @@ class ABTestingService:
         
         # Fallback to last variant
         return experiment.variants[-1]
+
+    def record_result(
+        self,
+        experiment_id: str,
+        variant: str,
+        user_id: str,
+        success: bool,
+        latency_ms: float
+    ) -> None:
+        """Record the result of an experiment trial.
+        
+        Args:
+            experiment_id: ID of the experiment
+            variant: Variant that was used
+            user_id: Unique user identifier
+            success: Whether the trial was successful
+            latency_ms: Response latency in milliseconds
+        """
+        result = ExperimentResult(
+            experiment_id=experiment_id,
+            variant=variant,
+            user_id=user_id,
+            success=success,
+            latency_ms=latency_ms
+        )
+        
+        self.results.append(result)
