@@ -174,3 +174,9 @@ class TestMemoryEndpoints:
         response = client.get("/api/v1/memory/facts/nonexistent-fact-id")
 
         assert response.status_code == 404
+
+    def test_delete_fact_not_found_returns_404(self):
+        """Test: DELETE /memory/facts/{id} with invalid id returns 404."""
+        response = client.delete("/api/v1/memory/facts/nonexistent-fact-id")
+
+        assert response.status_code == 404
