@@ -57,3 +57,20 @@ class TestValidatePrompt:
 
             assert exc_info.value.status_code == 400
             assert "dangerous" in exc_info.value.detail.lower()
+
+    def test_shell_injection_chars_raises_exception(self):
+        """Test: Shell injection characters raise HTTPException 400."""
+        dangerous_prompts = [
+            "ls; rm -rf /",  # Semicolon
+            "cat file & echo",  # Ampersand
+            "test | grep",  # Pipe
+            "hello `whoami`",  # Backticks
+            "price is $100",  # Dollar sign
+        ]
+
+        for prompt in dangerous_prompts:
+            with pytest.raises(HTTPException) as exc_info:
+                SecurityValidator.validate_prompt(prompt)
+
+            assert exc_info.value.status_code == 400
+            assert "dangerous" in exc_info.value.detail.lower()
