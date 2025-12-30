@@ -68,3 +68,35 @@ class AnalyticsDashboard:
             "failed_queries": failed,
             "success_rate": success_rate
         }
+
+    def get_strategy_distribution(self) -> Dict[str, Any]:
+        """Get distribution of queries by strategy.
+        
+        Returns:
+            Dictionary with strategy distribution:
+            - total: Total number of queries
+            - strategies: Dict with count and percentage per strategy
+        """
+        metrics_stats = self.metrics.get_stats()
+        
+        total = metrics_stats.get("total_queries", 0)
+        strategy_counts = metrics_stats.get("strategy_counts", {})
+        
+        if total == 0:
+            return {
+                "total": 0,
+                "strategies": {}
+            }
+        
+        strategies = {}
+        for strategy, count in strategy_counts.items():
+            if count > 0:  # Only include strategies with queries
+                strategies[strategy] = {
+                    "count": count,
+                    "percentage": (count / total) * 100
+                }
+        
+        return {
+            "total": total,
+            "strategies": strategies
+        }

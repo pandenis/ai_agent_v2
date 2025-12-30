@@ -68,3 +68,43 @@ class TestAnalyticsDashboard:
         assert stats["total_queries"] == 3
         assert stats["successful_queries"] == 3
         assert stats["success_rate"] == 1.0
+
+    def test_get_strategy_distribution_empty(self):
+        """Test: get_strategy_distribution returns empty when no data."""
+        # Arrange
+        dashboard = AnalyticsDashboard()
+
+        # Act
+        distribution = dashboard.get_strategy_distribution()
+
+        # Assert
+        assert distribution["total"] == 0
+        assert distribution["strategies"] == {}
+
+    def test_get_strategy_distribution_with_data(self):
+        """Test: get_strategy_distribution returns correct percentages."""
+        # Arrange
+        from app.services.orchestrator.orchestrator_metrics import OrchestratorMetrics
+        
+        metrics = OrchestratorMetrics()
+        # 5 direct, 3 enhanced, 2 deep_reasoning = 10 total
+        for _ in range(5):
+            metrics.track_query(strategy="direct", elapsed_time_ms=100, cost_usd=0.0)
+        for _ in range(3):
+            metrics.track_query(strategy="enhanced", elapsed_time_ms=2000, cost_usd=0.001)
+        for _ in range(2):
+            metrics.track_query(strategy="deep_reasoning", elapsed_time_ms=10000, cost_usd=0.005)
+        
+        dashboard = AnalyticsDashboard(metrics=metrics)
+
+        # Act
+        distribution = dashboard.get_strategy_distribution()
+
+        # Assert
+        assert distribution["total"] == 10
+        assert distribution["strategies"]["direct"]["count"] == 5
+        assert distribution["strategies"]["direct"]["percentage"] == pytest.approx(50.0)
+        assert distribution["strategies"]["enhanced"]["count"] == 3
+        assert distribution["strategies"]["enhanced"]["percentage"] == pytest.approx(30.0)
+        assert distribution["strategies"]["deep_reasoning"]["count"] == 2
+        assert distribution["strategies"]["deep_reasoning"]["percentage"] == pytest.approx(20.0)
