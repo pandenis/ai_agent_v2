@@ -206,3 +206,15 @@ class TestDocumentEndpoints:
         data = response.json()
         assert "results" in data
         assert "total_found" in data
+
+class TestWebSearchEndpoint:
+    """Tests for /search/web endpoint."""
+
+    def test_web_search_invalid_query_returns_400(self):
+        """Test: POST /search/web with empty query returns 400."""
+        response = client.post(
+            "/api/v1/search/web",
+            json={"query": "", "max_results": 5}
+        )
+
+        assert response.status_code == 400
