@@ -168,3 +168,9 @@ class TestMemoryEndpoints:
         assert "facts" in data
         assert "total" in data
         assert "has_more" in data
+
+    def test_get_fact_by_id_not_found_returns_404(self):
+        """Test: GET /memory/facts/{id} with invalid id returns 404."""
+        response = client.get("/api/v1/memory/facts/nonexistent-fact-id")
+
+        assert response.status_code == 404
