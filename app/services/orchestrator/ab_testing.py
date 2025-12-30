@@ -144,3 +144,50 @@ class ABTestingService:
         )
         
         self.results.append(result)
+
+    def get_experiment_stats(self, experiment_id: str) -> dict:
+        """Get aggregated statistics for an experiment.
+        
+        Args:
+            experiment_id: ID of the experiment
+            
+        Returns:
+            Dictionary with experiment statistics
+        """
+        experiment = self.experiments.get(experiment_id)
+        if not experiment:
+            raise ValueError(f"Experiment {experiment_id} not found")
+        
+        # Filter results for this experiment
+        exp_results = [r for r in self.results if r.experiment_id == experiment_id]
+        
+        # Aggregate by variant
+        variants_stats = {}
+        for variant in experiment.variants:
+            variant_results = [r for r in exp_results if r.variant == variant]
+            trials = len(variant_results)
+            
+            if trials > 0:
+                successes = sum(1 for r in variant_results if r.success)
+                total_latency = sum(r.latency_ms for r in variant_results)
+                
+                variants_stats[variant] = {
+                    "trials": trials,
+                    "successes": successes,
+                    "success_rate": successes / trials,
+                    "avg_latency_ms": total_latency / trials
+                }
+            else:
+                variants_stats[variant] = {
+                    "trials": 0,
+                    "successes": 0,
+                    "success_rate": 0.0,
+                    "avg_latency_ms": 0.0
+                }
+        
+        return {
+            "experiment_id": experiment_id,
+            "name": experiment.name,
+            "total_trials": len(exp_results),
+            "variants": variants_stats
+        }

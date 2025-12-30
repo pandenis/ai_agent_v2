@@ -181,3 +181,41 @@ class TestABTestingService:
         assert service.results[0].variant == "direct"
         assert service.results[0].success is True
         assert service.results[0].latency_ms == 120.5
+
+    def test_get_experiment_stats(self):
+        """Test: Get aggregated statistics for an experiment."""
+        # Arrange
+        from app.services.orchestrator.ab_testing import ABTestingService
+
+        service = ABTestingService()
+        exp_id = service.create_experiment(
+            name="Stats Test",
+            variants=["direct", "enhanced"],
+            traffic_split=[0.5, 0.5]
+        )
+
+        # Record some results
+        service.record_result(exp_id, "direct", "user_1", success=True, latency_ms=100)
+        service.record_result(exp_id, "direct", "user_2", success=True, latency_ms=150)
+        service.record_result(exp_id, "direct", "user_3", success=False, latency_ms=200)
+        service.record_result(exp_id, "enhanced", "user_4", success=True, latency_ms=300)
+        service.record_result(exp_id, "enhanced", "user_5", success=False, latency_ms=350)
+
+        # Act
+        stats = service.get_experiment_stats(exp_id)
+
+        # Assert
+        assert stats["experiment_id"] == exp_id
+        assert stats["total_trials"] == 5
+        assert "variants" in stats
+        
+        # Check direct variant stats
+        assert stats["variants"]["direct"]["trials"] == 3
+        assert stats["variants"]["direct"]["successes"] == 2
+        assert stats["variants"]["direct"]["success_rate"] == pytest.approx(0.667, rel=0.01)
+        assert stats["variants"]["direct"]["avg_latency_ms"] == pytest.approx(150.0)
+        
+        # Check enhanced variant stats
+        assert stats["variants"]["enhanced"]["trials"] == 2
+        assert stats["variants"]["enhanced"]["successes"] == 1
+        assert stats["variants"]["enhanced"]["success_rate"] == pytest.approx(0.5)
