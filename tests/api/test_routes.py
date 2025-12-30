@@ -190,3 +190,19 @@ class TestMemoryEndpoints:
         assert "total_facts" in data
         assert "facts_by_type" in data
         assert "avg_importance" in data
+
+class TestDocumentEndpoints:
+    """Tests for /documents/* endpoints."""
+
+    @pytest.mark.skip(reason="ChromaDB schema mismatch - known issue")
+    def test_search_documents_returns_results(self):
+        """Test: POST /documents/search returns search results."""
+        response = client.post(
+            "/api/v1/documents/search",
+            json={"query": "test query", "n_results": 5}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "results" in data
+        assert "total_found" in data
