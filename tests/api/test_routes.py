@@ -156,6 +156,17 @@ class TestSessionEndpoints:
         assert data["session_id"] == session_id
         assert "facts" in data
 
+    def test_create_session_without_agent_name(self):
+        """Test: POST /sessions without agent_name succeeds."""
+        response = client.post(
+            "/api/v1/sessions",
+            json={}
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert "session_id" in data
+
 class TestMemoryEndpoints:
     """Tests for /memory/* endpoints."""
 
