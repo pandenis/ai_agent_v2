@@ -167,6 +167,16 @@ class TestSessionEndpoints:
         data = response.json()
         assert "session_id" in data
 
+    def test_get_sessions_with_pagination(self):
+        """Test: GET /sessions with limit and skip parameters."""
+        response = client.get(
+            "/api/v1/sessions",
+            params={"limit": 10, "skip": 0}
+        )
+
+        assert response.status_code == 200
+        assert isinstance(response.json(), list)
+
 class TestMemoryEndpoints:
     """Tests for /memory/* endpoints."""
 
