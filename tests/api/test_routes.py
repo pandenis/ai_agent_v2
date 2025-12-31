@@ -191,6 +191,23 @@ class TestMemoryEndpoints:
         assert "facts_by_type" in data
         assert "avg_importance" in data
 
+    def test_get_facts_with_filters(self):
+        """Test: GET /memory/facts with query parameters."""
+        response = client.get(
+            "/api/v1/memory/facts",
+            params={
+                "min_importance": 0.7,
+                "fact_type": "preference",
+                "limit": 10,
+                "offset": 0
+            }
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "facts" in data
+        assert data["limit"] == 10
+
 class TestDocumentEndpoints:
     """Tests for /documents/* endpoints."""
 
