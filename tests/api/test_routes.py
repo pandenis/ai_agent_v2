@@ -177,6 +177,15 @@ class TestSessionEndpoints:
         assert response.status_code == 200
         assert isinstance(response.json(), list)
 
+    def test_create_session_invalid_agent_name_returns_400(self):
+        """Test: POST /sessions with dangerous agent_name returns 400."""
+        response = client.post(
+            "/api/v1/sessions",
+            json={"agent_name": "test; rm -rf /"}
+        )
+
+        assert response.status_code == 400
+
 class TestMemoryEndpoints:
     """Tests for /memory/* endpoints."""
 
