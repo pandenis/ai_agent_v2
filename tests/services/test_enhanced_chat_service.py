@@ -211,3 +211,20 @@ class TestProcessMessage:
 
         self.memory_service.get_conversation_history.assert_called_once()
         assert "conversation_history" in result["sources"]
+
+    @pytest.mark.asyncio
+    async def test_process_message_includes_facts(self):
+        """Test: process_message includes relevant facts."""
+        self.memory_service.search_facts = AsyncMock(return_value=[
+            {"text": "User likes Python", "importance": 0.8},
+            {"text": "User is a developer", "importance": 0.9},
+        ])
+
+        result = await self.service.process_message(
+            session_id="test-session-123",
+            message="Tell me about programming",
+            include_memory=True
+        )
+
+        self.memory_service.search_facts.assert_called_once()
+        assert "user_facts" in result["sources"]
