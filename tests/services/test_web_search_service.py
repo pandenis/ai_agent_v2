@@ -72,3 +72,15 @@ class TestWebSearchService:
 
         assert len(results) == 1
         assert "error" in results[0]
+
+    @patch.object(WebSearchService, '__init__', lambda self: None)
+    def test_search_empty_results(self):
+        """Test: search() returns empty list when no results."""
+        service = WebSearchService()
+        service.ddgs = MagicMock()
+        service.ddgs.text.return_value = []
+
+        import asyncio
+        results = asyncio.run(service.search("xyznonexistentquery123", max_results=5))
+
+        assert results == []
