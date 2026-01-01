@@ -178,3 +178,18 @@ class TestProcessMessage:
 
         self.web_search_service.search.assert_called_once()
         assert "web_search" in result["sources"]
+
+    @pytest.mark.asyncio
+    async def test_process_message_triggers_document_search(self):
+        """Test: process_message searches documents when keywords present."""
+        self.document_service.search_documents = AsyncMock(return_value=[
+            {"text": "Document content", "metadata": {}}
+        ])
+
+        result = await self.service.process_message(
+            session_id="test-session-123",
+            message="Find my document about Python"
+        )
+
+        self.document_service.search_documents.assert_called_once()
+        assert "documents" in result["sources"]
