@@ -98,3 +98,56 @@ class TestInferTaskType:
         """Test: returns GENERAL_CHAT for generic message."""
         result = self.service._infer_task_type("Hello, how are you?")
         assert result == TaskType.GENERAL_CHAT
+
+class TestProcessMessage:
+    """Tests for process_message()"""
+
+    def setup_method(self):
+        """Setup service with async mocks."""
+        self.agent_service = MagicMock()
+        self.agent_service.generate_response = AsyncMock(return_value={
+            "response": "Test response",
+            "tokens": 50
+        })
+        self.agent_service.select_best_agent_for_task = AsyncMock(return_value="mistral")
+
+        self.memory_service = MagicMock()
+        self.memory_service.get_conversation_history = AsyncMock(return_value=[])
+        self.memory_service.search_facts = AsyncMock(return_value=[])
+        self.memory_service.add_message = AsyncMock()
+
+        self.document_service = MagicMock()
+        self.document_service.search_documents = AsyncMock(return_value=[])
+
+        self.web_search_service = MagicMock()
+        self.web_search_service.search = AsyncMock(return_value=[])
+
+        self.service = EnhancedChatService(
+            agent_service=self.agent_service,
+            memory_service=self.memory_service,
+            document_service=self.document_service,
+            web_search_service=self.web_search_service,
+        )
+
+    @pytest.mark.asyncio
+    async def test_process_message_returns_response(self):
+        """Test: process_message returns response dict."""
+        result = await self.service.process_message(
+            session_id="test-session-123",
+            message="Hello world"
+        )
+
+        assert "response" in result
+        assert "agent_used" in result
+        assert "sources" in result
+        assert "timestamp" in result
+
+    @pytest.mark.asyncio
+    async def test_process_message_auto_selects_agent(self):
+        """Test: process_message auto-selects agent when not specified."""
+        await self.service.process_message(
+            session_id="test-session-123",
+            message="Hello world"
+        )
+
+        self.agent_service.select_best_agent_for_task.assert_called_once()
