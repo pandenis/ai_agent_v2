@@ -163,3 +163,18 @@ class TestProcessMessage:
 
         assert result["agent_used"] == "deepseek"
         self.agent_service.select_best_agent_for_task.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_process_message_triggers_web_search(self):
+        """Test: process_message searches web when keywords present."""
+        self.web_search_service.search = AsyncMock(return_value=[
+            {"title": "News", "snippet": "Latest news", "url": "http://example.com"}
+        ])
+
+        result = await self.service.process_message(
+            session_id="test-session-123",
+            message="What are the latest news today?"
+        )
+
+        self.web_search_service.search.assert_called_once()
+        assert "web_search" in result["sources"]
