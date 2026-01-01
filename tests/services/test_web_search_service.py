@@ -45,3 +45,18 @@ class TestWebSearchService:
         assert len(results) == 1
         assert "error" in results[0]
         assert "Invalid query" in results[0]["error"]
+
+    @patch.object(WebSearchService, '__init__', lambda self: None)
+    def test_search_exception_returns_error(self):
+        """Test: search() handles exceptions gracefully."""
+        service = WebSearchService()
+        service.ddgs = MagicMock()
+        service.ddgs.text.side_effect = Exception("Network error")
+
+        import asyncio
+        results = asyncio.run(service.search("weather", max_results=5))
+
+        assert len(results) == 1
+        assert "error" in results[0]
+        assert "Network error" in results[0]["error"]
+        assert "message" in results[0]
