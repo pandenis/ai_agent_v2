@@ -299,3 +299,20 @@ class TestExtractAndSaveFacts:
         )
 
         assert result == 0
+
+    @pytest.mark.asyncio
+    async def test_handles_exception_gracefully(self):
+        """Test: returns 0 and doesn't raise on exception."""
+        self.service.memorisator_enabled = True
+        self.service.fact_extractor = MagicMock()
+        self.service.fact_extractor.extract_facts = AsyncMock(
+            side_effect=Exception("Extraction failed")
+        )
+
+        result = await self.service._extract_and_save_facts(
+            session_id="test-123",
+            user_message="Hello",
+            assistant_message="Hi there"
+        )
+
+        assert result == 0
