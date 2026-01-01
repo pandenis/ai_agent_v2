@@ -316,3 +316,26 @@ class TestExtractAndSaveFacts:
         )
 
         assert result == 0
+
+    @pytest.mark.asyncio
+    async def test_extracts_and_saves_facts_successfully(self):
+        """Test: extracts facts and saves them."""
+        from app.services.memory_service import Fact
+
+        mock_fact = MagicMock()
+        mock_fact.importance = 0.8
+        mock_fact.confidence = 0.9
+
+        self.service.memorisator_enabled = True
+        self.service.fact_extractor = MagicMock()
+        self.service.fact_extractor.extract_facts = AsyncMock(return_value=[mock_fact])
+        self.memory_service.add_facts = AsyncMock(return_value=[mock_fact])
+
+        result = await self.service._extract_and_save_facts(
+            session_id="test-123",
+            user_message="My name is Denis",
+            assistant_message="Nice to meet you, Denis!"
+        )
+
+        assert result == 1
+        self.memory_service.add_facts.assert_called_once()
