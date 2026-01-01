@@ -256,3 +256,46 @@ class TestProcessMessage:
 
         # Should save user message and assistant response
         assert self.memory_service.add_message.call_count == 2
+
+class TestExtractAndSaveFacts:
+    """Tests for _extract_and_save_facts()"""
+
+    def setup_method(self):
+        """Setup service with mocks."""
+        self.agent_service = MagicMock()
+        self.memory_service = MagicMock()
+        self.memory_service.add_facts = AsyncMock(return_value=[])
+
+        self.service = EnhancedChatService(
+            agent_service=self.agent_service,
+            memory_service=self.memory_service,
+            document_service=MagicMock(),
+            web_search_service=MagicMock(),
+        )
+
+    @pytest.mark.asyncio
+    async def test_returns_zero_when_disabled(self):
+        """Test: returns 0 when memorisator disabled."""
+        self.service.memorisator_enabled = False
+
+        result = await self.service._extract_and_save_facts(
+            session_id="test-123",
+            user_message="Hello",
+            assistant_message="Hi there"
+        )
+
+        assert result == 0
+
+    @pytest.mark.asyncio
+    async def test_returns_zero_when_no_extractor(self):
+        """Test: returns 0 when fact_extractor is None."""
+        self.service.memorisator_enabled = True
+        self.service.fact_extractor = None
+
+        result = await self.service._extract_and_save_facts(
+            session_id="test-123",
+            user_message="Hello",
+            assistant_message="Hi there"
+        )
+
+        assert result == 0
