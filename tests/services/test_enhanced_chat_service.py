@@ -151,3 +151,15 @@ class TestProcessMessage:
         )
 
         self.agent_service.select_best_agent_for_task.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_process_message_uses_specified_agent(self):
+        """Test: process_message uses specified agent without auto-select."""
+        result = await self.service.process_message(
+            session_id="test-session-123",
+            message="Hello world",
+            agent_name="deepseek"
+        )
+
+        assert result["agent_used"] == "deepseek"
+        self.agent_service.select_best_agent_for_task.assert_not_called()
