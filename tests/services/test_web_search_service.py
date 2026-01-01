@@ -60,3 +60,15 @@ class TestWebSearchService:
         assert "error" in results[0]
         assert "Network error" in results[0]["error"]
         assert "message" in results[0]
+
+    @patch.object(WebSearchService, '__init__', lambda self: None)
+    def test_search_dangerous_input_returns_error(self):
+        """Test: search() with shell injection returns error."""
+        service = WebSearchService()
+        service.ddgs = MagicMock()
+
+        import asyncio
+        results = asyncio.run(service.search("test; rm -rf /", max_results=5))
+
+        assert len(results) == 1
+        assert "error" in results[0]
