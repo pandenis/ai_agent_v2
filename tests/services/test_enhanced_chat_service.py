@@ -241,3 +241,18 @@ class TestProcessMessage:
         self.memory_service.get_conversation_history.assert_not_called()
         self.memory_service.search_facts.assert_not_called()
         assert "conversation_history" not in result["sources"]
+
+    @pytest.mark.asyncio
+    async def test_process_message_saves_to_db(self):
+        """Test: process_message saves messages when db provided."""
+        mock_db = MagicMock()
+
+        await self.service.process_message(
+            session_id="test-session-123",
+            message="Hello",
+            include_memory=True,
+            db=mock_db
+        )
+
+        # Should save user message and assistant response
+        assert self.memory_service.add_message.call_count == 2
