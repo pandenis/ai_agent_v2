@@ -228,3 +228,16 @@ class TestProcessMessage:
 
         self.memory_service.search_facts.assert_called_once()
         assert "user_facts" in result["sources"]
+
+    @pytest.mark.asyncio
+    async def test_process_message_without_memory(self):
+        """Test: process_message skips memory when include_memory=False."""
+        result = await self.service.process_message(
+            session_id="test-session-123",
+            message="Hello",
+            include_memory=False
+        )
+
+        self.memory_service.get_conversation_history.assert_not_called()
+        self.memory_service.search_facts.assert_not_called()
+        assert "conversation_history" not in result["sources"]
