@@ -193,3 +193,21 @@ class TestProcessMessage:
 
         self.document_service.search_documents.assert_called_once()
         assert "documents" in result["sources"]
+
+    @pytest.mark.asyncio
+    async def test_process_message_includes_history(self):
+        """Test: process_message includes conversation history."""
+        mock_message = MagicMock()
+        mock_message.role = "user"
+        mock_message.content = "Previous message"
+
+        self.memory_service.get_conversation_history = AsyncMock(return_value=[mock_message])
+
+        result = await self.service.process_message(
+            session_id="test-session-123",
+            message="Hello again",
+            include_memory=True
+        )
+
+        self.memory_service.get_conversation_history.assert_called_once()
+        assert "conversation_history" in result["sources"]
