@@ -111,3 +111,31 @@ class TestAgentsSelectEndpoint:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+class TestAgentsSelectEdgeCases:
+    """Additional edge case tests for /agents/select endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_select_agent_config_not_found(self, client):
+        """Test: POST /agents/select returns 404 when agent config not found."""
+        # Arrange
+        request_data = {
+            "prompt": "Test prompt for agent selection"
+        }
+        
+        # Mock agent_service to return unknown agent and registry to return None
+        with patch('app.api.routes.AgentService') as mock_service_class:
+            mock_instance = MagicMock()
+            mock_instance.select_best_agent_for_task = AsyncMock(return_value="nonexistent_agent")
+            mock_service_class.return_value = mock_instance
+            
+            with patch('app.api.routes.agent_registry') as mock_registry:
+                mock_registry.get_agent_config.return_value = None
+                
+                # Act
+                response = await client.post("/api/v1/agents/select", json=request_data)
+        
+        # Assert
+        assert response.status_code == 404
+        assert "No suitable agent found" in response.json()["detail"]
