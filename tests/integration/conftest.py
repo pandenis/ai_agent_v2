@@ -2,7 +2,7 @@
 Integration test fixtures and configuration.
 
 This module provides:
-- In-memory database for testing
+- Async database for testing (matching app's async routes)
 - Mocked services (AgentService, MemoryService, Ollama)
 - Test client with dependency overrides
 - Sample data fixtures
@@ -10,11 +10,10 @@ This module provides:
 
 import os
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from httpx import AsyncClient, ASGITransport
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.pool import StaticPool
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock
 from datetime import datetime
 
 # Detect CI environment
@@ -22,51 +21,73 @@ IN_CI = os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "t
 
 
 # ============================================================================
-# DATABASE FIXTURES
+# DATABASE FIXTURES (Async)
 # ============================================================================
 
 @pytest.fixture(scope="function")
-def test_engine():
-    """Create in-memory SQLite engine for testing."""
+async def test_engine():
+    """Create async SQLite engine for testing."""
     from app.core.database import Base
     
-    engine = create_engine(
-        "sqlite:///:memory:",
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    Base.metadata.create_all(bind=engine)
+    
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    
     yield engine
-    Base.metadata.drop_all(bind=engine)
+    
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    
+    await engine.dispose()
 
 
 @pytest.fixture(scope="function")
-def test_db(test_engine):
-    """Create database session for each test."""
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def test_db_session(test_engine):
+    """Create async database session for each test."""
+    async_session = async_sessionmaker(
+        test_engine, 
+        class_=AsyncSession, 
+        expire_on_commit=False
+    )
+    
+    async with async_session() as session:
+        yield session
 
 
 @pytest.fixture(scope="function")
-def client(test_db):
-    """Create test client with mocked database."""
+async def client(test_engine):
+    """Create async test client with DB override."""
     from app.main import app
     from app.core.database import get_db
     
-    def override_get_db():
-        try:
-            yield test_db
-        finally:
-            pass
+    # Create session factory for test engine
+    async_session = async_sessionmaker(
+        test_engine,
+        class_=AsyncSession,
+        expire_on_commit=False
+    )
+    
+    # Override get_db dependency
+    async def override_get_db():
+        async with async_session() as session:
+            try:
+                yield session
+            finally:
+                await session.close()
     
     app.dependency_overrides[get_db] = override_get_db
     
-    with TestClient(app) as test_client:
-        yield test_client
+    # Use httpx AsyncClient with ASGITransport
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test"
+    ) as ac:
+        yield ac
     
     app.dependency_overrides.clear()
 
@@ -113,36 +134,18 @@ def mock_agent_service(mock_agent_response):
 
 
 @pytest.fixture
-def mock_enhanced_chat_service(mock_agent_response):
-    """Mock EnhancedChatService for testing."""
-    mock = MagicMock()
-    mock.process_message = AsyncMock(return_value={
-        **mock_agent_response,
-        "session_id": "test-session-123",
-        "facts_extracted": 0
-    })
-    return mock
-
-
-@pytest.fixture
 def mock_memory_service():
     """Mock MemoryService for testing without real memory."""
     mock = MagicMock()
-    mock.get_facts = MagicMock(return_value=[
-        {"id": 1, "text": "User likes Python", "importance": 0.8, "tags": ["programming"]},
-        {"id": 2, "text": "User is a QA Engineer", "importance": 0.9, "tags": ["occupation"]}
-    ])
-    mock.save_fact = MagicMock(return_value=1)
-    mock.delete_fact = MagicMock(return_value=True)
-    mock.get_chat_history = MagicMock(return_value=[])
-    mock.get_stats = MagicMock(return_value={
-        "total_facts": 10,
-        "total_sessions": 5,
-        "total_messages": 50
+    mock.get_facts = AsyncMock(return_value=[])
+    mock.save_fact = AsyncMock(return_value=1)
+    mock.delete_fact = AsyncMock(return_value=True)
+    mock.get_chat_history = AsyncMock(return_value=[])
+    mock.get_facts_stats = AsyncMock(return_value={
+        "total_facts": 0,
+        "facts_by_type": {},
+        "avg_importance": 0.0
     })
-    mock.search_facts = MagicMock(return_value=[
-        {"id": 1, "text": "User likes Python", "importance": 0.8, "score": 0.95}
-    ])
     return mock
 
 
@@ -174,13 +177,3 @@ def sample_fact():
         "importance": 0.7,
         "tags": ["preference", "ui"]
     }
-
-
-@pytest.fixture
-def created_session(client):
-    """Create a session and return its ID."""
-    response = client.post("/api/v1/sessions", json={"title": "Test Session"})
-    if response.status_code == 200:
-        return response.json().get("session_id") or response.json().get("id")
-    # Fallback for different API structures
-    return "fallback-session-id"
