@@ -370,3 +370,110 @@ class TestCloudAgent:
         
         # Assert
         assert result is False
+
+
+class TestAgentFactory:
+    """Tests for AgentFactory class."""
+
+    def setup_method(self):
+        """Clear cache before each test."""
+        agent_factory.clear_cache()
+
+    def test_create_agent_ollama_type(self):
+        """Test: AgentFactory creates OllamaAgent for LOCAL_OLLAMA type."""
+        # Arrange
+        factory = AgentFactory()
+        
+        # Act - 'mistral' is configured as LOCAL_OLLAMA in agent_registry
+        agent = factory.create_agent("mistral")
+        
+        # Assert
+        assert agent is not None
+        assert isinstance(agent, OllamaAgent)
+        assert agent.name == "Mistral"
+
+    def test_create_agent_cloud_type(self):
+        """Test: AgentFactory creates CloudAgent for CLOUD_API type."""
+        # Arrange
+        factory = AgentFactory()
+        
+        # Act - 'groq' is configured as CLOUD_API in agent_registry
+        agent = factory.create_agent("groq")
+        
+        # Assert
+        assert agent is not None
+        assert isinstance(agent, CloudAgent)
+        assert agent.name == "Groq"
+
+    def test_create_agent_caches_instance(self):
+        """Test: AgentFactory caches agent instances."""
+        # Arrange
+        factory = AgentFactory()
+        
+        # Act
+        agent1 = factory.create_agent("mistral")
+        agent2 = factory.create_agent("mistral")
+        
+        # Assert - same instance returned
+        assert agent1 is agent2
+
+    def test_create_agent_unknown_returns_none(self):
+        """Test: AgentFactory returns None for unknown agent."""
+        # Arrange
+        factory = AgentFactory()
+        
+        # Act
+        agent = factory.create_agent("nonexistent_agent")
+        
+        # Assert
+        assert agent is None
+
+    def test_create_agent_disabled_returns_none(self):
+        """Test: AgentFactory returns None for disabled agent."""
+        # Arrange
+        factory = AgentFactory()
+        
+        # Temporarily disable an agent
+        from app.core.agent_config import agent_registry
+        original_enabled = agent_registry.get_agent_config("mistral").enabled
+        agent_registry.disable_agent("mistral")
+        
+        try:
+            # Act
+            agent = factory.create_agent("mistral")
+            
+            # Assert
+            assert agent is None
+        finally:
+            # Restore original state
+            if original_enabled:
+                agent_registry.enable_agent("mistral")
+
+    def test_clear_cache(self):
+        """Test: AgentFactory.clear_cache() clears cached agents."""
+        # Arrange
+        factory = AgentFactory()
+        agent1 = factory.create_agent("mistral")
+        
+        # Act
+        factory.clear_cache()
+        agent2 = factory.create_agent("mistral")
+        
+        # Assert - different instances after cache clear
+        assert agent1 is not agent2
+
+    @pytest.mark.asyncio
+    async def test_get_available_agents(self):
+        """Test: AgentFactory.get_available_agents() returns health status."""
+        # Arrange
+        factory = AgentFactory()
+        
+        # Act
+        with patch.object(OllamaAgent, 'health_check', new_callable=AsyncMock) as mock_health:
+            mock_health.return_value = True
+            available = await factory.get_available_agents()
+        
+        # Assert
+        assert isinstance(available, dict)
+        # Should have at least some agents
+        assert len(available) > 0
