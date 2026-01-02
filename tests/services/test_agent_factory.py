@@ -239,3 +239,134 @@ class TestOllamaAgent:
         
         # Assert
         assert result is False
+
+
+class TestCloudAgent:
+    """Tests for CloudAgent class."""
+
+    def _create_cloud_config(self, api_key: str = "test-api-key") -> CloudAgentConfig:
+        """Helper to create test CloudAgentConfig."""
+        return CloudAgentConfig(
+            name="TestCloud",
+            description="Test Cloud agent",
+            capabilities=[
+                AgentCapability("general_chat", 0.95, "Test capability")
+            ],
+            api_base_url="https://api.test.com/v1",
+            api_key=api_key,
+            model_id="test-model-id",
+            max_tokens=200,
+            temperature=0.7,
+        )
+
+    @pytest.mark.asyncio
+    async def test_generate_success(self):
+        """Test: CloudAgent.generate() returns success response."""
+        # Arrange
+        config = self._create_cloud_config()
+        agent = CloudAgent(config)
+        
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {
+            "choices": [{"message": {"content": "Cloud response!"}}],
+            "usage": {"total_tokens": 25}
+        }
+        
+        with patch.object(agent.client, 'post', new_callable=AsyncMock) as mock_post:
+            mock_post.return_value = mock_response
+            
+            # Act
+            result = await agent.generate("Hello from cloud!")
+        
+        # Assert
+        assert result["status"] == "success"
+        assert result["response"] == "Cloud response!"
+        assert result["model"] == "test-model-id"
+        assert result["tokens"] == 25
+
+    @pytest.mark.asyncio
+    async def test_generate_no_api_key_returns_error(self):
+        """Test: CloudAgent.generate() returns error when no API key."""
+        # Arrange
+        config = self._create_cloud_config(api_key="")
+        agent = CloudAgent(config)
+        # Ensure api_key is empty (settings might override)
+        agent.api_key = ""
+        
+        # Act
+        result = await agent.generate("Hello")
+        
+        # Assert
+        assert result["status"] == "error"
+        assert "API key" in result["error"] or "API key" in result["response"]
+
+    @pytest.mark.asyncio
+    async def test_generate_exception_returns_error(self):
+        """Test: CloudAgent.generate() handles exceptions gracefully."""
+        # Arrange
+        config = self._create_cloud_config()
+        agent = CloudAgent(config)
+        
+        with patch.object(agent.client, 'post', new_callable=AsyncMock) as mock_post:
+            mock_post.side_effect = httpx.HTTPStatusError(
+                "Rate limited", 
+                request=Mock(), 
+                response=Mock(status_code=429)
+            )
+            
+            # Act
+            result = await agent.generate("Hello")
+        
+        # Assert
+        assert result["status"] == "error"
+        assert "error" in result
+
+    @pytest.mark.asyncio
+    async def test_health_check_success(self):
+        """Test: CloudAgent.health_check() returns True when API accessible."""
+        # Arrange
+        config = self._create_cloud_config()
+        agent = CloudAgent(config)
+        
+        mock_response = Mock()
+        mock_response.status_code = 200
+        
+        with patch.object(agent.client, 'get', new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_response
+            
+            # Act
+            result = await agent.health_check()
+        
+        # Assert
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_health_check_no_api_key(self):
+        """Test: CloudAgent.health_check() returns False when no API key."""
+        # Arrange
+        config = self._create_cloud_config(api_key="")
+        agent = CloudAgent(config)
+        agent.api_key = ""
+        
+        # Act
+        result = await agent.health_check()
+        
+        # Assert
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_health_check_api_error(self):
+        """Test: CloudAgent.health_check() returns False on API error."""
+        # Arrange
+        config = self._create_cloud_config()
+        agent = CloudAgent(config)
+        
+        with patch.object(agent.client, 'get', new_callable=AsyncMock) as mock_get:
+            mock_get.side_effect = httpx.ConnectError("API unavailable")
+            
+            # Act
+            result = await agent.health_check()
+        
+        # Assert
+        assert result is False
