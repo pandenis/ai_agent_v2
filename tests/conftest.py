@@ -2,6 +2,7 @@
 Pytest configuration and fixtures
 """
 
+import os
 from typing import AsyncGenerator
 
 import pytest
@@ -12,6 +13,46 @@ from app.core.database import Base
 # Test database URL (in-memory SQLite)
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
+# Detect CI environment
+IN_CI = os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true"
+
+
+# ============================================================================
+# PYTEST HOOKS FOR INTEGRATION TESTS
+# ============================================================================
+
+def pytest_addoption(parser):
+    """Add custom command line options."""
+    parser.addoption(
+        "--run-integration",
+        action="store_true",
+        default=False,
+        help="Run real integration tests (requires running services)"
+    )
+
+
+def pytest_configure(config):
+    """Configure custom markers."""
+    config.addinivalue_line(
+        "markers", "integration: mark test as requiring real services (skip by default)"
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip integration tests unless --run-integration is passed."""
+    if config.getoption("--run-integration"):
+        # Run all tests including integration
+        return
+    
+    skip_integration = pytest.mark.skip(reason="Need --run-integration option to run")
+    for item in items:
+        if "integration" in item.keywords:
+            item.add_marker(skip_integration)
+
+
+# ============================================================================
+# DATABASE FIXTURES
+# ============================================================================
 
 @pytest.fixture(scope="function")
 async def test_db() -> AsyncGenerator[AsyncSession, None]:
@@ -39,6 +80,10 @@ async def test_db() -> AsyncGenerator[AsyncSession, None]:
 
     await engine.dispose()
 
+
+# ============================================================================
+# SAMPLE DATA FIXTURES
+# ============================================================================
 
 @pytest.fixture
 def sample_session_data():
