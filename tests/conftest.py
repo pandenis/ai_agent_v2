@@ -39,14 +39,16 @@ def pytest_configure(config):
 
 
 def pytest_collection_modifyitems(config, items):
-    """Skip integration tests unless --run-integration is passed."""
+    """Skip tests marked with @pytest.mark.integration unless --run-integration is passed."""
     if config.getoption("--run-integration"):
         # Run all tests including integration
         return
     
     skip_integration = pytest.mark.skip(reason="Need --run-integration option to run")
     for item in items:
-        if "integration" in item.keywords:
+        # Only skip tests that have the explicit @pytest.mark.integration marker
+        # Not just tests that have "integration" in the path
+        if item.get_closest_marker("integration") is not None:
             item.add_marker(skip_integration)
 
 
