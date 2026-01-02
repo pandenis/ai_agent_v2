@@ -104,6 +104,26 @@ class TestGetSessions:
         data = response.json()
         assert len(data) <= 2
 
+    @pytest.mark.asyncio
+    async def test_get_sessions_includes_message_count(self, client):
+        """Test: GET /sessions includes message_count for each session."""
+        # Arrange - create a session
+        create_response = await client.post("/api/v1/sessions", json={"agent_name": "mistral"})
+        assert create_response.status_code == 201
+        session_id = create_response.json()["session_id"]
+        
+        # Act
+        response = await client.get("/api/v1/sessions")
+        
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) >= 1
+        our_session = next((s for s in data if s["session_id"] == session_id), None)
+        assert our_session is not None
+        assert "message_count" in our_session
+        assert our_session["message_count"] == 0
+
 
 class TestGetSessionById:
     """Tests for GET /sessions/{session_id} endpoint."""
@@ -193,58 +213,10 @@ class TestGetSessionFacts:
         # Assert
         assert response.status_code == 404
 
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
-
-
-class TestSessionsWithMessages:
-    """Tests for sessions with actual messages."""
-
     @pytest.mark.asyncio
-    async def test_get_sessions_includes_message_count(self, client):
-        """Test: GET /sessions includes message_count for each session."""
-        # Arrange - create a session
-        create_response = await client.post("/api/v1/sessions", json={"agent_name": "mistral"})
-        assert create_response.status_code == 201
-        
-        # Act
-        response = await client.get("/api/v1/sessions")
-        
-        # Assert
-        assert response.status_code == 200
-        data = response.json()
-        assert len(data) >= 1
-        # Check first session has message_count field
-        assert "message_count" in data[0]
-        assert isinstance(data[0]["message_count"], int)
-
-    @pytest.mark.asyncio
-    async def test_get_sessions_message_count_is_zero_for_new_session(self, client):
-        """Test: New session has message_count of 0."""
+    async def test_get_session_facts_structure(self, client):
+        """Test: GET /sessions/{id}/facts returns proper structure."""
         # Arrange
-        create_response = await client.post("/api/v1/sessions", json={"agent_name": "mistral"})
-        session_id = create_response.json()["session_id"]
-        
-        # Act
-        response = await client.get("/api/v1/sessions")
-        
-        # Assert
-        assert response.status_code == 200
-        data = response.json()
-        # Find our session
-        our_session = next((s for s in data if s["session_id"] == session_id), None)
-        assert our_session is not None
-        assert our_session["message_count"] == 0
-
-
-class TestSessionFactsRetrieval:
-    """Tests for session facts retrieval with actual facts."""
-
-    @pytest.mark.asyncio
-    async def test_get_session_facts_returns_fact_details(self, client):
-        """Test: GET /sessions/{id}/facts returns proper fact structure."""
-        # Arrange - create a session
         create_response = await client.post("/api/v1/sessions", json={"agent_name": "mistral"})
         session_id = create_response.json()["session_id"]
         
@@ -258,3 +230,7 @@ class TestSessionFactsRetrieval:
         assert "facts" in data
         assert isinstance(data["facts"], list)
         assert "total" in data
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])
