@@ -155,3 +155,87 @@ class TestOllamaAgent:
         assert result["status"] == "error"
         assert "error" in result
         assert "Connection refused" in result["error"] or "Connection" in result["response"]
+
+    @pytest.mark.asyncio
+    async def test_health_check_success(self):
+        """Test: OllamaAgent.health_check() returns True when model available."""
+        # Arrange
+        config = self._create_ollama_config()
+        agent = OllamaAgent(config)
+        
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "models": [
+                {"name": "test-model:latest"},
+                {"name": "other-model:7b"}
+            ]
+        }
+        
+        with patch.object(agent.client, 'get', new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_response
+            
+            # Act
+            result = await agent.health_check()
+        
+        # Assert
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_health_check_model_not_found(self):
+        """Test: OllamaAgent.health_check() returns False when model not available."""
+        # Arrange
+        config = self._create_ollama_config()
+        agent = OllamaAgent(config)
+        
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "models": [
+                {"name": "other-model:7b"}
+            ]
+        }
+        
+        with patch.object(agent.client, 'get', new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_response
+            
+            # Act
+            result = await agent.health_check()
+        
+        # Assert
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_health_check_server_error(self):
+        """Test: OllamaAgent.health_check() returns False on server error."""
+        # Arrange
+        config = self._create_ollama_config()
+        agent = OllamaAgent(config)
+        
+        mock_response = Mock()
+        mock_response.status_code = 500
+        
+        with patch.object(agent.client, 'get', new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_response
+            
+            # Act
+            result = await agent.health_check()
+        
+        # Assert
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_health_check_connection_error(self):
+        """Test: OllamaAgent.health_check() returns False on connection error."""
+        # Arrange
+        config = self._create_ollama_config()
+        agent = OllamaAgent(config)
+        
+        with patch.object(agent.client, 'get', new_callable=AsyncMock) as mock_get:
+            mock_get.side_effect = httpx.ConnectError("Connection refused")
+            
+            # Act
+            result = await agent.health_check()
+        
+        # Assert
+        assert result is False
