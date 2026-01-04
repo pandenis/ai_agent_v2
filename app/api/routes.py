@@ -561,18 +561,6 @@ async def orchestrate_query(
 ):
     """
     Intelligent query orchestration with all production features.
-
-    This endpoint uses the IntelligentOrchestrator which provides:
-    - Response caching for fast repeated queries
-    - Circuit breaker for fault tolerance
-    - Rate limiting per user
-    - A/B testing support
-    - Analytics and metrics collection
-
-    Strategies:
-    - direct: Answer from memory (~100ms, $0)
-    - enhanced: Light AI reasoning (~3s, ~$0.0003)
-    - deep_reasoning: Multi-step analysis (~15s, ~$0.005)
     """
 
     # Security: Validate query
@@ -591,12 +579,21 @@ async def orchestrate_query(
             detail=f"Invalid session ID: {session_error}"
         )
 
-    # Process through orchestrator
-    result = await orchestrator.process_query(
-        query=sanitized_query,
-        session_id=request.session_id,
-        use_chains=request.use_chains,
-    )
+    # Process through orchestrator with error handling
+    try:
+        result = await orchestrator.process_query(
+            query=sanitized_query,
+            session_id=request.session_id,
+            use_chains=request.use_chains,
+        )
+    except Exception as e:
+        # Log error and return 500
+        import logging
+        logging.error(f"Orchestrator error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal processing error: {str(e)}"
+        )
 
     # Build response
     metadata = result.get("metadata", {})
