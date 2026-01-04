@@ -169,3 +169,29 @@ class AgentSelectionResponse(BaseModel):
     confidence: float
     reasoning: str
     agent_capabilities: List[AgentCapabilityInfo]
+
+# Pydantic models
+
+class OrchestrateRequest(BaseModel):
+    """Request for orchestrate endpoint"""
+    query: str = Field(..., min_length=1, max_length=5000, description="User query")
+    session_id: str = Field(..., min_length=1, max_length=100, description="Session ID")
+    use_chains: bool = Field(default=False, description="Use chain execution mode")
+    include_debug: bool = Field(default=False, description="Include debug info")
+
+
+class OrchestratorMetadata(BaseModel):
+    """Metadata from orchestrator response"""
+    strategy: str
+    confidence: float
+    sources: List[str]
+    elapsed_time_ms: float = Field(default=0.0)
+    cost_usd: float = Field(default=0.0)
+    reasoning_depth: int = Field(default=0)
+
+
+class OrchestrateResponse(BaseModel):
+    """Response from orchestrate endpoint"""
+    text: str
+    metadata: OrchestratorMetadata
+    debug: Optional[Dict[str, Any]] = None

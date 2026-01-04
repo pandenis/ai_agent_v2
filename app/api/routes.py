@@ -3,12 +3,13 @@ API routes for AI Agent System with multi-model support
 """
 
 import uuid
-from idlelib.query import Query
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.api.deps import get_orchestrator
+from app.services.orchestrator.orchestrator import IntelligentOrchestrator
 
 from app.api.deps import get_agent_service, get_db, get_memory_service
 from app.core.agent_config import TaskType
@@ -26,6 +27,9 @@ from app.schemas.agent import (
     SessionResponse,
     WebSearchRequest,
     WebSearchResponse,
+    OrchestrateRequest,
+    OrchestrateResponse,
+    OrchestratorMetadata,
 )
 from app.schemas.memory import FactDeleteResponse, FactListRequest, FactListResponse, FactResponse, FactStatsResponse
 from app.services.agent_service import AgentService
@@ -538,4 +542,74 @@ async def get_memory_stats(memory_service: MemoryService = Depends(get_memory_se
 
     return FactStatsResponse(
         total_facts=stats["total_facts"], facts_by_type=stats["facts_by_type"], avg_importance=stats["avg_importance"]
+    )
+
+
+# ============================================================================
+# ORCHESTRATOR ENDPOINT (NEW!)
+# ============================================================================
+
+@router.post(
+    "/orchestrate",
+    response_model=OrchestrateResponse,
+    summary="Intelligent query orchestration",
+    description="Process query through IntelligentOrchestrator with caching, circuit breaker, and analytics",
+)
+async def orchestrate_query(
+        request: OrchestrateRequest,
+        orchestrator: IntelligentOrchestrator = Depends(get_orchestrator),
+):
+    """
+    Intelligent query orchestration with all production features.
+
+    This endpoint uses the IntelligentOrchestrator which provides:
+    - Response caching for fast repeated queries
+    - Circuit breaker for fault tolerance
+    - Rate limiting per user
+    - A/B testing support
+    - Analytics and metrics collection
+
+    Strategies:
+    - direct: Answer from memory (~100ms, $0)
+    - enhanced: Light AI reasoning (~3s, ~$0.0003)
+    - deep_reasoning: Multi-step analysis (~15s, ~$0.005)
+    """
+
+    # Security: Validate query
+    is_valid, sanitized_query, error = validate_input(request.query)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid query: {error}"
+        )
+
+    # Security: Validate session_id
+    is_valid_session, session_error = SecurityValidator.validate_session_id(request.session_id)
+    if not is_valid_session:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid session ID: {session_error}"
+        )
+
+    # Process through orchestrator
+    result = await orchestrator.process_query(
+        query=sanitized_query,
+        session_id=request.session_id,
+        use_chains=request.use_chains,
+    )
+
+    # Build response
+    metadata = result.get("metadata", {})
+
+    return OrchestrateResponse(
+        text=result.get("text", ""),
+        metadata=OrchestratorMetadata(
+            strategy=metadata.get("strategy", "unknown"),
+            confidence=metadata.get("confidence", 0.0),
+            sources=metadata.get("sources", []),
+            elapsed_time_ms=metadata.get("elapsed_time_ms", 0.0),
+            cost_usd=metadata.get("cost_usd", 0.0),
+            reasoning_depth=metadata.get("reasoning_depth", 0),
+        ),
+        debug=result.get("debug") if request.include_debug else None,
     )
