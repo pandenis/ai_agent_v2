@@ -1,261 +1,343 @@
 """
-A/B Testing Service for Strategy Experimentation.
+A/B Testing Framework for Intelligent Orchestrator
 
-Enables controlled experiments to compare different response
-strategies (direct, enhanced, deep_reasoning) and find optimal
-approach for different query types.
-
-Features:
-- Experiment configuration with variants
-- Traffic splitting by percentage
-- Results collection and aggregation
-- Statistical significance analysis
+Enables running experiments to compare different strategies:
+- Create experiments with multiple variants
+- Deterministic user assignment (same user → same variant)
+- Track success rates and response times
+- Determine winning variants
 
 Usage:
-    >>> service = ABTestingService()
-    >>> exp_id = service.create_experiment(
-    ...     name="Strategy Test",
-    ...     variants=["direct", "enhanced"],
-    ...     traffic_split=[0.5, 0.5]
-    ... )
-    >>> variant = service.get_variant(exp_id, user_id="user_123")
-    >>> service.record_result(exp_id, variant, success=True, latency_ms=150)
-    >>> stats = service.get_experiment_stats(exp_id)
+    manager = ABTestingManager()
+
+    # Create experiment
+    manager.create_experiment(
+        name="strategy_test",
+        variants=["direct", "enhanced"],
+        traffic_split=[0.5, 0.5]
+    )
+
+    # Get variant for user
+    variant = manager.get_variant("strategy_test", user_id="user123")
+
+    # Record result
+    manager.record_result(
+        experiment_name="strategy_test",
+        variant=variant,
+        user_id="user123",
+        success=True,
+        response_time_ms=150.0
+    )
+
+    # Get winner
+    winner = manager.get_winner("strategy_test")
 """
 
+import hashlib
 from dataclasses import dataclass, field
-from typing import List
-
-
-@dataclass
-class Experiment:
-    """Configuration for an A/B test experiment."""
-    
-    experiment_id: str
-    name: str
-    variants: List[str]
-    traffic_split: List[float]
+from datetime import datetime
+from typing import Dict, List, Optional, Any
 
 
 @dataclass
 class ExperimentResult:
-    """Result of a single experiment trial."""
-    
-    experiment_id: str
-    variant: str
+    """Single result from an experiment"""
     user_id: str
+    variant: str
     success: bool
-    latency_ms: float
+    response_time_ms: float
+    timestamp: datetime = field(default_factory=datetime.utcnow)
 
 
-class ABTestingService:
-    """Service for managing A/B testing experiments."""
-    
+@dataclass
+class Experiment:
+    """A/B Test Experiment configuration"""
+    name: str
+    variants: List[str]
+    traffic_split: List[float]
+    is_active: bool = True
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    results: List[ExperimentResult] = field(default_factory=list)
+
+    def __post_init__(self):
+        """Validate traffic split sums to 1.0"""
+        total = sum(self.traffic_split)
+        if not (0.99 <= total <= 1.01):  # Allow small floating point errors
+            raise ValueError(f"Traffic split must sum to 1.0, got {total}")
+
+        if len(self.variants) != len(self.traffic_split):
+            raise ValueError("Number of variants must match traffic split length")
+
+
+class ABTestingManager:
+    """
+    Manages A/B testing experiments.
+
+    Features:
+    - Deterministic variant assignment (hash-based)
+    - Traffic splitting with configurable ratios
+    - Result tracking and statistics
+    - Winner determination
+    """
+
     def __init__(self):
-        """Initialize A/B testing service."""
-        self.experiments: dict = {}
-        self.results: list = []
+        """Initialize the A/B testing manager"""
+        self._experiments: Dict[str, Experiment] = {}
 
     def create_experiment(
         self,
         name: str,
         variants: List[str],
         traffic_split: List[float]
-    ) -> str:
-        """Create a new A/B test experiment.
-        
-        Args:
-            name: Human-readable experiment name
-            variants: List of variant names (e.g., ["direct", "enhanced"])
-            traffic_split: Traffic percentage for each variant (must sum to 1.0)
-            
-        Returns:
-            Experiment ID
-            
-        Raises:
-            ValueError: If traffic_split doesn't sum to 1.0 or lengths don't match
+    ) -> Experiment:
         """
-        import uuid
-        
-        # Validate traffic split sums to 1.0
-        if abs(sum(traffic_split) - 1.0) > 0.001:
-            raise ValueError(f"traffic_split must sum to 1.0, got {sum(traffic_split)}")
-        
-        # Validate lengths match
-        if len(variants) != len(traffic_split):
-            raise ValueError(f"variants and traffic_split must have same length")
-        
-        exp_id = f"exp_{uuid.uuid4().hex[:8]}"
-        
+        Create a new A/B experiment.
+
+        Args:
+            name: Unique experiment name
+            variants: List of variant names (e.g., ["control", "treatment"])
+            traffic_split: Traffic allocation per variant (must sum to 1.0)
+
+        Returns:
+            Created Experiment object
+
+        Example:
+            >>> manager.create_experiment(
+            ...     name="button_color",
+            ...     variants=["red", "blue", "green"],
+            ...     traffic_split=[0.33, 0.33, 0.34]
+            ... )
+        """
         experiment = Experiment(
-            experiment_id=exp_id,
             name=name,
             variants=variants,
             traffic_split=traffic_split
         )
-        
-        self.experiments[exp_id] = experiment
-        
-        return exp_id
+        self._experiments[name] = experiment
+        return experiment
 
-    def get_variant(self, experiment_id: str, user_id: str) -> str:
-        """Get variant for a user in an experiment.
-        
-        Uses consistent hashing based on user_id to ensure
-        the same user always gets the same variant.
-        
-        Args:
-            experiment_id: ID of the experiment
-            user_id: Unique user identifier
-            
-        Returns:
-            Selected variant name
+    def get_variant(
+        self,
+        experiment_name: str,
+        user_id: str
+    ) -> Optional[str]:
         """
-        experiment = self.experiments.get(experiment_id)
-        if not experiment:
-            raise ValueError(f"Experiment {experiment_id} not found")
-        
-        # Consistent hash based on user_id + experiment_id
-        hash_input = f"{experiment_id}:{user_id}"
-        hash_value = hash(hash_input) % 1000 / 1000.0  # 0.0 to 0.999
-        
-        # Select variant based on traffic split
+        Get variant for a user (deterministic assignment).
+
+        Same user_id will always get the same variant for a given experiment.
+        Uses hash-based assignment for consistent distribution.
+
+        Args:
+            experiment_name: Name of the experiment
+            user_id: Unique user identifier
+
+        Returns:
+            Variant name or None if experiment doesn't exist/inactive
+        """
+        experiment = self._experiments.get(experiment_name)
+
+        if not experiment or not experiment.is_active:
+            return None
+
+        # Create deterministic hash from experiment + user
+        hash_input = f"{experiment_name}:{user_id}"
+        hash_value = hashlib.md5(hash_input.encode()).hexdigest()
+
+        # Convert hash to float between 0 and 1
+        hash_float = int(hash_value[:8], 16) / 0xFFFFFFFF
+
+        # Determine variant based on traffic split
         cumulative = 0.0
-        for variant, split in zip(experiment.variants, experiment.traffic_split):
+        for i, split in enumerate(experiment.traffic_split):
             cumulative += split
-            if hash_value < cumulative:
-                return variant
-        
-        # Fallback to last variant
+            if hash_float < cumulative:
+                return experiment.variants[i]
+
+        # Fallback to last variant (shouldn't happen with valid split)
         return experiment.variants[-1]
 
     def record_result(
         self,
-        experiment_id: str,
+        experiment_name: str,
         variant: str,
         user_id: str,
         success: bool,
-        latency_ms: float
-    ) -> None:
-        """Record the result of an experiment trial.
-        
-        Args:
-            experiment_id: ID of the experiment
-            variant: Variant that was used
-            user_id: Unique user identifier
-            success: Whether the trial was successful
-            latency_ms: Response latency in milliseconds
+        response_time_ms: float
+    ) -> bool:
         """
-        result = ExperimentResult(
-            experiment_id=experiment_id,
-            variant=variant,
-            user_id=user_id,
-            success=success,
-            latency_ms=latency_ms
-        )
-        
-        self.results.append(result)
+        Record a result for an experiment.
 
-    def get_experiment_stats(self, experiment_id: str) -> dict:
-        """Get aggregated statistics for an experiment.
-        
         Args:
-            experiment_id: ID of the experiment
-            
+            experiment_name: Name of the experiment
+            variant: Which variant was used
+            user_id: User identifier
+            success: Whether the interaction was successful
+            response_time_ms: Response time in milliseconds
+
         Returns:
-            Dictionary with experiment statistics
+            True if recorded successfully, False otherwise
         """
-        experiment = self.experiments.get(experiment_id)
+        experiment = self._experiments.get(experiment_name)
+
         if not experiment:
-            raise ValueError(f"Experiment {experiment_id} not found")
-        
-        # Filter results for this experiment
-        exp_results = [r for r in self.results if r.experiment_id == experiment_id]
-        
-        # Aggregate by variant
-        variants_stats = {}
-        for variant in experiment.variants:
-            variant_results = [r for r in exp_results if r.variant == variant]
-            trials = len(variant_results)
-            
-            if trials > 0:
-                successes = sum(1 for r in variant_results if r.success)
-                total_latency = sum(r.latency_ms for r in variant_results)
-                
-                variants_stats[variant] = {
-                    "trials": trials,
-                    "successes": successes,
-                    "success_rate": successes / trials,
-                    "avg_latency_ms": total_latency / trials
+            return False
+
+        result = ExperimentResult(
+            user_id=user_id,
+            variant=variant,
+            success=success,
+            response_time_ms=response_time_ms
+        )
+
+        experiment.results.append(result)
+        return True
+
+    def get_experiment_stats(
+        self,
+        experiment_name: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get statistics for an experiment.
+
+        Returns:
+            Dictionary with stats per variant:
+            {
+                "total_participants": 100,
+                "variants": {
+                    "control": {
+                        "count": 50,
+                        "success_rate": 0.7,
+                        "avg_response_time_ms": 200.0
+                    },
+                    "treatment": {
+                        "count": 50,
+                        "success_rate": 0.85,
+                        "avg_response_time_ms": 150.0
+                    }
+                }
+            }
+        """
+        experiment = self._experiments.get(experiment_name)
+
+        if not experiment:
+            return None
+
+        # Group results by variant
+        variant_results: Dict[str, List[ExperimentResult]] = {
+            v: [] for v in experiment.variants
+        }
+
+        for result in experiment.results:
+            if result.variant in variant_results:
+                variant_results[result.variant].append(result)
+
+        # Calculate stats per variant
+        variant_stats = {}
+        for variant, results in variant_results.items():
+            if results:
+                success_count = sum(1 for r in results if r.success)
+                total_time = sum(r.response_time_ms for r in results)
+
+                variant_stats[variant] = {
+                    "count": len(results),
+                    "success_rate": success_count / len(results),
+                    "avg_response_time_ms": total_time / len(results)
                 }
             else:
-                variants_stats[variant] = {
-                    "trials": 0,
-                    "successes": 0,
+                variant_stats[variant] = {
+                    "count": 0,
                     "success_rate": 0.0,
-                    "avg_latency_ms": 0.0
+                    "avg_response_time_ms": 0.0
                 }
-        
+
         return {
-            "experiment_id": experiment_id,
-            "name": experiment.name,
-            "total_trials": len(exp_results),
-            "variants": variants_stats
+            "total_participants": len(experiment.results),
+            "variants": variant_stats
         }
 
-    def is_statistically_significant(
+    def get_winner(
         self,
-        experiment_id: str,
-        min_samples_per_variant: int = 30,
-        confidence_level: float = 0.95
-    ) -> dict:
-        """Check if experiment results are statistically significant.
-        
-        Uses a simple approach: requires minimum samples per variant
-        and checks if success rate difference exceeds threshold.
-        
-        Args:
-            experiment_id: ID of the experiment
-            min_samples_per_variant: Minimum trials per variant (default: 30)
-            confidence_level: Required confidence level (default: 0.95)
-            
-        Returns:
-            Dictionary with significance analysis
+        experiment_name: str
+    ) -> Optional[Dict[str, Any]]:
         """
-        stats = self.get_experiment_stats(experiment_id)
-        variants_stats = stats["variants"]
-        
-        # Check minimum samples
-        for variant, data in variants_stats.items():
-            if data["trials"] < min_samples_per_variant:
-                return {
-                    "is_significant": False,
-                    "reason": "insufficient_data",
-                    "min_required": min_samples_per_variant,
-                    "current_trials": {v: d["trials"] for v, d in variants_stats.items()}
-                }
-        
-        # Get success rates
-        success_rates = {v: d["success_rate"] for v, d in variants_stats.items()}
-        
-        # Find best and worst variants
-        best_variant = max(success_rates, key=success_rates.get)
-        worst_variant = min(success_rates, key=success_rates.get)
-        
-        rate_difference = success_rates[best_variant] - success_rates[worst_variant]
-        
-        # Simple significance threshold based on confidence level
-        # For 95% confidence, require at least 10% difference
-        threshold = 0.10 if confidence_level >= 0.95 else 0.05
-        
-        is_significant = rate_difference >= threshold
-        
+        Determine the winning variant based on success rate.
+
+        Returns:
+            Dictionary with winner info:
+            {
+                "variant": "treatment",
+                "success_rate": 0.85,
+                "improvement": 0.21  # 21% improvement over worst
+            }
+        """
+        stats = self.get_experiment_stats(experiment_name)
+
+        if not stats or not stats["variants"]:
+            return None
+
+        # Find variant with highest success rate
+        best_variant = None
+        best_rate = -1.0
+        worst_rate = 1.1
+
+        for variant, data in stats["variants"].items():
+            if data["count"] > 0:  # Only consider variants with data
+                if data["success_rate"] > best_rate:
+                    best_rate = data["success_rate"]
+                    best_variant = variant
+                if data["success_rate"] < worst_rate:
+                    worst_rate = data["success_rate"]
+
+        if best_variant is None:
+            return None
+
+        # Calculate improvement over baseline (worst variant)
+        improvement = 0.0
+        if worst_rate > 0:
+            improvement = (best_rate - worst_rate) / worst_rate
+
         return {
-            "is_significant": is_significant,
-            "reason": "significant_difference" if is_significant else "no_significant_difference",
-            "best_variant": best_variant,
-            "worst_variant": worst_variant,
-            "rate_difference": rate_difference,
-            "threshold": threshold,
-            "success_rates": success_rates
+            "variant": best_variant,
+            "success_rate": best_rate,
+            "improvement": improvement
         }
+
+    def deactivate_experiment(self, experiment_name: str) -> bool:
+        """
+        Deactivate an experiment.
+
+        Deactivated experiments no longer assign variants to users.
+
+        Args:
+            experiment_name: Name of the experiment to deactivate
+
+        Returns:
+            True if deactivated, False if experiment not found
+        """
+        experiment = self._experiments.get(experiment_name)
+
+        if not experiment:
+            return False
+
+        experiment.is_active = False
+        return True
+
+    def list_experiments(self) -> List[Dict[str, Any]]:
+        """
+        List all experiments with their status.
+
+        Returns:
+            List of experiment summaries
+        """
+        return [
+            {
+                "name": exp.name,
+                "variants": exp.variants,
+                "is_active": exp.is_active,
+                "total_results": len(exp.results),
+                "created_at": exp.created_at.isoformat()
+            }
+            for exp in self._experiments.values()
+        ]
+
+ABTestingService = ABTestingManager
