@@ -37,17 +37,16 @@ def mock_agent():
     """Create a mock AI agent"""
     agent = AsyncMock()
     agent.name = "test-agent"
-    agent.process = AsyncMock(return_value="This is a test AI response")
+    agent.generate = AsyncMock(return_value={"response": "This is a test AI response", "status": "success"})
     return agent
 
 
 @pytest.fixture
-def mock_agent_registry(mock_agent):
-    """Create a mock agent registry"""
-    registry = Mock()
-    registry.get_agent = Mock(return_value=mock_agent)
-    registry.get_default_agent = Mock(return_value=mock_agent)
-    return registry
+def mock_agent_factory(mock_agent):
+    """Create a mock agent factory"""
+    factory = Mock()
+    factory.create_agent = Mock(return_value=mock_agent)
+    return factory
 
 
 @pytest.fixture
@@ -65,11 +64,11 @@ def mock_fact_extractor():
 
 
 @pytest.fixture
-def orchestrator(mock_memory_service, mock_agent_registry, mock_fact_extractor):
+def orchestrator(mock_memory_service, mock_agent_factory, mock_fact_extractor):
     """Create an orchestrator instance for testing"""
     return IntelligentOrchestrator(
         memory_service=mock_memory_service,
-        agent_registry=mock_agent_registry,
+        agent_factory=mock_agent_factory,
         fact_extractor=mock_fact_extractor
     )
 
@@ -151,7 +150,7 @@ async def test_medium_query_enhanced_answer(orchestrator, mock_memory_service, m
     ]
 
     # Setup: Mock AI response
-    mock_agent.process.return_value = "Based on your Python skills and QA background, I recommend learning JavaScript for web automation."
+    mock_agent.generate.return_value = {"response": "Based on your Python skills and QA background, I recommend learning JavaScript for web automation.", "status": "success"}
 
     # Execute: Process the query
     result = await orchestrator.process_query(
@@ -166,8 +165,8 @@ async def test_medium_query_enhanced_answer(orchestrator, mock_memory_service, m
     assert "test-agent" in result["metadata"]["sources"]
 
     # Verify: AI was called with memory context
-    mock_agent.process.assert_called_once()
-    call_args = mock_agent.process.call_args[0][0]
+    mock_agent.generate.assert_called_once()
+    call_args = mock_agent.generate.call_args[0][0]
     assert "User is a QA Engineer" in call_args  # Memory context included
     assert "What programming languages" in call_args  # Original query included
 
@@ -195,12 +194,12 @@ async def test_complex_query_deep_reasoning(orchestrator, mock_memory_service, m
     mock_memory_service.search_facts.return_value = []
 
     # Setup: Mock comprehensive AI response
-    mock_agent.process.return_value = """
+    mock_agent.generate.return_value = {"response": """
     Quantum computing and classical computing differ fundamentally:
     1. Classical computers use bits (0 or 1)
     2. Quantum computers use qubits (superposition of 0 and 1)
     [... comprehensive explanation ...]
-    """
+    """, "status": "success"}
 
     # Execute: Process the query
     result = await orchestrator.process_query(
@@ -283,7 +282,7 @@ async def test_error_handling(orchestrator, mock_agent):
         Expected: Safe error response returned to user
     """
     # Setup: Make agent fail
-    mock_agent.process.side_effect = Exception("AI service unavailable")
+    mock_agent.generate.side_effect = Exception("AI service unavailable")
 
     # Execute: Process the query (should not crash)
     result = await orchestrator.process_query(
@@ -310,7 +309,7 @@ async def test_error_handling(orchestrator, mock_agent):
 # ==========================================
 
 @pytest.mark.asyncio
-async def test_no_memory_no_ai(orchestrator, mock_memory_service, mock_agent_registry):
+async def test_no_memory_no_ai(orchestrator, mock_memory_service, mock_agent_factory):
     """
     Test Case: What happens when we have no memory and no AI?
 
@@ -323,8 +322,8 @@ async def test_no_memory_no_ai(orchestrator, mock_memory_service, mock_agent_reg
     mock_memory_service.search_facts.return_value = []
 
     # Setup: No agents available
-    mock_agent_registry.get_agent.return_value = None
-    mock_agent_registry.get_default_agent.return_value = None
+    mock_agent_factory.create_agent.return_value = None
+    mock_agent_factory.get_default_agent.return_value = None
 
     # Execute: Process the query
     result = await orchestrator.process_query(
@@ -420,7 +419,7 @@ async def test_complete_e2e_flow(
     ]
 
     # Setup: AI provides response
-    mock_agent.process.return_value = "Hello Denis! How can I help you today?"
+    mock_agent.generate.return_value = {"response": "Hello Denis! How can I help you today?", "status": "success"}
 
     # Setup: New facts extracted
     mock_fact_extractor.extract_facts.return_value = [
@@ -532,7 +531,7 @@ async def test_response_formatter_integration(
         {"text": "User is a QA Engineer", "importance": 0.75, "confidence": 0.85, "fact_type": "professional"}
     ]
 
-    mock_agent.process.return_value = "Based on your Python skills, I recommend trying JavaScript."
+    mock_agent.generate.return_value = {"response": "Based on your Python skills, I recommend trying JavaScript.", "status": "success"}
 
     result = await orchestrator.process_query(
         query="What programming language should I learn next?",
@@ -557,7 +556,7 @@ async def test_direct_answer_no_facts_falls_back_to_ai(
     """
     # Setup: No facts in memory → coverage = 0
     mock_memory_service.search_facts.return_value = []
-    mock_agent.process.return_value = "I don't know your name yet. Could you tell me?"
+    mock_agent.generate.return_value = {"response": "I don't know your name yet. Could you tell me?", "status": "success"}
 
     # Execute with simple query
     result = await orchestrator.process_query(
@@ -582,7 +581,7 @@ async def test_memory_update_failure_doesnt_break_response(
     mock_memory_service.search_facts.return_value = [
         {"text": "User likes Python", "importance": 0.5, "confidence": 0.5}
     ]
-    mock_agent.process.return_value = "Python is a great language!"
+    mock_agent.generate.return_value = {"response": "Python is a great language!", "status": "success"}
 
     # Setup: Memory update fails
     mock_memory_service.add_fact.side_effect = Exception("Database connection error")
@@ -613,13 +612,13 @@ async def test_enhanced_fallback_when_no_agent_available(
 
     # Create registry that returns None (no agent available)
     mock_registry_no_agent = Mock()
-    mock_registry_no_agent.get_agent = Mock(return_value=None)
+    mock_registry_no_agent.create_agent = Mock(return_value=None)
     mock_registry_no_agent.get_default_agent = Mock(return_value=None)
 
     # Create orchestrator with no-agent registry
     orchestrator_no_agent = IntelligentOrchestrator(
         memory_service=mock_memory_service,
-        agent_registry=mock_registry_no_agent
+        agent_factory=mock_registry_no_agent
     )
 
     # Setup: Medium coverage (triggers enhanced) but with facts
@@ -703,7 +702,7 @@ async def test_enhanced_answer_uses_sorted_context(
         captured_prompt = prompt
         return "AI response based on context"
 
-    mock_agent.process = capture_process
+    mock_agent.generate = capture_process
 
     # Execute
     result = await orchestrator.process_query(
@@ -744,7 +743,7 @@ async def test_deep_reasoning_uses_sorted_context(
         captured_prompt = prompt
         return "Deep analysis response with multiple paragraphs."
 
-    mock_agent.process = capture_process
+    mock_agent.generate= capture_process
 
     # Execute: Complex query triggers deep reasoning
     result = await orchestrator.process_query(
@@ -773,7 +772,7 @@ async def test_orchestrator_tracks_metrics(
     mock_memory_service.search_facts.return_value = [
         {"text": "Test fact", "importance": 0.9, "confidence": 0.9}
     ]
-    mock_agent.process.return_value = "Test response"
+    mock_agent.generate.return_value = {"response": "Test response", "status": "success"}
 
     # Execute multiple queries
     await orchestrator.process_query(query="What is my name?", session_id="test-1")
@@ -797,7 +796,7 @@ async def test_deep_reasoning_uses_reasoning_planner(
     mock_memory_service.search_facts.return_value = [
         {"text": "User interested in travel", "importance": 0.3, "confidence": 0.5}
     ]
-    mock_agent.process.return_value = "Comprehensive analysis of Tokyo vs Paris costs..."
+    mock_agent.generate.return_value = {"response": "Comprehensive analysis of Tokyo vs Paris costs...", "status": "success"}
 
     # Execute: Complex query triggers deep reasoning
     result = await orchestrator.process_query(
@@ -832,19 +831,19 @@ async def test_deep_reasoning_executes_web_search_for_gaps(
 
     # Create mock registry
     mock_registry = Mock()
-    mock_registry.get_agent = Mock(return_value=mock_agent)
+    mock_registry.create_agent = Mock(return_value=mock_agent)
     mock_registry.get_default_agent = Mock(return_value=mock_agent)
 
     # Create orchestrator with web search service
     orchestrator = IntelligentOrchestrator(
         memory_service=mock_memory_service,
-        agent_registry=mock_registry,
+        agent_factory=mock_registry,
         web_search_service=mock_web_search  # Pass web search service
     )
 
     # Setup: Low coverage with gaps to trigger web search
     mock_memory_service.search_facts.return_value = []  # No facts = gaps
-    mock_agent.process.return_value = "Based on current data, inflation is around 3.2%..."
+    mock_agent.generate.return_value = {"response": "Based on current data, inflation is around 3.2%...", "status": "success"}
 
     # Execute: Query about current events (needs web search)
     result = await orchestrator.process_query(
@@ -876,13 +875,13 @@ async def test_deep_reasoning_uses_synthesis_engine(
 
     # Create mock registry
     mock_registry = Mock()
-    mock_registry.get_agent = Mock(return_value=mock_agent)
+    mock_registry.create_agent = Mock(return_value=mock_agent)
     mock_registry.get_default_agent = Mock(return_value=mock_agent)
 
     # Create orchestrator
     orchestrator = IntelligentOrchestrator(
         memory_service=mock_memory_service,
-        agent_registry=mock_registry,
+        agent_factory=mock_registry,
         web_search_service=mock_web_search
     )
 
@@ -890,7 +889,7 @@ async def test_deep_reasoning_uses_synthesis_engine(
     mock_memory_service.search_facts.return_value = [
         {"text": "User interested in environment", "importance": 0.5, "confidence": 0.6}
     ]
-    mock_agent.process.return_value = "Climate change analysis with multiple factors..."
+    mock_agent.generate.return_value = {"response": "Climate change analysis with multiple factors...", "status": "success"}
 
     # Execute: Complex query triggers deep reasoning with synthesis
     result = await orchestrator.process_query(
@@ -923,13 +922,13 @@ async def test_deep_reasoning_uses_synthesis_engine(
 
     # Create mock registry
     mock_registry = Mock()
-    mock_registry.get_agent = Mock(return_value=mock_agent)
+    mock_registry.create_agent = Mock(return_value=mock_agent)
     mock_registry.get_default_agent = Mock(return_value=mock_agent)
 
     # Create orchestrator
     orchestrator = IntelligentOrchestrator(
         memory_service=mock_memory_service,
-        agent_registry=mock_registry,
+        agent_factory=mock_registry,
         web_search_service=mock_web_search
     )
 
@@ -937,7 +936,7 @@ async def test_deep_reasoning_uses_synthesis_engine(
     mock_memory_service.search_facts.return_value = [
         {"text": "User interested in environment", "importance": 0.5, "confidence": 0.6}
     ]
-    mock_agent.process.return_value = "Climate change analysis with multiple factors..."
+    mock_agent.generate.return_value = {"response": "Climate change analysis with multiple factors...", "status": "success"}
 
     # Execute: Complex query triggers deep reasoning with synthesis
     result = await orchestrator.process_query(
@@ -970,19 +969,19 @@ async def test_deep_reasoning_has_synthesis_confidence(
 
     # Create mock registry
     mock_registry = Mock()
-    mock_registry.get_agent = Mock(return_value=mock_agent)
+    mock_registry.create_agent = Mock(return_value=mock_agent)
     mock_registry.get_default_agent = Mock(return_value=mock_agent)
 
     # Create orchestrator
     orchestrator = IntelligentOrchestrator(
         memory_service=mock_memory_service,
-        agent_registry=mock_registry,
+        agent_factory=mock_registry,
         web_search_service=mock_web_search
     )
 
     # Setup: Trigger deep reasoning
     mock_memory_service.search_facts.return_value = []
-    mock_agent.process.return_value = "Here's a detailed recipe analysis..."
+    mock_agent.generate.return_value = {"response": "Here's a detailed recipe analysis...", "status": "success"}
 
     # Execute
     result = await orchestrator.process_query(
@@ -1022,12 +1021,12 @@ def test_create_orchestrator_factory():
 
     orchestrator = create_orchestrator(
         memory_service=mock_memory,
-        agent_registry=mock_registry
+        agent_factory=mock_registry
     )
 
     assert orchestrator is not None
     assert orchestrator.memory_service == mock_memory
-    assert orchestrator.agent_registry == mock_registry
+    assert orchestrator.agent_factory == mock_registry
 
 
 @pytest.mark.asyncio
@@ -1042,12 +1041,12 @@ async def test_deep_reasoning_no_web_search_when_no_gaps(
     mock_web_search.search = AsyncMock(return_value=[])
 
     mock_registry = Mock()
-    mock_registry.get_agent = Mock(return_value=mock_agent)
+    mock_registry.create_agent = Mock(return_value=mock_agent)
     mock_registry.get_default_agent = Mock(return_value=mock_agent)
 
     orchestrator = IntelligentOrchestrator(
         memory_service=mock_memory_service,
-        agent_registry=mock_registry,
+        agent_factory=mock_registry,
         web_search_service=mock_web_search
     )
 
@@ -1055,7 +1054,7 @@ async def test_deep_reasoning_no_web_search_when_no_gaps(
     mock_memory_service.search_facts.return_value = [
         {"text": "Complete info", "importance": 0.9, "confidence": 0.95}
     ]
-    mock_agent.process.return_value = "Deep analysis result"
+    mock_agent.generate.return_value = {"response": "Deep analysis result", "status": "success"}
 
     result = await orchestrator.process_query(
         query="Analyze this complex topic with multiple factors and considerations",
@@ -1079,18 +1078,18 @@ async def test_deep_reasoning_empty_web_results(
     mock_web_search.search = AsyncMock(return_value=[])  # Empty results!
 
     mock_registry = Mock()
-    mock_registry.get_agent = Mock(return_value=mock_agent)
+    mock_registry.create_agent = Mock(return_value=mock_agent)
     mock_registry.get_default_agent = Mock(return_value=mock_agent)
 
     orchestrator = IntelligentOrchestrator(
         memory_service=mock_memory_service,
-        agent_registry=mock_registry,
+        agent_factory=mock_registry,
         web_search_service=mock_web_search
     )
 
     # No facts, has gaps → triggers web search but returns empty
     mock_memory_service.search_facts.return_value = []
-    mock_agent.process.return_value = "Analysis without web data"
+    mock_agent.generate.return_value = {"response": "Analysis without web data", "status": "success"}
 
     result = await orchestrator.process_query(
         query="Compare and analyze complex economic trends across multiple regions",
@@ -1106,7 +1105,7 @@ async def test_deep_reasoning_empty_web_results(
 # Test: Response Caching
 # ==========================================
 @pytest.mark.asyncio
-async def test_direct_answer_is_cached(mock_memory_service, mock_agent_registry, mock_fact_extractor):
+async def test_direct_answer_is_cached(mock_memory_service, mock_agent_factory, mock_fact_extractor):
     """
     Test Case: Direct answers are cached and reused
 
@@ -1118,7 +1117,7 @@ async def test_direct_answer_is_cached(mock_memory_service, mock_agent_registry,
 
     orchestrator = IntelligentOrchestrator(
         memory_service=mock_memory_service,
-        agent_registry=mock_agent_registry,
+        agent_factory=mock_agent_factory,
         fact_extractor=mock_fact_extractor
     )
 
@@ -1165,24 +1164,24 @@ if __name__ == "__main__":
 class TestOrchestratorChainIntegration:
     """Test ChainBuilder and ChainExecutor integration with Orchestrator"""
 
-    def test_orchestrator_has_chain_builder(self, mock_memory_service, mock_agent_registry):
+    def test_orchestrator_has_chain_builder(self, mock_memory_service, mock_agent_factory):
         """Test: Orchestrator initializes with ChainBuilder"""
         # Arrange & Act
         orchestrator = IntelligentOrchestrator(
             memory_service=mock_memory_service,
-            agent_registry=mock_agent_registry
+            agent_factory=mock_agent_factory
         )
 
         # Assert
         assert hasattr(orchestrator, 'chain_builder')
         assert orchestrator.chain_builder is not None
 
-    def test_orchestrator_has_chain_executor(self, mock_memory_service, mock_agent_registry):
+    def test_orchestrator_has_chain_executor(self, mock_memory_service, mock_agent_factory):
         """Test: Orchestrator initializes with ChainExecutor"""
         # Arrange & Act
         orchestrator = IntelligentOrchestrator(
             memory_service=mock_memory_service,
-            agent_registry=mock_agent_registry
+            agent_factory=mock_agent_factory
         )
 
         # Assert
@@ -1190,12 +1189,12 @@ class TestOrchestratorChainIntegration:
         assert orchestrator.chain_executor is not None
 
     @pytest.mark.asyncio
-    async def test_orchestrator_has_execute_chain_method(self, mock_memory_service, mock_agent_registry):
+    async def test_orchestrator_has_execute_chain_method(self, mock_memory_service, mock_agent_factory):
         """Test: Orchestrator has _execute_chain method"""
         # Arrange
         orchestrator = IntelligentOrchestrator(
             memory_service=mock_memory_service,
-            agent_registry=mock_agent_registry
+            agent_factory=mock_agent_factory
         )
 
         # Assert
@@ -1203,14 +1202,14 @@ class TestOrchestratorChainIntegration:
         assert callable(orchestrator._execute_chain)
 
     @pytest.mark.asyncio
-    async def test_execute_chain_uses_chain_executor(self, mock_memory_service, mock_agent_registry):
+    async def test_execute_chain_uses_chain_executor(self, mock_memory_service, mock_agent_factory):
         """Test: _execute_chain uses ChainExecutor to run steps"""
         # Arrange
         from app.services.orchestrator.chain_builder import ChainBuilder, ExecutionChain, ChainStep
 
         orchestrator = IntelligentOrchestrator(
             memory_service=mock_memory_service,
-            agent_registry=mock_agent_registry
+            agent_factory=mock_agent_factory
         )
 
         # Create a simple chain
@@ -1233,14 +1232,14 @@ class TestOrchestratorChainIntegration:
         assert len(result["sources"]) > 0  # Should have at least one source
 
     @pytest.mark.asyncio
-    async def test_execute_chain_handles_analysis_step(self, mock_memory_service, mock_agent_registry):
+    async def test_execute_chain_handles_analysis_step(self, mock_memory_service, mock_agent_factory):
         """Test: _execute_chain handles analysis step with AI agent"""
         # Arrange
         from app.services.orchestrator.chain_builder import ExecutionChain, ChainStep
 
         orchestrator = IntelligentOrchestrator(
             memory_service=mock_memory_service,
-            agent_registry=mock_agent_registry
+            agent_factory=mock_agent_factory
         )
 
         # Create chain with analysis step
@@ -1263,18 +1262,18 @@ class TestOrchestratorChainIntegration:
         assert "mistral" in result["sources"] or "analysis" in str(result)
 
     @pytest.mark.asyncio
-    async def test_execute_chain_calls_ai_agent_for_analysis(self, mock_memory_service, mock_agent_registry):
+    async def test_execute_chain_calls_ai_agent_for_analysis(self, mock_memory_service, mock_agent_factory):
         """Test: _execute_chain actually calls AI agent for analysis step"""
         # Arrange
         from app.services.orchestrator.chain_builder import ExecutionChain, ChainStep
 
         mock_agent = AsyncMock()
-        mock_agent.process = AsyncMock(return_value="AI generated response about quantum computing")
-        mock_agent_registry.get_agent = Mock(return_value=mock_agent)
+        mock_agent.generate = AsyncMock(return_value={"response": "AI generated response about quantum computing", "status": "success"})
+        mock_agent_factory.create_agent = Mock(return_value=mock_agent)
 
         orchestrator = IntelligentOrchestrator(
             memory_service=mock_memory_service,
-            agent_registry=mock_agent_registry
+            agent_factory=mock_agent_factory
         )
 
         # Create chain with analysis step
@@ -1293,10 +1292,10 @@ class TestOrchestratorChainIntegration:
 
         # Assert
         assert "AI generated response" in result["text"]
-        mock_agent.process.assert_called_once()
+        mock_agent.generate.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_execute_chain_handles_web_search_step(self, mock_memory_service, mock_agent_registry):
+    async def test_execute_chain_handles_web_search_step(self, mock_memory_service, mock_agent_factory):
         """Test: _execute_chain handles web_search step"""
         # Arrange
         from app.services.orchestrator.chain_builder import ExecutionChain, ChainStep
@@ -1308,7 +1307,7 @@ class TestOrchestratorChainIntegration:
 
         orchestrator = IntelligentOrchestrator(
             memory_service=mock_memory_service,
-            agent_registry=mock_agent_registry,
+            agent_factory=mock_agent_factory,
             web_search_service=mock_web_search
         )
 
@@ -1331,18 +1330,18 @@ class TestOrchestratorChainIntegration:
         mock_web_search.search.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_execute_chain_handles_synthesis_step(self, mock_memory_service, mock_agent_registry):
+    async def test_execute_chain_handles_synthesis_step(self, mock_memory_service, mock_agent_factory):
         """Test: _execute_chain handles synthesis step combining results"""
         # Arrange
         from app.services.orchestrator.chain_builder import ExecutionChain, ChainStep
 
         mock_agent = AsyncMock()
-        mock_agent.process = AsyncMock(return_value="Synthesized answer combining all sources")
-        mock_agent_registry.get_agent = Mock(return_value=mock_agent)
+        mock_agent.generate = AsyncMock(return_value={"response": "Synthesized answer combining all sources", "status": "success"})
+        mock_agent_factory.create_agent = Mock(return_value=mock_agent)
 
         orchestrator = IntelligentOrchestrator(
             memory_service=mock_memory_service,
-            agent_registry=mock_agent_registry
+            agent_factory=mock_agent_factory
         )
 
         # Create chain with synthesis step
@@ -1366,7 +1365,7 @@ class TestOrchestratorChainIntegration:
         assert "mixtral" in result["sources"]
 
     @pytest.mark.asyncio
-    async def test_execute_chain_web_search_without_service(self, mock_memory_service, mock_agent_registry):
+    async def test_execute_chain_web_search_without_service(self, mock_memory_service, mock_agent_factory):
         """Test: _execute_chain handles web_search when no service configured"""
         # Arrange
         from app.services.orchestrator.chain_builder import ExecutionChain, ChainStep
@@ -1374,7 +1373,7 @@ class TestOrchestratorChainIntegration:
         # No web_search_service provided
         orchestrator = IntelligentOrchestrator(
             memory_service=mock_memory_service,
-            agent_registry=mock_agent_registry,
+            agent_factory=mock_agent_factory,
             web_search_service=None
         )
 
@@ -1396,14 +1395,14 @@ class TestOrchestratorChainIntegration:
         assert "web" in result["sources"]
 
     @pytest.mark.asyncio
-    async def test_execute_chain_unknown_step_type(self, mock_memory_service, mock_agent_registry):
+    async def test_execute_chain_unknown_step_type(self, mock_memory_service, mock_agent_factory):
         """Test: _execute_chain handles unknown step type gracefully"""
         # Arrange
         from app.services.orchestrator.chain_builder import ExecutionChain, ChainStep
 
         orchestrator = IntelligentOrchestrator(
             memory_service=mock_memory_service,
-            agent_registry=mock_agent_registry
+            agent_factory=mock_agent_factory
         )
 
         chain = ExecutionChain(
@@ -1424,12 +1423,12 @@ class TestOrchestratorChainIntegration:
         assert "some_agent" in result["sources"]
 
     @pytest.mark.asyncio
-    async def test_process_query_accepts_use_chains_parameter(self, mock_memory_service, mock_agent_registry):
+    async def test_process_query_accepts_use_chains_parameter(self, mock_memory_service, mock_agent_factory):
         """Test: process_query accepts use_chains parameter"""
         # Arrange
         orchestrator = IntelligentOrchestrator(
             memory_service=mock_memory_service,
-            agent_registry=mock_agent_registry
+            agent_factory=mock_agent_factory
         )
 
         # Act & Assert - should not raise TypeError
@@ -1443,7 +1442,7 @@ class TestOrchestratorChainIntegration:
         assert "metadata" in result
 
     @pytest.mark.asyncio
-    async def test_process_query_with_chains_uses_chain_builder(self, mock_memory_service, mock_agent_registry):
+    async def test_process_query_with_chains_uses_chain_builder(self, mock_memory_service, mock_agent_factory):
         """Test: process_query with use_chains=True uses ChainBuilder"""
         # Arrange
         mock_memory_service.search_facts = AsyncMock(return_value=[
@@ -1452,7 +1451,7 @@ class TestOrchestratorChainIntegration:
 
         orchestrator = IntelligentOrchestrator(
             memory_service=mock_memory_service,
-            agent_registry=mock_agent_registry
+            agent_factory=mock_agent_factory
         )
 
         # Act
@@ -1467,7 +1466,7 @@ class TestOrchestratorChainIntegration:
         assert result["metadata"].get("chain_executed") == True
 
     @pytest.mark.asyncio
-    async def test_process_query_without_chains_uses_old_logic(self, mock_memory_service, mock_agent_registry):
+    async def test_process_query_without_chains_uses_old_logic(self, mock_memory_service, mock_agent_factory):
         """Test: process_query with use_chains=False uses original logic (backward compatible)"""
         # Arrange
         mock_memory_service.search_facts = AsyncMock(return_value=[
@@ -1476,7 +1475,7 @@ class TestOrchestratorChainIntegration:
 
         orchestrator = IntelligentOrchestrator(
             memory_service=mock_memory_service,
-            agent_registry=mock_agent_registry
+            agent_factory=mock_agent_factory
         )
 
         # Act - default is use_chains=False
@@ -1490,12 +1489,12 @@ class TestOrchestratorChainIntegration:
         assert result["metadata"].get("chain_executed") is None
 
     @pytest.mark.asyncio
-    async def test_process_query_chains_direct_strategy(self, mock_memory_service, mock_agent_registry):
+    async def test_process_query_chains_direct_strategy(self, mock_memory_service, mock_agent_factory):
         """Test: process_query with chains handles high coverage (direct answer)"""
         # Arrange
         orchestrator = IntelligentOrchestrator(
             memory_service=mock_memory_service,
-            agent_registry=mock_agent_registry
+            agent_factory=mock_agent_factory
         )
 
         # Mock memory evaluator to return high coverage with all required attributes
@@ -1521,16 +1520,16 @@ class TestOrchestratorChainIntegration:
         assert "memory" in result["metadata"]["sources"]
 
     @pytest.mark.asyncio
-    async def test_process_query_chains_enhanced_strategy(self, mock_memory_service, mock_agent_registry):
+    async def test_process_query_chains_enhanced_strategy(self, mock_memory_service, mock_agent_factory):
         """Test: process_query with chains handles medium coverage (enhanced - 2 steps)"""
         # Arrange
         mock_agent = AsyncMock()
-        mock_agent.process = AsyncMock(return_value="AI enhanced response")
-        mock_agent_registry.get_agent = Mock(return_value=mock_agent)
+        mock_agent.generate = AsyncMock(return_value={"response": "AI enhanced response", "status": "success"})
+        mock_agent_factory.create_agent = Mock(return_value=mock_agent)
 
         orchestrator = IntelligentOrchestrator(
             memory_service=mock_memory_service,
-            agent_registry=mock_agent_registry
+            agent_factory=mock_agent_factory
         )
 
         # Mock memory evaluator to return medium coverage
@@ -1556,12 +1555,12 @@ class TestOrchestratorChainIntegration:
         assert "mistral" in result["metadata"]["sources"]
 
     @pytest.mark.asyncio
-    async def test_process_query_chains_deep_reasoning_strategy(self, mock_memory_service, mock_agent_registry):
+    async def test_process_query_chains_deep_reasoning_strategy(self, mock_memory_service, mock_agent_factory):
         """Test: process_query with chains handles low coverage (deep reasoning - 4 steps)"""
         # Arrange
         mock_agent = AsyncMock()
-        mock_agent.process = AsyncMock(return_value="Deep reasoning response")
-        mock_agent_registry.get_agent = Mock(return_value=mock_agent)
+        mock_agent.generate = AsyncMock(return_value={"response": "Deep reasoning response", "status": "success"})
+        mock_agent_factory.create_agent = Mock(return_value=mock_agent)
 
         mock_web_search = AsyncMock()
         mock_web_search.search = AsyncMock(return_value=[
@@ -1570,7 +1569,7 @@ class TestOrchestratorChainIntegration:
 
         orchestrator = IntelligentOrchestrator(
             memory_service=mock_memory_service,
-            agent_registry=mock_agent_registry,
+            agent_factory=mock_agent_factory,
             web_search_service=mock_web_search
         )
 
@@ -1597,12 +1596,12 @@ class TestOrchestratorChainIntegration:
         assert "web" in result["metadata"]["sources"]
 
     @pytest.mark.asyncio
-    async def test_process_query_chains_uses_cache(self, mock_memory_service, mock_agent_registry):
+    async def test_process_query_chains_uses_cache(self, mock_memory_service, mock_agent_factory):
         """Test: process_query with chains returns cached response on second call"""
         # Arrange
         orchestrator = IntelligentOrchestrator(
             memory_service=mock_memory_service,
-            agent_registry=mock_agent_registry
+            agent_factory=mock_agent_factory
         )
 
         # Mock high coverage for direct (cacheable) response
@@ -1633,12 +1632,12 @@ class TestOrchestratorChainIntegration:
         assert result2["metadata"].get("cached") == True
 
     @pytest.mark.asyncio
-    async def test_process_query_chains_handles_error(self, mock_memory_service, mock_agent_registry):
+    async def test_process_query_chains_handles_error(self, mock_memory_service, mock_agent_factory):
         """Test: process_query with chains handles errors gracefully"""
         # Arrange
         orchestrator = IntelligentOrchestrator(
             memory_service=mock_memory_service,
-            agent_registry=mock_agent_registry
+            agent_factory=mock_agent_factory
         )
 
         # Mock memory evaluator to raise an error
@@ -1675,7 +1674,7 @@ class TestOrchestratorABTesting:
         # Act
         orchestrator = IntelligentOrchestrator(
             memory_service=mock_memory,
-            agent_registry=mock_registry,
+            agent_factory=mock_registry,
             ab_testing_service=ab_service
         )
 
@@ -1695,10 +1694,10 @@ class TestOrchestratorABTesting:
         
         mock_agent = Mock()
         mock_agent.name = "mistral"
-        mock_agent.process = AsyncMock(return_value="AI response")
+        mock_agent.generate = AsyncMock(return_value={"response": "AI response", "status": "success"})
         
         mock_registry = Mock()
-        mock_registry.get_agent = Mock(return_value=mock_agent)
+        mock_registry.create_agent = Mock(return_value=mock_agent)
         mock_registry.get_default_agent = Mock(return_value=mock_agent)
 
         ab_service = ABTestingService()
@@ -1710,7 +1709,7 @@ class TestOrchestratorABTesting:
 
         orchestrator = IntelligentOrchestrator(
             memory_service=mock_memory,
-            agent_registry=mock_registry,
+            agent_factory=mock_registry,
             ab_testing_service=ab_service
         )
 
@@ -1744,10 +1743,10 @@ class TestOrchestratorABTesting:
         
         mock_agent = Mock()
         mock_agent.name = "mistral"
-        mock_agent.process = AsyncMock(return_value="Enhanced AI response")
+        mock_agent.generate = AsyncMock(return_value={"response": "Enhanced AI response", "status": "success"})
         
         mock_registry = Mock()
-        mock_registry.get_agent = Mock(return_value=mock_agent)
+        mock_registry.create_agent = Mock(return_value=mock_agent)
         mock_registry.get_default_agent = Mock(return_value=mock_agent)
 
         ab_service = ABTestingService()
@@ -1760,7 +1759,7 @@ class TestOrchestratorABTesting:
 
         orchestrator = IntelligentOrchestrator(
             memory_service=mock_memory,
-            agent_registry=mock_registry,
+            agent_factory=mock_registry,
             ab_testing_service=ab_service
         )
 

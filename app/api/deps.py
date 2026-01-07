@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.agent_config import agent_registry
+from app.services.agent_factory import agent_factory
 from app.services.agent_service import AgentService
 from app.services.document_service import DocumentService
 from app.services.enhanced_chat_service import EnhancedChatService
@@ -66,7 +67,7 @@ async def get_orchestrator(
 
     Creates a fully configured orchestrator with all required services:
     - MemoryService for fact storage/retrieval
-    - AgentRegistry for AI model access
+    - AgentFactory for creating AI agents
     - WebSearchService for external information
 
     The orchestrator provides:
@@ -91,7 +92,7 @@ async def get_orchestrator(
     # Create orchestrator with all services
     orchestrator = IntelligentOrchestrator(
         memory_service=memory_service,
-        agent_registry=agent_registry,  # Global registry from agent_config
+        agent_factory=agent_factory,  # Factory for creating AI agents
         web_search_service=web_search_service,
         # fact_extractor and response_cache will use defaults
     )

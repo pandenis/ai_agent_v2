@@ -74,18 +74,18 @@ async def test_orchestrator_has_memory_service():
 
 
 @pytest.mark.asyncio
-async def test_orchestrator_has_agent_registry():
+async def test_orchestrator_has_agent_factory():
     """
-    Test: Orchestrator has agent_registry injected
+    Test: Orchestrator has agent_factory injected
 
-    Expected: orchestrator.agent_registry is not None
+    Expected: orchestrator.agent_factory is not None
     """
     from app.api.deps import get_orchestrator
 
     mock_db = AsyncMock(spec=AsyncSession)
     orchestrator = await get_orchestrator(db=mock_db)
 
-    assert orchestrator.agent_registry is not None
+    assert orchestrator.agent_factory is not None
 
 
 @pytest.mark.asyncio
