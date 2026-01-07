@@ -41,10 +41,10 @@ def mock_agent():
 
 
 @pytest.fixture
-def mock_agent_registry(mock_agent):
+def mock_agent_factory(mock_agent):
     """Mock agent registry"""
     registry = Mock()
-    registry.get_agent = Mock(return_value=mock_agent)
+    registry.create_agent = Mock(return_value=mock_agent)
     registry.get_default_agent = Mock(return_value=mock_agent)
     return registry
 
@@ -70,12 +70,12 @@ async def test_e2e_direct_strategy_from_memory():
         Mock(text="User's name is Denis", importance=0.9, confidence=0.95)
     ])
 
-    mock_registry = Mock()
-    mock_registry.get_agent = Mock(return_value=AsyncMock())
+    mock_factory = Mock()
+    mock_factory.create_agent = Mock(return_value=AsyncMock())
 
     orchestrator = IntelligentOrchestrator(
         memory_service=mock_memory,
-        agent_registry=mock_registry,
+        agent_factory=mock_factory,
     )
 
     # Mock memory evaluator to return high coverage
@@ -142,15 +142,15 @@ async def test_e2e_enhanced_strategy_with_ai():
 
     mock_agent = AsyncMock()
     mock_agent.name = "mistral"
-    mock_agent.process = AsyncMock(return_value="Based on your Python experience, I recommend learning FastAPI.")
+    mock_agent.generate = AsyncMock(return_value={"response": "Based on your Python experience, I recommend learning FastAPI.", "status": "success"})
 
-    mock_registry = Mock()
-    mock_registry.get_agent = Mock(return_value=mock_agent)
-    mock_registry.get_default_agent = Mock(return_value=mock_agent)
+    mock_factory = Mock()
+    mock_factory.create_agent = Mock(return_value=mock_agent)
+    mock_factory.get_default_agent = Mock(return_value=mock_agent)
 
     orchestrator = IntelligentOrchestrator(
         memory_service=mock_memory,
-        agent_registry=mock_registry,
+        agent_factory=mock_factory,
     )
 
     with patch.object(
@@ -212,15 +212,15 @@ async def test_e2e_deep_reasoning_strategy():
 
     mock_agent = AsyncMock()
     mock_agent.name = "deepseek"
-    mock_agent.process = AsyncMock(return_value="Deep analysis of quantum vs classical computing...")
+    mock_agent.generate = AsyncMock(return_value={"response": "Deep analysis of quantum vs classical computing...", "status": "success"})
 
-    mock_registry = Mock()
-    mock_registry.get_agent = Mock(return_value=mock_agent)
-    mock_registry.get_default_agent = Mock(return_value=mock_agent)
+    mock_factory = Mock()
+    mock_factory.create_agent = Mock(return_value=mock_agent)
+    mock_factory.get_default_agent = Mock(return_value=mock_agent)
 
     orchestrator = IntelligentOrchestrator(
         memory_service=mock_memory,
-        agent_registry=mock_registry,
+        agent_factory=mock_factory,
     )
 
     with patch.object(
@@ -281,12 +281,12 @@ async def test_e2e_caching_returns_cached_response():
         Mock(text="User's favorite color is blue", importance=0.9, confidence=0.95)
     ])
 
-    mock_registry = Mock()
-    mock_registry.get_agent = Mock(return_value=AsyncMock())
+    mock_factory = Mock()
+    mock_factory.create_agent = Mock(return_value=AsyncMock())
 
     orchestrator = IntelligentOrchestrator(
         memory_service=mock_memory,
-        agent_registry=mock_registry,
+        agent_factory=mock_factory,
     )
 
     with patch.object(

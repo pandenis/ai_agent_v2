@@ -41,7 +41,7 @@ class IntelligentOrchestrator:
     def __init__(
             self,
             memory_service,  # Handles memory storage/retrieval
-            agent_registry,  # Manages AI agents (Mistral, DeepSeek, etc.)
+            agent_factory=None,  # Factory for creating AI agents
             fact_extractor=None,  # Extracts facts from conversations
             web_search_service=None,  # Web search for external info
             response_cache=None,  # Cache for responses
@@ -51,14 +51,14 @@ class IntelligentOrchestrator:
         Initialize the orchestrator with required services.
         Args:
             memory_service: Service for storing/retrieving facts
-            agent_registry: Registry of available AI agents
+            agent_factory: Factory for creating AI agents
             fact_extractor: Service for extracting facts (optional)
             web_search_service: Web search for external info (optional)
             response_cache: Cache for responses (optional, created if not provided)
         """
         # Store the services we need
         self.memory_service = memory_service
-        self.agent_registry = agent_registry
+        self.agent_factory = agent_factory
         self.fact_extractor = fact_extractor
         self.web_search_service = web_search_service
         self.response_cache = response_cache or ResponseCache()
@@ -365,7 +365,8 @@ class IntelligentOrchestrator:
 
         if agent:
             # Call the AI agent
-            ai_response = await agent.process(enhanced_prompt)
+            result = await agent.generate(enhanced_prompt)
+            ai_response = result.get("response", "")
 
             # Format with ResponseFormatter
             formatted_response = self.response_formatter.format_enhanced(
@@ -444,7 +445,8 @@ class IntelligentOrchestrator:
         # Use premium agent (e.g., Mixtral, DeepSeek)
         agent = self._select_agent("premium")
         if agent:
-            ai_response = await agent.process(deep_prompt)
+            result = await agent.generate(deep_prompt)
+            ai_response = result.get("response", "")
 
             # Synthesize from all sources
             synthesis_result = self.synthesis_engine.synthesize(
@@ -482,12 +484,12 @@ class IntelligentOrchestrator:
 
         # Try to get first available agent
         for agent_name in preferred_agents:
-            agent = self.agent_registry.get_agent(agent_name)
+            agent = self.agent_factory.create_agent(agent_name)
             if agent:
                 return agent
 
-        # Fallback to any available agent
-        return self.agent_registry.get_default_agent()
+            # Fallback to default agent
+        return self.agent_factory.create_agent("mistral")
 
     def _build_context(self, facts: List[Dict[str, Any]], max_facts: int = 5) -> str:
         """
@@ -588,21 +590,21 @@ class IntelligentOrchestrator:
                 return []
             elif step.step_type == "analysis":
                 sources.append(step.agent)
-                agent = self.agent_registry.get_agent(step.agent)
+                agent = self.agent_factory.create_agent(step.agent)
                 prompt = step.prompt
                 if context_from_memory:
                     prompt = f"Context:\n{context_from_memory}\n\nQuestion: {step.prompt}"
-                response = await agent.process(prompt)
-                return response
+                result = await agent.generate(prompt)
+                return result.get("response", "")
             elif step.step_type == "synthesis":
                 sources.append(step.agent)
-                agent = self.agent_registry.get_agent(step.agent)
+                agent = self.agent_factory.create_agent(step.agent)
                 # Build context from previous results
                 prev_outputs = [r.output for r in previous_results if r.success]
                 synthesis_context = "\n".join(str(o) for o in prev_outputs)
                 prompt = f"Previous analysis:\n{synthesis_context}\n\nSynthesize a final answer for: {step.prompt}"
-                response = await agent.process(prompt)
-                return response
+                result = await agent.generate(prompt)
+                return result.get("response", "")
             else:
                 # Default: return step type as placeholder
                 sources.append(step.agent)
@@ -623,23 +625,21 @@ class IntelligentOrchestrator:
 
 def create_orchestrator(
         memory_service,
-        agent_registry,
+        agent_factory,
         fact_extractor=None
 ) -> IntelligentOrchestrator:
     """
     Factory function to create an orchestrator.
     Makes it easier to create one with proper setup.
-
     Args:
         memory_service: Memory service instance
-        agent_registry: Agent registry instance
+        agent_factory: Agent factory instance
         fact_extractor: Fact extractor instance (optional)
-
     Returns:
         Configured IntelligentOrchestrator instance
     """
     return IntelligentOrchestrator(
         memory_service=memory_service,
-        agent_registry=agent_registry,
+        agent_factory=agent_factory,
         fact_extractor=fact_extractor
     )
