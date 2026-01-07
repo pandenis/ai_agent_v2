@@ -163,3 +163,26 @@ async def test_cloud_agent_generate_with_system_prompt():
         assert messages[0]["role"] == "system"
         assert messages[0]["content"] == "You are a helpful assistant"
         assert messages[1]["role"] == "user"
+
+
+def test_create_agent_unknown_type_returns_none():
+    """Test: Unknown agent type returns None and is not cached"""
+    from unittest.mock import Mock
+    from app.core.agent_config import AgentType
+    
+    factory = AgentFactory()
+    
+    # Mock config with unknown type (not OLLAMA, CLOUD, or LLAMA_CPP)
+    mock_config = Mock()
+    mock_config.enabled = True
+    mock_config.agent_type = Mock()  # Unknown type - won't match any
+    mock_config.agent_type.value = "unknown_type"
+    
+    with patch.object(agent_registry, "get_agent_config", return_value=mock_config):
+        # Act
+        agent = factory.create_agent("fake_agent")
+        
+        # Assert - should return None
+        assert agent is None
+        # Should NOT be cached
+        assert "fake_agent" not in factory._agent_cache
