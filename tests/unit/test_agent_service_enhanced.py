@@ -138,3 +138,34 @@ async def test_select_best_agent_returns_found_agent(agent_service):
     # Assert - should return best agent for general chat (groq has 0.95)
     assert result is not None
     assert result in ["groq", "mistral", "llama3"]  # Any of these could be best
+
+
+@pytest.mark.asyncio
+async def test_fallback_response_finds_alternative_agent(agent_service):
+    """Test: _fallback_response finds and uses alternative agent"""
+    # Arrange
+    mock_alternative_agent = MagicMock()
+    mock_alternative_agent.generate = AsyncMock(return_value={
+        "status": "success",
+        "response": "Fallback response from alternative"
+    })
+    
+    with patch.object(agent_service.factory, "get_available_agents") as mock_available:
+        # mistral unavailable, but llama3 is available
+        mock_available.return_value = {"mistral": False, "llama3": True, "groq": False}
+        
+        with patch.object(agent_service.factory, "create_agent") as mock_create:
+            mock_create.return_value = mock_alternative_agent
+            
+            # Act
+            result = await agent_service._fallback_response(
+                prompt="Hello",
+                failed_agent="mistral",
+                reason="Test failure"
+            )
+            
+            # Assert
+            assert result["fallback"] is True
+            assert result["original_agent"] == "mistral"
+            assert result["fallback_reason"] == "Test failure"
+            assert "Fallback response" in result["response"]
