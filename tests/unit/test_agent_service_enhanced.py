@@ -189,3 +189,27 @@ async def test_select_best_agent_returns_default_when_no_match(agent_service):
         # Assert - should return default agent
         assert result == agent_service.default_agent
         assert result == "mistral"
+
+
+@pytest.mark.asyncio
+async def test_fallback_response_skips_when_create_returns_none(agent_service):
+    """Test: _fallback_response skips agent when create_agent returns None"""
+    with patch.object(agent_service.factory, "get_available_agents") as mock_available:
+        # llama3 shows as available, but create_agent will return None
+        mock_available.return_value = {"mistral": False, "llama3": True}
+        
+        with patch.object(agent_service.factory, "create_agent") as mock_create:
+            # create_agent returns None even for "available" agent
+            mock_create.return_value = None
+            
+            # Act
+            result = await agent_service._fallback_response(
+                prompt="Hello",
+                failed_agent="mistral",
+                reason="Test failure"
+            )
+            
+            # Assert - should return mock/error response since no agent worked
+            assert result["status"] == "error"
+            assert "DEMO MODE" in result["response"] or "No AI agents" in result["response"]
+            assert result["fallback"] is True
