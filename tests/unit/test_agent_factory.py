@@ -116,3 +116,17 @@ def test_clear_cache():
     # Clear cache
     factory.clear_cache()
     assert factory._agent_cache == {}
+
+
+def test_create_llamacpp_agent_returns_none():
+    """Test: LlamaCpp agent type returns None (not implemented yet)"""
+    # Arrange
+    factory = AgentFactory()
+    
+    # Act - deepseek is configured as LOCAL_LLAMA_CPP type
+    agent = factory.create_agent("deepseek")
+    
+    # Assert - should return None because LlamaCpp not implemented
+    assert agent is None
+    # Should NOT be cached when None
+    assert "deepseek" not in factory._agent_cache
