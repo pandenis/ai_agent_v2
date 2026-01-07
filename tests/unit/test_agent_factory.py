@@ -130,3 +130,36 @@ def test_create_llamacpp_agent_returns_none():
     assert agent is None
     # Should NOT be cached when None
     assert "deepseek" not in factory._agent_cache
+
+
+@pytest.mark.asyncio
+async def test_cloud_agent_generate_with_system_prompt():
+    """Test: CloudAgent.generate() includes system_prompt in messages"""
+    # Arrange
+    factory = AgentFactory()
+    agent = factory.create_agent("groq")
+    
+    # Mock the HTTP client
+    with patch.object(agent.client, "post") as mock_post:
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "choices": [{"message": {"content": "AI response"}}]
+        }
+        mock_post.return_value = mock_response
+        
+        # Act - call with system_prompt
+        result = await agent.generate(
+            prompt="Hello",
+            system_prompt="You are a helpful assistant"
+        )
+        
+        # Assert - verify system_prompt was included
+        call_args = mock_post.call_args
+        json_data = call_args.kwargs.get("json") or call_args[1].get("json")
+        messages = json_data["messages"]
+        
+        assert len(messages) == 2
+        assert messages[0]["role"] == "system"
+        assert messages[0]["content"] == "You are a helpful assistant"
+        assert messages[1]["role"] == "user"
