@@ -139,6 +139,9 @@ async def test_cloud_agent_generate_with_system_prompt():
     factory = AgentFactory()
     agent = factory.create_agent("groq")
     
+    # Set API key (required for generate to proceed)
+    agent.api_key = "test-api-key"
+    
     # Mock the HTTP client
     with patch.object(agent.client, "post") as mock_post:
         mock_response = MagicMock()
