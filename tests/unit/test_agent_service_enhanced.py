@@ -169,3 +169,23 @@ async def test_fallback_response_finds_alternative_agent(agent_service):
             assert result["original_agent"] == "mistral"
             assert result["fallback_reason"] == "Test failure"
             assert "Fallback response" in result["response"]
+
+
+@pytest.mark.asyncio
+async def test_select_best_agent_returns_default_when_no_match(agent_service):
+    """Test: select_best_agent returns default when no agent matches task"""
+    from unittest.mock import patch
+    
+    # Mock registry to return None (no agent for this task)
+    with patch("app.services.agent_service.agent_registry") as mock_registry:
+        mock_registry.find_best_agent_for_task.return_value = None
+        
+        # Act
+        result = await agent_service.select_best_agent_for_task(
+            prompt="Some prompt",
+            task_type=TaskType.GENERAL_CHAT
+        )
+        
+        # Assert - should return default agent
+        assert result == agent_service.default_agent
+        assert result == "mistral"
