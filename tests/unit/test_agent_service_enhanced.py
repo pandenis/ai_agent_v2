@@ -124,3 +124,17 @@ async def test_unhealthy_agent_fallback(agent_service):
 
             assert "fallback" in result
             assert "health check failed" in result.get("fallback_reason", "")
+
+
+@pytest.mark.asyncio
+async def test_select_best_agent_returns_found_agent(agent_service):
+    """Test: select_best_agent_for_task returns agent when found"""
+    # Act - GENERAL_CHAT should find an agent
+    result = await agent_service.select_best_agent_for_task(
+        prompt="Hello, how are you?",
+        task_type=TaskType.GENERAL_CHAT
+    )
+    
+    # Assert - should return best agent for general chat (groq has 0.95)
+    assert result is not None
+    assert result in ["groq", "mistral", "llama3"]  # Any of these could be best
