@@ -199,3 +199,29 @@ class TestSessionsEndpointsE2E:
         assert response.status_code == 404
         data = response.json()
         assert "detail" in data
+
+    def test_get_session_messages_returns_empty_list(self):
+        """Test: GET /sessions/{session_id}/messages returns messages.
+
+        Verifies session messages retrieval works end-to-end.
+        New session should have empty messages list.
+        """
+        # Arrange
+        client = TestClient(app)
+
+        # Create a session first
+        create_response = client.post(
+            "/api/v1/sessions",
+            json={"agent_name": "mistral"}
+        )
+        session_id = create_response.json()["session_id"]
+
+        # Act
+        response = client.get(f"/api/v1/sessions/{session_id}/messages")
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert "messages" in data
+        assert isinstance(data["messages"], list)
+        assert len(data["messages"]) == 0  # New session has no messages
