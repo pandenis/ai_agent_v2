@@ -1,0 +1,42 @@
+"""
+E2E Integration Tests for API Endpoints.
+
+These tests verify the full request → response cycle through the real API,
+ensuring all components are properly wired together.
+
+Purpose:
+    - Prevent "hidden bypass" issues (like the 7-week orchestrator gap)
+    - Verify endpoints work end-to-end, not just in isolation
+    - Test real FastAPI app with TestClient
+
+The Golden Rule: "If you can't curl it, it doesn't work"
+These tests are the programmatic equivalent of curl verification.
+
+Usage:
+    pytest tests/integration/test_api_e2e.py -v
+"""
+
+import pytest
+from fastapi.testclient import TestClient
+
+from app.main import app
+
+
+class TestHealthEndpointE2E:
+    """E2E tests for health check endpoint."""
+
+    def test_health_endpoint_returns_healthy(self):
+        """Test: GET /health returns healthy status.
+
+        This is the simplest E2E test - verifies the API is running
+        and responding correctly.
+        """
+        # Arrange
+        client = TestClient(app)
+
+        # Act
+        response = client.get("/api/v1/health")
+
+        # Assert
+        assert response.status_code == 200
+        assert response.json() == {"status": "healthy"}
