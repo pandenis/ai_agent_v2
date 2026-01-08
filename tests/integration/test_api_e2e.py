@@ -273,3 +273,20 @@ class TestMemoryEndpointsE2E:
         data = response.json()
         assert "total_facts" in data
         assert isinstance(data["total_facts"], int)
+
+    def test_memory_facts_returns_list(self):
+        """Test: GET /memory/facts returns list of facts.
+
+        Verifies memory facts retrieval works end-to-end.
+        """
+        # Arrange
+        client = TestClient(app)
+
+        # Act
+        response = client.get("/api/v1/memory/facts")
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert "facts" in data
+        assert isinstance(data["facts"], list)
