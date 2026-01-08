@@ -290,3 +290,37 @@ class TestMemoryEndpointsE2E:
         data = response.json()
         assert "facts" in data
         assert isinstance(data["facts"], list)
+
+class TestOrchestrateEndpointE2E:
+    """E2E tests for orchestrate endpoint - the critical integration point."""
+
+    def test_orchestrate_returns_response_with_strategy(self):
+        """Test: POST /orchestrate returns AI response with strategy metadata.
+
+        This is THE critical test - verifies the orchestrator is actually
+        wired into the API (prevents the 7-week hidden bypass issue).
+        """
+        # Arrange
+        client = TestClient(app)
+
+        # Create a session first
+        create_response = client.post(
+            "/api/v1/sessions",
+            json={"agent_name": "mistral"}
+        )
+        session_id = create_response.json()["session_id"]
+
+        # Act
+        response = client.post(
+            "/api/v1/orchestrate",
+            json={
+                "query": "What is 2 + 2?",
+                "session_id": session_id
+            }
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert "text" in data or "response" in data  # Response text
+        assert "metadata" in data or "strategy" in data  # Strategy info
