@@ -364,3 +364,26 @@ class TestChatEndpointE2E:
         data = response.json()
         assert "response" in data
         assert len(data["response"]) > 0  # Got some response
+
+
+class TestInputValidationE2E:
+    """E2E tests for input validation and error handling."""
+
+    def test_session_create_invalid_agent_returns_400(self):
+        """Test: POST /sessions with invalid agent name returns 400.
+
+        Verifies security validation works end-to-end.
+        """
+        # Arrange
+        client = TestClient(app)
+
+        # Act - Try to create session with potentially dangerous input
+        response = client.post(
+            "/api/v1/sessions",
+            json={"agent_name": "<script>alert('xss')</script>"}
+        )
+
+        # Assert
+        assert response.status_code == 400
+        data = response.json()
+        assert "detail" in data
