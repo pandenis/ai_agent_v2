@@ -225,3 +225,51 @@ class TestSessionsEndpointsE2E:
         assert "messages" in data
         assert isinstance(data["messages"], list)
         assert len(data["messages"]) == 0  # New session has no messages
+
+    def test_get_session_facts_returns_empty_list(self):
+        """Test: GET /sessions/{session_id}/facts returns facts.
+
+        Verifies session facts retrieval works end-to-end.
+        New session should have empty facts list.
+        """
+        # Arrange
+        client = TestClient(app)
+
+        # Create a session first
+        create_response = client.post(
+            "/api/v1/sessions",
+            json={"agent_name": "mistral"}
+        )
+        session_id = create_response.json()["session_id"]
+
+        # Act
+        response = client.get(f"/api/v1/sessions/{session_id}/facts")
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert "session_id" in data
+        assert "facts" in data
+        assert "total" in data
+        assert isinstance(data["facts"], list)
+        assert data["total"] == 0  # New session has no facts
+
+class TestMemoryEndpointsE2E:
+    """E2E tests for memory endpoints."""
+
+    def test_memory_stats_returns_statistics(self):
+        """Test: GET /memory/stats returns memory statistics.
+
+        Verifies memory service is connected and returns stats.
+        """
+        # Arrange
+        client = TestClient(app)
+
+        # Act
+        response = client.get("/api/v1/memory/stats")
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert "total_facts" in data
+        assert isinstance(data["total_facts"], int)
