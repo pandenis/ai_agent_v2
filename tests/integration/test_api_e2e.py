@@ -81,3 +81,28 @@ class TestAgentsEndpointsE2E:
         assert "capabilities" in groq_agent
         assert "enabled" in groq_agent
         assert isinstance(groq_agent["capabilities"], list)
+
+    def test_agents_select_returns_best_agent(self):
+        """Test: POST /agents/select returns best agent for task.
+
+        Verifies agent selection logic works end-to-end.
+        """
+        # Arrange
+        client = TestClient(app)
+
+        # Act
+        response = client.post(
+            "/api/v1/agents/select",
+            json={
+                "prompt": "Help me write Python code for sorting a list",
+                "task_type": "code_analysis"
+            }
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert "selected_agent" in data
+        assert "confidence" in data
+        assert "reasoning" in data
+        assert data["confidence"] > 0  # Has some confidence score
