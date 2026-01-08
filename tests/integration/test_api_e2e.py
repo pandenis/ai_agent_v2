@@ -132,3 +132,29 @@ class TestSessionsEndpointsE2E:
         assert "created_at" in data
         assert data["agent_name"] == "mistral"
         assert len(data["session_id"]) == 36  # UUID format
+
+    def test_list_sessions_returns_array(self):
+        """Test: GET /sessions returns list of sessions.
+
+        Verifies session listing works end-to-end.
+        """
+        # Arrange
+        client = TestClient(app)
+
+        # First create a session to ensure list is not empty
+        client.post("/api/v1/sessions", json={"agent_name": "mistral"})
+
+        # Act
+        response = client.get("/api/v1/sessions")
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) > 0  # At least one session exists
+
+        # Verify session structure
+        session = data[0]
+        assert "session_id" in session
+        assert "agent_name" in session
+        assert "created_at" in session
