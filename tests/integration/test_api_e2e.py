@@ -387,3 +387,25 @@ class TestInputValidationE2E:
         assert response.status_code == 400
         data = response.json()
         assert "detail" in data
+
+    def test_orchestrate_invalid_session_id_returns_400(self):
+        """Test: POST /orchestrate with invalid session_id returns 400.
+
+        Verifies session ID validation works end-to-end.
+        """
+        # Arrange
+        client = TestClient(app)
+
+        # Act - Try with invalid session_id format
+        response = client.post(
+            "/api/v1/orchestrate",
+            json={
+                "query": "Hello",
+                "session_id": "invalid-session-id!"
+            }
+        )
+
+        # Assert
+        assert response.status_code == 400
+        data = response.json()
+        assert "detail" in data
