@@ -40,3 +40,44 @@ class TestHealthEndpointE2E:
         # Assert
         assert response.status_code == 200
         assert response.json() == {"status": "healthy"}
+
+class TestAgentsEndpointsE2E:
+    """E2E tests for agents endpoints."""
+
+    def test_agents_status_returns_agent_dict(self):
+        """Test: GET /agents/status returns dict of available agents.
+
+        Verifies the agent registry is properly connected and
+        returns agent configurations.
+        """
+        # Arrange
+        client = TestClient(app)
+
+        # Act
+        response = client.get("/api/v1/agents/status")
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+
+        # Verify top-level structure
+        assert "agents" in data
+        assert "available_agents" in data
+        assert "enabled_agents" in data
+        assert "default_agent" in data
+
+        agents = data["agents"]
+        assert isinstance(agents, dict)
+        assert len(agents) > 0  # At least one agent configured
+
+        # Verify known agents exist
+        expected_agents = ["groq", "mistral", "deepseek"]
+        for agent_name in expected_agents:
+            assert agent_name in agents, f"Expected agent '{agent_name}' not found"
+
+        # Verify agent structure
+        groq_agent = agents["groq"]
+        assert "available" in groq_agent
+        assert "capabilities" in groq_agent
+        assert "enabled" in groq_agent
+        assert isinstance(groq_agent["capabilities"], list)
