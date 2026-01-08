@@ -17,10 +17,13 @@ Usage:
 """
 
 import pytest
+import os
 from fastapi.testclient import TestClient
 
 from app.main import app
 
+# CI environment detection
+IN_CI = os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true"
 
 class TestHealthEndpointE2E:
     """E2E tests for health check endpoint."""
@@ -107,6 +110,7 @@ class TestAgentsEndpointsE2E:
         assert "reasoning" in data
         assert data["confidence"] > 0  # Has some confidence score
 
+@pytest.mark.skipif(IN_CI, reason="Requires database access not available in CI")
 class TestSessionsEndpointsE2E:
     """E2E tests for sessions endpoints."""
 
@@ -254,6 +258,7 @@ class TestSessionsEndpointsE2E:
         assert isinstance(data["facts"], list)
         assert data["total"] == 0  # New session has no facts
 
+@pytest.mark.skipif(IN_CI, reason="Requires database access not available in CI")
 class TestMemoryEndpointsE2E:
     """E2E tests for memory endpoints."""
 
@@ -291,6 +296,7 @@ class TestMemoryEndpointsE2E:
         assert "facts" in data
         assert isinstance(data["facts"], list)
 
+@pytest.mark.skipif(IN_CI, reason="Requires database access not available in CI")
 class TestOrchestrateEndpointE2E:
     """E2E tests for orchestrate endpoint - the critical integration point."""
 
@@ -325,7 +331,7 @@ class TestOrchestrateEndpointE2E:
         assert "text" in data or "response" in data  # Response text
         assert "metadata" in data or "strategy" in data  # Strategy info
 
-
+@pytest.mark.skipif(IN_CI, reason="Requires database access not available in CI")
 class TestChatEndpointE2E:
     """E2E tests for chat endpoints."""
 
@@ -365,7 +371,7 @@ class TestChatEndpointE2E:
         assert "response" in data
         assert len(data["response"]) > 0  # Got some response
 
-
+@pytest.mark.skipif(IN_CI, reason="Requires database access not available in CI")
 class TestInputValidationE2E:
     """E2E tests for input validation and error handling."""
 
@@ -432,7 +438,7 @@ class TestInputValidationE2E:
         data = response.json()
         assert "detail" in data
 
-
+@pytest.mark.skipif(IN_CI, reason="Requires database access not available in CI")
 class TestFullPipelineE2E:
     """E2E tests for complete user workflows."""
 
