@@ -182,3 +182,20 @@ class TestSessionsEndpointsE2E:
         data = response.json()
         assert data["session_id"] == session_id
         assert data["agent_name"] == "groq"
+
+    def test_get_session_not_found_returns_404(self):
+        """Test: GET /sessions/{session_id} returns 404 for invalid ID.
+
+        Verifies proper error handling for non-existent sessions.
+        """
+        # Arrange
+        client = TestClient(app)
+        fake_session_id = "00000000-0000-0000-0000-000000000000"
+
+        # Act
+        response = client.get(f"/api/v1/sessions/{fake_session_id}")
+
+        # Assert
+        assert response.status_code == 404
+        data = response.json()
+        assert "detail" in data
