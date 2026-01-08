@@ -158,3 +158,27 @@ class TestSessionsEndpointsE2E:
         assert "session_id" in session
         assert "agent_name" in session
         assert "created_at" in session
+
+    def test_get_session_by_id_returns_session(self):
+        """Test: GET /sessions/{session_id} returns specific session.
+
+        Verifies session retrieval by ID works end-to-end.
+        """
+        # Arrange
+        client = TestClient(app)
+
+        # Create a session first
+        create_response = client.post(
+            "/api/v1/sessions",
+            json={"agent_name": "groq"}
+        )
+        session_id = create_response.json()["session_id"]
+
+        # Act
+        response = client.get(f"/api/v1/sessions/{session_id}")
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert data["session_id"] == session_id
+        assert data["agent_name"] == "groq"
