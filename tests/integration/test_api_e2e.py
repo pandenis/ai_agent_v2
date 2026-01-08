@@ -409,3 +409,25 @@ class TestInputValidationE2E:
         assert response.status_code == 400
         data = response.json()
         assert "detail" in data
+
+    def test_orchestrate_empty_query_returns_400(self):
+        """Test: POST /orchestrate with empty query returns 400.
+
+        Verifies query validation works end-to-end.
+        """
+        # Arrange
+        client = TestClient(app)
+
+        # Act - Try with empty query
+        response = client.post(
+            "/api/v1/orchestrate",
+            json={
+                "query": "",
+                "session_id": "00000000-0000-0000-0000-000000000000"
+            }
+        )
+
+        # Assert
+        assert response.status_code == 400 or response.status_code == 422
+        data = response.json()
+        assert "detail" in data
