@@ -106,3 +106,29 @@ class TestAgentsEndpointsE2E:
         assert "confidence" in data
         assert "reasoning" in data
         assert data["confidence"] > 0  # Has some confidence score
+
+class TestSessionsEndpointsE2E:
+    """E2E tests for sessions endpoints."""
+
+    def test_create_session_returns_session_id(self):
+        """Test: POST /sessions creates a new session.
+
+        Verifies session creation works end-to-end with database.
+        """
+        # Arrange
+        client = TestClient(app)
+
+        # Act
+        response = client.post(
+            "/api/v1/sessions",
+            json={"agent_name": "mistral"}
+        )
+
+        # Assert
+        assert response.status_code == 201
+        data = response.json()
+        assert "session_id" in data
+        assert "agent_name" in data
+        assert "created_at" in data
+        assert data["agent_name"] == "mistral"
+        assert len(data["session_id"]) == 36  # UUID format
