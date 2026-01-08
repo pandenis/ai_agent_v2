@@ -1,0 +1,60 @@
+{
+  "timestamp": "2026-01-08T20:49:26.989353",
+  "base_url": "http://192.168.1.237:8000/api/v1",
+  "benchmarks": {
+    "response_time": {
+      "simple": {
+        "iterations": 5,
+        "min_ms": 1758.04,
+        "max_ms": 4446.58,
+        "avg_ms": 3527.78,
+        "median_ms": 4121.24,
+        "std_dev_ms": 1147.81,
+        "strategies": [
+          "deep_reasoning"
+        ]
+      },
+      "medium": {
+        "iterations": 5,
+        "min_ms": 7242.02,
+        "max_ms": 10255.75,
+        "avg_ms": 8361.08,
+        "median_ms": 7931.26,
+        "std_dev_ms": 1304.08,
+        "strategies": [
+          "deep_reasoning"
+        ]
+      },
+      "complex": {
+        "iterations": 5,
+        "min_ms": 8175.61,
+        "max_ms": 9897.19,
+        "avg_ms": 8984.13,
+        "median_ms": 8887.43,
+        "std_dev_ms": 749.25,
+        "strategies": [
+          "deep_reasoning"
+        ]
+      }
+    },
+    "throughput": {
+      "duration_seconds": 11.76,
+      "total_requests": 3,
+      "errors": 0,
+      "requests_per_second": 0.26
+    },
+    "concurrent": {
+      "concurrent_users": 5,
+      "successful": 5,
+      "failed": 0,
+      "avg_response_ms": 5767.22,
+      "max_response_ms": 8234.66
+    },
+    "cache": {
+      "first_request_ms": 3430.12,
+      "subsequent_avg_ms": 3565.95,
+      "speedup_factor": 0.96,
+      "cache_effective": false
+    }
+  }
+}
