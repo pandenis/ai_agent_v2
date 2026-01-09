@@ -191,27 +191,124 @@ class QueryAnalyzer:
         """Identify main topics based on keywords and entities"""
         topics = []
 
-        # Programming indicators
+        # Personal/Identity indicators
+        personal_keywords = {
+            'name': ['name', 'who am i', 'call me', 'called'],
+            'profession': ['profession', 'job', 'work', 'career', 'occupation', 'employed', 'company'],
+            'location': ['live', 'location', 'address', 'where am i', 'city', 'country', 'home', 'moved'],
+            'preference': ['favorite', 'prefer', 'like best', 'favourite', 'love', 'enjoy'],
+            'age': ['age', 'old', 'born', 'birthday', 'birth date'],
+            'family': ['family', 'married', 'wife', 'husband', 'children', 'kids', 'parent', 'mother', 'father',
+                       'brother', 'sister', 'son', 'daughter'],
+            'contact': ['email', 'phone', 'number', 'contact', 'reach'],
+        }
+
+        for topic, keywords in personal_keywords.items():
+            if any(keyword in query_lower for keyword in keywords):
+                topics.append(topic)
+
+        # Programming/Technical indicators
         programming_keywords = ['python', 'code', 'bug', 'function', 'database',
-                                'programming', 'javascript', 'java', 'api']
+                                'programming', 'javascript', 'java', 'api', 'git',
+                                'sql', 'html', 'css', 'react', 'node', 'django',
+                                'flask', 'fastapi', 'docker', 'kubernetes', 'linux',
+                                'server', 'deploy', 'debug', 'error', 'exception',
+                                'class', 'method', 'variable', 'loop', 'array', 'list']
         if any(keyword in query_lower for keyword in programming_keywords):
             topics.append("programming")
 
-        # Medical indicators
+        # Medical/Health indicators
         medical_keywords = ['symptom', 'disease', 'treatment', 'medicine',
-                            'diagnosis', 'doctor', 'health', 'medical']
+                            'diagnosis', 'doctor', 'health', 'medical', 'pain',
+                            'hospital', 'clinic', 'prescription', 'vaccine',
+                            'allergy', 'infection', 'therapy', 'surgery',
+                            'mental health', 'anxiety', 'depression', 'diet',
+                            'exercise', 'sleep', 'nutrition', 'vitamin']
         if any(keyword in query_lower for keyword in medical_keywords):
             topics.append("medical")
 
-        # Creative indicators
-        creative_keywords = ['story', 'write', 'creative', 'poem', 'article', 'blog']
+        # Creative/Writing indicators
+        creative_keywords = ['story', 'write', 'creative', 'poem', 'article', 'blog',
+                             'essay', 'novel', 'fiction', 'script', 'content',
+                             'draft', 'edit', 'proofread', 'summarize', 'rewrite']
         if any(keyword in query_lower for keyword in creative_keywords):
             topics.append("creative")
 
-        # Analysis indicators
-        analysis_keywords = ['analyze', 'compare', 'evaluate', 'assess', 'review']
+        # Analysis/Research indicators
+        analysis_keywords = ['analyze', 'compare', 'evaluate', 'assess', 'review',
+                             'research', 'study', 'investigate', 'examine', 'pros and cons',
+                             'advantages', 'disadvantages', 'difference', 'similarity']
         if any(keyword in query_lower for keyword in analysis_keywords):
             topics.append("analysis")
+
+        # Finance/Business indicators
+        finance_keywords = ['money', 'budget', 'invest', 'stock', 'salary', 'price',
+                            'cost', 'finance', 'bank', 'loan', 'tax', 'income',
+                            'expense', 'profit', 'revenue', 'payment', 'credit',
+                            'mortgage', 'insurance', 'savings', 'retirement']
+        if any(keyword in query_lower for keyword in finance_keywords):
+            topics.append("finance")
+
+        # Travel indicators
+        travel_keywords = ['travel', 'trip', 'flight', 'hotel', 'vacation', 'holiday',
+                           'visit', 'tourism', 'destination', 'booking', 'passport',
+                           'visa', 'airport', 'luggage', 'itinerary']
+        if any(keyword in query_lower for keyword in travel_keywords):
+            topics.append("travel")
+
+        # Food/Cooking indicators
+        food_keywords = ['recipe', 'cook', 'food', 'eat', 'restaurant', 'meal',
+                         'ingredient', 'dish', 'cuisine', 'bake', 'dinner',
+                         'breakfast', 'lunch', 'snack', 'drink', 'coffee', 'tea']
+        if any(keyword in query_lower for keyword in food_keywords):
+            topics.append("food")
+
+        # Weather indicators
+        weather_keywords = ['weather', 'temperature', 'rain', 'sunny', 'forecast',
+                            'climate', 'snow', 'wind', 'humid', 'storm', 'cold', 'hot']
+        if any(keyword in query_lower for keyword in weather_keywords):
+            topics.append("weather")
+
+        # Entertainment indicators
+        entertainment_keywords = ['movie', 'film', 'music', 'song', 'game', 'play',
+                                  'watch', 'show', 'series', 'netflix', 'youtube',
+                                  'book', 'read', 'podcast', 'concert', 'theater']
+        if any(keyword in query_lower for keyword in entertainment_keywords):
+            topics.append("entertainment")
+
+        # Education/Learning indicators
+        education_keywords = ['learn', 'study', 'course', 'school', 'university',
+                              'teach', 'education', 'exam', 'test', 'degree',
+                              'certificate', 'tutorial', 'lesson', 'homework']
+        if any(keyword in query_lower for keyword in education_keywords):
+            topics.append("education")
+
+        # Sports/Fitness indicators
+        sports_keywords = ['sport', 'football', 'soccer', 'basketball', 'tennis',
+                           'gym', 'fitness', 'workout', 'run', 'swim', 'yoga',
+                           'team', 'match', 'score', 'player', 'championship']
+        if any(keyword in query_lower for keyword in sports_keywords):
+            topics.append("sports")
+
+        # Shopping/Products indicators
+        shopping_keywords = ['buy', 'purchase', 'product', 'shop', 'order',
+                             'amazon', 'delivery', 'shipping', 'return', 'refund',
+                             'discount', 'sale', 'brand', 'quality', 'recommend']
+        if any(keyword in query_lower for keyword in shopping_keywords):
+            topics.append("shopping")
+
+        # Legal indicators
+        legal_keywords = ['law', 'legal', 'lawyer', 'court', 'contract', 'rights',
+                          'sue', 'lawsuit', 'attorney', 'judge', 'verdict', 'settlement']
+        if any(keyword in query_lower for keyword in legal_keywords):
+            topics.append("legal")
+
+        # Science indicators
+        science_keywords = ['science', 'physics', 'chemistry', 'biology', 'experiment',
+                            'research', 'hypothesis', 'theory', 'formula', 'equation',
+                            'atom', 'molecule', 'cell', 'dna', 'evolution']
+        if any(keyword in query_lower for keyword in science_keywords):
+            topics.append("science")
 
         # General if no specific topic found
         if not topics:
