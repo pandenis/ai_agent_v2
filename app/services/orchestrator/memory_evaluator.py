@@ -93,12 +93,29 @@ class MemoryEvaluator:
         try:
             facts = await self.memory_service.search_facts(
                 query=search_query,
-                session_id=session_id,
+                min_importance=0.3,
                 limit=10
             )
-            return facts if facts else []
-        except Exception:
-            # If memory service fails, return empty
+
+            # Convert SQLAlchemy models to dicts for consistent handling
+            result = []
+            for fact in facts:
+                if hasattr(fact, 'text'):
+                    # SQLAlchemy model - convert to dict
+                    result.append({
+                        'text': fact.text,
+                        'importance': getattr(fact, 'importance', 0.5),
+                        'confidence': getattr(fact, 'confidence', 0.8),
+                        'tags': getattr(fact, 'tags', []),
+                    })
+                elif isinstance(fact, dict):
+                    # Already a dict
+                    result.append(fact)
+            return result
+        except Exception as e:
+            # Log and return empty on failure
+            import logging
+            logging.getLogger(__name__).warning(f"Memory search failed: {e}")
             return []
 
     def _calculate_coverage(self, query_analysis, relevant_facts: List[dict]) -> float:

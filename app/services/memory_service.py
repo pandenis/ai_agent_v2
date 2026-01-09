@@ -95,14 +95,31 @@ class MemoryService:
 
         return result.scalars().all()
 
-    async def search_facts(self, query: str, min_importance: float = 0.3) -> List[UserFact]:
-        """Search facts by text content (legacy)"""
+    async def search_facts(
+            self,
+            query: str,
+            min_importance: float = 0.3,
+            limit: int = 10,
+            session_id: str = None  # Optional - for future session filtering
+    ) -> List[UserFact]:
+        """
+        Search facts by text content.
+
+        Args:
+            query: Search text
+            min_importance: Minimum importance threshold (default 0.3)
+            limit: Maximum number of results (default 10)
+            session_id: Optional session filter (not used currently - facts are user-wide)
+
+        Returns:
+            List of matching UserFact objects
+        """
         result = await self.db.execute(
             select(UserFact)
             .where(and_(UserFact.text.contains(query), UserFact.importance >= min_importance))
             .order_by(UserFact.importance.desc())
+            .limit(limit)
         )
-
         return result.scalars().all()
 
     async def update_fact_usage(self, fact_id: str):
