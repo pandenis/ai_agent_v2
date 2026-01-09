@@ -290,14 +290,29 @@ class IntelligentOrchestrator:
                 cost_usd=strategy.estimated_cost
             )
 
-            # Cache direct answers for reuse
+            # Cache responses based on strategy
+            # - direct: cache (factual, stable)
+            # - enhanced: cache (AI-augmented, reasonably stable)
+            # - deep_reasoning: don't cache (needs fresh web data)
             if strategy.strategy == "direct":
-                self.response_cache.set(query, result, context=user_context)
+                self.response_cache.set(
+                    query, result,
+                    context=user_context,
+                    strategy="direct"
+                )
                 logger.debug("Cached direct response")
+            elif strategy.strategy == "enhanced":
+                self.response_cache.set(
+                    query, result,
+                    context=user_context,
+                    strategy="enhanced"
+                )
+                logger.debug("Cached enhanced response")
+                # Note: deep_reasoning not cached - needs fresh web search data
 
-            # ==========================================
-            # A/B TESTING: Record result
-            # ==========================================
+                # ==========================================
+                # A/B TESTING: Record result
+                # ==========================================
             if self.ab_testing_service and ab_experiment_id and user_id and ab_variant:
                 self.ab_testing_service.record_result(
                     experiment_id=ab_experiment_id,
