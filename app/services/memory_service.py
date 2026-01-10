@@ -87,46 +87,49 @@ class MemoryService:
 
         return fact
 
-    async def get_important_facts(self, min_importance: float = 0.5, limit: int = 10) -> List[UserFact]:
-        """Get important facts above threshold (legacy)"""
+    async def get_important_facts(self, min_importance: float = 0.5, limit: int = 10) -> List[FactModel]:
+        """Get important facts above threshold (Memorisator v2)"""
         result = await self.db.execute(
-            select(UserFact).where(UserFact.importance >= min_importance).order_by(UserFact.importance.desc()).limit(limit)
+            select(FactModel)
+            .where(FactModel.importance >= min_importance)
+            .order_by(FactModel.importance.desc())
+            .limit(limit)
         )
-
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     async def search_facts(
             self,
             query: str,
             min_importance: float = 0.3,
             limit: int = 10,
-            session_id: str = None  # Optional - for future session filtering
-    ) -> List[UserFact]:
+            session_id: str = None
+    ) -> List[FactModel]:
         """
-        Search facts by text content.
+        Search facts by text content (Memorisator v2).
 
         Args:
             query: Search text
             min_importance: Minimum importance threshold (default 0.3)
             limit: Maximum number of results (default 10)
-            session_id: Optional session filter (not used currently - facts are user-wide)
+            session_id: Optional session filter (not used - facts are user-wide)
 
         Returns:
-            List of matching UserFact objects
+            List of matching FactModel objects
         """
         result = await self.db.execute(
-            select(UserFact)
-            .where(and_(UserFact.text.contains(query), UserFact.importance >= min_importance))
-            .order_by(UserFact.importance.desc())
+            select(FactModel)
+            .where(and_(FactModel.text.contains(query), FactModel.importance >= min_importance))
+            .order_by(FactModel.importance.desc())
             .limit(limit)
         )
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     async def update_fact_usage(self, fact_id: str):
-        """Update fact usage statistics (legacy)"""
-        result = await self.db.execute(select(UserFact).where(UserFact.fact_id == fact_id))
+        """Update fact usage statistics (Memorisator v2)"""
+        result = await self.db.execute(
+            select(FactModel).where(FactModel.fact_id == fact_id)
+        )
         fact = result.scalar_one_or_none()
-
         if fact:
             fact.usage_count += 1
             fact.last_used = datetime.utcnow()

@@ -38,17 +38,25 @@ async def test_get_conversation_history(test_db):
 
 @pytest.mark.asyncio
 async def test_add_and_search_facts(test_db):
-    """Test adding and searching facts"""
+    """Test adding and searching facts (Memorisator v2)"""
+    from uuid import uuid4
+    from app.models.memory_v2 import Fact
+
     service = MemoryService(test_db)
 
-    # Add facts
-    await service.add_fact("User likes Python", importance=0.8, tags=["programming"])
-    await service.add_fact("User lives in Tel Aviv", importance=0.9, tags=["personal"])
-    await service.add_fact("User enjoys coffee", importance=0.3, tags=["preference"])
+    # Add facts using v2 API
+    facts_to_add = [
+        Fact(fact_id=str(uuid4()), text="User likes Python", importance=0.8, confidence=0.9, fact_type="preference",
+             source="test"),
+        Fact(fact_id=str(uuid4()), text="User lives in Tel Aviv", importance=0.9, confidence=0.9, fact_type="personal",
+             source="test"),
+        Fact(fact_id=str(uuid4()), text="User enjoys coffee", importance=0.3, confidence=0.9, fact_type="preference",
+             source="test"),
+    ]
+    await service.add_facts(facts_to_add)
 
     # Search for important facts
     important_facts = await service.get_important_facts(min_importance=0.7)
-
     assert len(important_facts) == 2
     assert all(f.importance >= 0.7 for f in important_facts)
 
@@ -60,18 +68,25 @@ async def test_add_and_search_facts(test_db):
 
 @pytest.mark.asyncio
 async def test_update_fact_usage(test_db):
-    """Test updating fact usage statistics"""
+    """Test updating fact usage statistics (Memorisator v2)"""
+    from uuid import uuid4
+    from app.models.memory_v2 import Fact
+
     service = MemoryService(test_db)
 
-    # Add fact
-    fact = await service.add_fact("Test fact", importance=0.5)
+    # Add fact using v2 API
+    facts = await service.add_facts([
+        Fact(fact_id=str(uuid4()), text="Test fact for usage", importance=0.5, confidence=0.9, fact_type="test",
+             source="test")
+    ])
+    fact = facts[0]
     initial_count = fact.usage_count
 
     # Update usage
-    await service.update_fact_usage(fact.fact_id)
+    await service.update_fact_usage(str(fact.fact_id))
 
     # Verify
-    updated_facts = await service.search_facts("Test fact")
+    updated_facts = await service.search_facts("Test fact for usage")
     assert len(updated_facts) == 1
     assert updated_facts[0].usage_count == initial_count + 1
     assert updated_facts[0].last_used is not None
