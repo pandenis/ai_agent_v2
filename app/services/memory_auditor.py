@@ -27,11 +27,26 @@ Usage:
         to_delete = auditor.get_facts_to_delete(group.facts, merged.fact_id)
 """
 
+import logging
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 from difflib import SequenceMatcher
 
 from app.models.memory_v2 import Fact
+
+if TYPE_CHECKING:
+    from app.services.memory_service import MemoryService
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class DeduplicationResult:
+    """Result of deduplication operation"""
+    groups_found: int
+    facts_merged: int
+    facts_deleted: int
+    errors: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -244,3 +259,94 @@ class MemoryAuditor:
         t2 = text2.lower().strip()
 
         return SequenceMatcher(None, t1, t2).ratio()
+
+    async def deduplicate_all(
+        self,
+        memory_service: "MemoryService",
+        dry_run: bool = False
+    ) -> DeduplicationResult:
+        """
+        Find and merge all duplicate facts in the database
+
+        Args:
+            memory_service: MemoryService instance for database access
+            dry_run: If True, only report duplicates without deleting
+
+        Returns:
+            DeduplicationResult with statistics
+        """
+        result = DeduplicationResult(
+            groups_found=0,
+            facts_merged=0,
+            facts_deleted=0,
+            errors=[]
+        )
+
+        try:
+            # Get all facts from database
+            all_facts_models = await memory_service.get_facts(
+                min_importance=0.0,
+                limit=10000
+            )
+
+            # Convert to Fact dataclass for processing
+            all_facts = [fm.to_dataclass() for fm in all_facts_models]
+
+            logger.info(f"Analyzing {len(all_facts)} facts for duplicates...")
+
+            # Find duplicate groups
+            duplicate_groups = self.find_duplicates(all_facts)
+            result.groups_found = len(duplicate_groups)
+
+            if not duplicate_groups:
+                logger.info("No duplicates found")
+                return result
+
+            logger.info(f"Found {len(duplicate_groups)} duplicate groups")
+
+            if dry_run:
+                # Just count what would be deleted
+                for group in duplicate_groups:
+                    result.facts_deleted += len(group.facts) - 1
+                return result
+
+            # Process each duplicate group
+            for group in duplicate_groups:
+                try:
+                    # Create merged fact
+                    merged = self.create_merged_fact(group.facts)
+
+                    # Get facts to delete
+                    to_delete = self.get_facts_to_delete(group.facts, merged.fact_id)
+
+                    # Update primary fact with merged data
+                    await memory_service.update_fact(
+                        fact_id=merged.fact_id,
+                        tags=merged.tags,
+                        usage_count=merged.usage_count
+                    )
+
+                    # Delete duplicates
+                    for fact_id in to_delete:
+                        await memory_service.delete_fact(fact_id)
+                        result.facts_deleted += 1
+
+                    result.facts_merged += 1
+                    logger.debug(f"Merged group: kept {merged.fact_id}, deleted {len(to_delete)}")
+
+                except Exception as e:
+                    error_msg = f"Error processing group {group.primary_fact_id}: {e}"
+                    logger.error(error_msg)
+                    result.errors.append(error_msg)
+
+            logger.info(
+                f"Deduplication complete: {result.facts_merged} merged, "
+                f"{result.facts_deleted} deleted, {len(result.errors)} errors"
+            )
+
+        except Exception as e:
+            error_msg = f"Deduplication failed: {e}"
+            logger.error(error_msg)
+            result.errors.append(error_msg)
+
+        return result

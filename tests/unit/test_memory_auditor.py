@@ -9,7 +9,7 @@ import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
-from app.services.memory_auditor import MemoryAuditor, DuplicateGroup
+from app.services.memory_auditor import MemoryAuditor, DuplicateGroup, DeduplicationResult
 from app.models.memory_v2 import Fact, FactModel
 
 
@@ -237,3 +237,135 @@ class TestMemoryAuditorDeduplicate:
         # Assert
         assert set(to_delete) == {"fact-2", "fact-3"}
         assert "fact-1" not in to_delete
+
+
+class TestMemoryAuditorAsync:
+    """Tests for async database deduplication"""
+
+    @pytest.mark.asyncio
+    async def test_deduplicate_all_dry_run(self):
+        """Test: Dry run reports duplicates without deleting"""
+        # Arrange
+        auditor = MemoryAuditor()
+
+        # Mock MemoryService
+        mock_memory_service = AsyncMock()
+
+        # Create mock FactModel objects with to_dataclass method
+        mock_fact_1 = MagicMock()
+        mock_fact_1.to_dataclass.return_value = Fact(
+            fact_id="fact-1",
+            text="User's name is Denis",
+            importance=0.9,
+        )
+        mock_fact_2 = MagicMock()
+        mock_fact_2.to_dataclass.return_value = Fact(
+            fact_id="fact-2",
+            text="User's name is Denis",
+            importance=0.7,
+        )
+
+        mock_memory_service.get_facts.return_value = [mock_fact_1, mock_fact_2]
+
+        # Act
+        result = await auditor.deduplicate_all(mock_memory_service, dry_run=True)
+
+        # Assert
+        assert result.groups_found == 1
+        assert result.facts_deleted == 1  # Would delete 1 duplicate
+        assert result.facts_merged == 0  # Dry run, no actual merge
+        mock_memory_service.delete_fact.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_deduplicate_all_actual_merge(self):
+        """Test: Actually merge and delete duplicates"""
+        # Arrange
+        auditor = MemoryAuditor()
+
+        mock_memory_service = AsyncMock()
+
+        mock_fact_1 = MagicMock()
+        mock_fact_1.to_dataclass.return_value = Fact(
+            fact_id="fact-1",
+            text="User's name is Denis",
+            importance=0.9,
+            tags=["name"],
+            usage_count=5,
+        )
+        mock_fact_2 = MagicMock()
+        mock_fact_2.to_dataclass.return_value = Fact(
+            fact_id="fact-2",
+            text="User's name is Denis",
+            importance=0.7,
+            tags=["personal"],
+            usage_count=3,
+        )
+
+        mock_memory_service.get_facts.return_value = [mock_fact_1, mock_fact_2]
+
+        # Act
+        result = await auditor.deduplicate_all(mock_memory_service, dry_run=False)
+
+        # Assert
+        assert result.groups_found == 1
+        assert result.facts_merged == 1
+        assert result.facts_deleted == 1
+
+        # Verify update was called for primary fact
+        mock_memory_service.update_fact.assert_called_once()
+        call_kwargs = mock_memory_service.update_fact.call_args[1]
+        assert call_kwargs["fact_id"] == "fact-1"
+        assert set(call_kwargs["tags"]) == {"name", "personal"}
+        assert call_kwargs["usage_count"] == 8
+
+        # Verify delete was called for duplicate
+        mock_memory_service.delete_fact.assert_called_once_with("fact-2")
+
+    @pytest.mark.asyncio
+    async def test_deduplicate_all_no_duplicates(self):
+        """Test: No action when no duplicates found"""
+        # Arrange
+        auditor = MemoryAuditor()
+
+        mock_memory_service = AsyncMock()
+
+        mock_fact_1 = MagicMock()
+        mock_fact_1.to_dataclass.return_value = Fact(
+            fact_id="fact-1",
+            text="User's name is Denis",
+            importance=0.9,
+        )
+        mock_fact_2 = MagicMock()
+        mock_fact_2.to_dataclass.return_value = Fact(
+            fact_id="fact-2",
+            text="User lives in Tel Aviv",
+            importance=0.8,
+        )
+
+        mock_memory_service.get_facts.return_value = [mock_fact_1, mock_fact_2]
+
+        # Act
+        result = await auditor.deduplicate_all(mock_memory_service, dry_run=False)
+
+        # Assert
+        assert result.groups_found == 0
+        assert result.facts_merged == 0
+        assert result.facts_deleted == 0
+        mock_memory_service.update_fact.assert_not_called()
+        mock_memory_service.delete_fact.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_deduplicate_all_handles_errors(self):
+        """Test: Handles errors gracefully and continues"""
+        # Arrange
+        auditor = MemoryAuditor()
+
+        mock_memory_service = AsyncMock()
+        mock_memory_service.get_facts.side_effect = Exception("Database error")
+
+        # Act
+        result = await auditor.deduplicate_all(mock_memory_service, dry_run=False)
+
+        # Assert
+        assert len(result.errors) == 1
+        assert "Database error" in result.errors[0]
