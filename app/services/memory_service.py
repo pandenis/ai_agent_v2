@@ -276,6 +276,58 @@ class MemoryService:
         logger.warning(f"Fact not found for deletion: {fact_id}")
         return False
 
+    async def update_fact(
+            self,
+            fact_id: str,
+            tags: Optional[List[str]] = None,
+            usage_count: Optional[int] = None,
+            importance: Optional[float] = None,
+            confidence: Optional[float] = None,
+            needs_update: Optional[bool] = None,
+    ) -> bool:
+        """
+        Update specific fields of a fact (Memorisator v2)
+
+        Used by MemoryAuditor for merging duplicate facts.
+
+        Args:
+            fact_id: Fact ID to update
+            tags: New tags list (replaces existing)
+            usage_count: New usage count
+            importance: New importance score
+            confidence: New confidence score
+            needs_update: Whether fact needs update
+
+        Returns:
+            True if updated, False if not found
+        """
+        result = await self.db.execute(
+            select(FactModel).where(FactModel.fact_id == fact_id)
+        )
+        fact = result.scalar_one_or_none()
+
+        if not fact:
+            logger.warning(f"Fact not found for update: {fact_id}")
+            return False
+
+        # Update only provided fields
+        if tags is not None:
+            fact.tags = tags
+        if usage_count is not None:
+            fact.usage_count = usage_count
+        if importance is not None:
+            fact.importance = importance
+        if confidence is not None:
+            fact.confidence = confidence
+        if needs_update is not None:
+            fact.needs_update = needs_update
+
+        fact.updated = datetime.utcnow()
+
+        await self.db.commit()
+        logger.info(f"Updated fact: {fact_id}")
+        return True
+
     async def update_fact_access(self, fact_id: str):
         """
         Update fact last_accessed and usage_count (Memorisator v2)
