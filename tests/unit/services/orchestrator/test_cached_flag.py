@@ -57,3 +57,56 @@ class TestCachedFlagInResponse:
         assert "metadata" in result
         assert "cached" in result["metadata"], "metadata should contain 'cached' field"
         assert result["metadata"]["cached"] is False, "Fresh response should have cached: false"
+
+    @pytest.mark.asyncio
+    async def test_cached_response_has_cached_true(self):
+        """Test: Cached response (second identical request) should have cached: true."""
+        # Arrange
+        from app.services.orchestrator.orchestrator import IntelligentOrchestrator
+        from app.services.orchestrator.memory_evaluator import MemoryEvaluation
+        
+        mock_memory_service = Mock()
+        mock_memory_service.search_facts = AsyncMock(return_value=[
+            {"text": "User's name is Denis", "importance": 0.9}
+        ])
+        mock_memory_service.get_important_facts = AsyncMock(return_value=[
+            {"text": "User's name is Denis", "importance": 0.9}
+        ])
+        mock_memory_service.save_interaction = AsyncMock()
+        
+        mock_agent_factory = Mock()
+        mock_fact_extractor = Mock()
+        mock_fact_extractor.extract = AsyncMock(return_value=[])
+        
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory_service,
+            agent_factory=mock_agent_factory,
+            fact_extractor=mock_fact_extractor
+        )
+        
+        # Mock memory evaluator for high coverage (direct response - cacheable)
+        mock_eval = MemoryEvaluation(
+            coverage_score=0.95,
+            relevant_facts=[{"text": "User's name is Denis", "importance": 0.9}],
+            gaps=[],
+            confidence=0.9
+        )
+        orchestrator.memory_evaluator.evaluate = AsyncMock(return_value=mock_eval)
+
+        # Act - first request (should be cached: false)
+        result1 = await orchestrator.process_query(
+            query="What is my name?",
+            session_id="test-session"
+        )
+        
+        # Assert first request
+        assert result1["metadata"]["cached"] is False, "First request should have cached: false"
+
+        # Act - second identical request (should be cached: true)
+        result2 = await orchestrator.process_query(
+            query="What is my name?",
+            session_id="test-session"
+        )
+
+        # Assert - second request should have cached: true
+        assert result2["metadata"]["cached"] is True, "Second request should have cached: true"
