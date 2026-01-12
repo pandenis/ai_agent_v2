@@ -194,7 +194,8 @@ class IntelligentOrchestrator:
                         "reasoning_depth": strategy.reasoning_depth,
                         "memory_coverage": round(memory_eval.coverage_score, 2),
                         "chain_executed": True,
-                        "chain_steps": len(chain.steps)
+                        "chain_steps": len(chain.steps),
+                        "cached": False
                     }
                 }
 
@@ -277,7 +278,8 @@ class IntelligentOrchestrator:
                     "memory_coverage": round(memory_eval.coverage_score, 2),
                     "reasoning_steps": reasoning_steps,
                     "synthesis_confidence": synthesis_confidence if strategy.strategy == "deep_reasoning" else None,
-                    "ab_variant": ab_variant
+                    "ab_variant": ab_variant,
+                    "cached": False
                 }
             }
 
@@ -336,7 +338,8 @@ class IntelligentOrchestrator:
                     "sources": [],
                     "elapsed_time_ms": (time.time() - start_time) * 1000,
                     "cost_usd": 0.0,
-                    "error": str(e)
+                    "error": str(e),
+                    "cached": False
                 }
             }
 
