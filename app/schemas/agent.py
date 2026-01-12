@@ -188,6 +188,7 @@ class OrchestratorMetadata(BaseModel):
     elapsed_time_ms: float = Field(default=0.0)
     cost_usd: float = Field(default=0.0)
     reasoning_depth: int = Field(default=0)
+    cached: bool = Field(default=False)
 
 
 class OrchestrateResponse(BaseModel):
