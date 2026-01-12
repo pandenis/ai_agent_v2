@@ -110,3 +110,48 @@ class TestCachedFlagInResponse:
 
         # Assert - second request should have cached: true
         assert result2["metadata"]["cached"] is True, "Second request should have cached: true"
+
+    @pytest.mark.asyncio
+    async def test_cached_flag_is_boolean_not_none(self):
+        """Test: cached flag should always be boolean, never None."""
+        # Arrange
+        from app.services.orchestrator.orchestrator import IntelligentOrchestrator
+        from app.services.orchestrator.memory_evaluator import MemoryEvaluation
+        
+        mock_memory_service = Mock()
+        mock_memory_service.search_facts = AsyncMock(return_value=[])
+        mock_memory_service.get_important_facts = AsyncMock(return_value=[])
+        mock_memory_service.save_interaction = AsyncMock()
+        
+        mock_agent_factory = Mock()
+        mock_agent = Mock()
+        mock_agent.process = AsyncMock(return_value="Test response about cooking")
+        mock_agent_factory.get_agent = Mock(return_value=mock_agent)
+        
+        mock_fact_extractor = Mock()
+        mock_fact_extractor.extract = AsyncMock(return_value=[])
+        
+        orchestrator = IntelligentOrchestrator(
+            memory_service=mock_memory_service,
+            agent_factory=mock_agent_factory,
+            fact_extractor=mock_fact_extractor
+        )
+        
+        # Mock for enhanced strategy (medium coverage)
+        mock_eval = MemoryEvaluation(
+            coverage_score=0.75,
+            relevant_facts=[{"text": "Some cooking fact", "importance": 0.7}],
+            gaps=["partial info"],
+            confidence=0.7
+        )
+        orchestrator.memory_evaluator.evaluate = AsyncMock(return_value=mock_eval)
+
+        # Act
+        result = await orchestrator.process_query(
+            query="Tell me about cooking pasta",
+            session_id="test-session"
+        )
+
+        # Assert - cached should be boolean, not None
+        assert result["metadata"]["cached"] is not None, "cached should not be None"
+        assert isinstance(result["metadata"]["cached"], bool), "cached should be boolean"
