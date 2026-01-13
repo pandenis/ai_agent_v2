@@ -607,6 +607,8 @@ async def orchestrate_query(
             elapsed_time_ms=metadata.get("elapsed_time_ms", 0.0),
             cost_usd=metadata.get("cost_usd", 0.0),
             reasoning_depth=metadata.get("reasoning_depth", 0),
+            cached=metadata.get("cached", False),
+            memory_coverage=metadata.get("memory_coverage", 0.0),
         ),
         debug=result.get("debug") if request.include_debug else None,
     )
