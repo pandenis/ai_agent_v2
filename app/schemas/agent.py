@@ -189,6 +189,7 @@ class OrchestratorMetadata(BaseModel):
     cost_usd: float = Field(default=0.0)
     reasoning_depth: int = Field(default=0)
     cached: bool = Field(default=False)
+    memory_coverage: float = Field(default=0.0)
 
 
 class OrchestrateResponse(BaseModel):

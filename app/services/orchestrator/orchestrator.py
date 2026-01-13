@@ -339,6 +339,7 @@ class IntelligentOrchestrator:
                     "elapsed_time_ms": (time.time() - start_time) * 1000,
                     "cost_usd": 0.0,
                     "error": str(e),
+                    "memory_coverage": 0.0,
                     "cached": False
                 }
             }
