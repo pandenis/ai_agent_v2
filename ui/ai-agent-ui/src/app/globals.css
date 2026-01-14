@@ -123,3 +123,39 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Status colors */
+:root {
+  --success: oklch(0.627 0.194 142.5);
+  --warning: oklch(0.75 0.183 55.93);
+  --error: oklch(0.577 0.245 27.325);
+  --info: oklch(0.623 0.214 259.1);
+}
+
+.dark {
+  --success: oklch(0.627 0.194 142.5);
+  --warning: oklch(0.75 0.183 55.93);
+  --error: oklch(0.704 0.191 22.216);
+  --info: oklch(0.623 0.214 259.1);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--muted);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 4px;
+  opacity: 0.3;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  opacity: 0.5;
+}
