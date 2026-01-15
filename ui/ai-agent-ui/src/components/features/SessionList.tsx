@@ -77,10 +77,6 @@ export function SessionList() {
         </button>
       </div>
 
-      {/* Debug info */}
-      <div className="px-3 text-xs text-muted-foreground">
-        Loading: {isLoading ? 'yes' : 'no'} | Count: {sessions?.length ?? 0}
-      </div>
 
       {/* Session List */}
       <div className="flex-1 overflow-y-auto">
