@@ -8,6 +8,7 @@ import type {
   CreateSessionRequest,
   Message,
   Fact,
+  FactsResponse,
   HealthResponse,
 } from '@/types/api';
 
@@ -64,11 +65,12 @@ export const api = {
     return request<Message[]>(`/api/v1/sessions/${sessionId}/messages`);
   },
 
-  getFacts: (sessionId?: string): Promise<Fact[]> => {
+  getFacts: async (sessionId?: string): Promise<Fact[]> => {
     const endpoint = sessionId
       ? `/api/v1/memory/facts?session_id=${sessionId}`
       : '/api/v1/memory/facts';
-    return request<Fact[]>(endpoint);
+    const response = await request<FactsResponse>(endpoint);
+    return response.facts;
   },
 
   health: (): Promise<HealthResponse> => {

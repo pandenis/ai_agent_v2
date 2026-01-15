@@ -39,10 +39,9 @@ export interface OrchestrateResponse {
   metadata: ResponseMetadata;
 }
 
-// Session - matches actual backend format
 export interface Session {
-  session_id: string;        // Backend uses session_id
-  agent_name: string;        // Backend uses agent_name
+  session_id: string;
+  agent_name: string;
   created_at: string;
   updated_at?: string;
   message_count: number;
@@ -57,14 +56,23 @@ export interface Message {
   metadata?: Partial<ResponseMetadata>;
 }
 
+// Fact - matches actual backend format
 export interface Fact {
-  id: string;
-  content: string;
+  fact_id: string;
+  text: string;
   importance: number;
   confidence: number;
-  source: string;
   tags: string[];
-  created_at: string;
+  fact_type: string;
+  source: string;
+  created: string;
+  updated: string;
+  usage_count: number;
+}
+
+// Facts response wrapper
+export interface FactsResponse {
+  facts: Fact[];
 }
 
 export interface HealthResponse {
