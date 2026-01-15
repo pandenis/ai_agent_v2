@@ -1,8 +1,7 @@
 /**
  * API Types for AI Agent Backend
  * 
- * These types match the backend API responses.
- * See: /api/v1/orchestrate, /api/v1/sessions, etc.
+ * These types match the ACTUAL backend API responses.
  */
 
 // ============ Request Types ============
@@ -15,6 +14,7 @@ export interface OrchestrateRequest {
 
 export interface CreateSessionRequest {
   title?: string;
+  agent_name?: string;
 }
 
 // ============ Response Types ============
@@ -26,21 +26,25 @@ export interface ResponseMetadata {
   memory_coverage: number;
   cached: boolean;
   elapsed_time_ms: number;
+  confidence?: number;
   sources?: string[];
   model_used?: string;
+  cost_usd?: number;
+  reasoning_depth?: number;
 }
 
 export interface OrchestrateResponse {
   text: string;
-  model_used: string;
+  model_used?: string;
   metadata: ResponseMetadata;
 }
 
+// Session - matches actual backend format
 export interface Session {
-  id: string;
-  title: string;
+  session_id: string;        // Backend uses session_id
+  agent_name: string;        // Backend uses agent_name
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
   message_count: number;
 }
 

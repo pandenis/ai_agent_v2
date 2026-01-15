@@ -19,16 +19,16 @@ describe('API Types', () => {
   test('OrchestrateResponse has metadata with strategy', () => {
     const response: OrchestrateResponse = {
       text: 'Your name is Denis',
-      model_used: 'mistral',
       metadata: {
-        strategy: 'direct',
+        strategy: 'enhanced',
         memory_coverage: 0.85,
         cached: false,
         elapsed_time_ms: 50,
+        confidence: 0.8,
       },
     };
     expect(response.text).toBeDefined();
-    expect(response.metadata.strategy).toBe('direct');
+    expect(response.metadata.strategy).toBe('enhanced');
   });
 
   test('Strategy type only allows valid values', () => {
@@ -38,16 +38,15 @@ describe('API Types', () => {
     });
   });
 
-  test('Session has required fields', () => {
+  test('Session matches backend format', () => {
     const session: Session = {
-      id: 'sess-123',
-      title: 'Test Session',
+      session_id: 'sess-123',       // Not 'id'
+      agent_name: 'mistral',        // Not 'title'
       created_at: '2026-01-15T10:00:00Z',
-      updated_at: '2026-01-15T10:30:00Z',
       message_count: 5,
     };
-    expect(session.id).toBeDefined();
-    expect(session.title).toBeDefined();
+    expect(session.session_id).toBeDefined();
+    expect(session.agent_name).toBeDefined();
     expect(session.message_count).toBe(5);
   });
 });

@@ -95,7 +95,7 @@ class ApiClient {
   // ============ Health ============
 
   async health(): Promise<HealthResponse> {
-    return this.request<HealthResponse>('/health');
+    return this.request<HealthResponse>('/api/v1/health');
   }
 }
 
