@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useChatStore } from '@/lib/stores/chat-store';
 import { api } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
+import { MessageContent } from './MessageContent';
 
 export function ChatArea() {
   const [input, setInput] = useState('');
@@ -74,7 +75,7 @@ export function ChatArea() {
                   : 'mr-auto bg-muted'
               )}
             >
-              <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+              <MessageContent content={message.content} />
               {message.metadata && (
                 <div className="mt-2 text-xs opacity-70 flex gap-2 flex-wrap">
                   {message.metadata.strategy && (
