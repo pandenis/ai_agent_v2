@@ -1,4 +1,5 @@
 import { MainLayout } from '@/components/layouts/MainLayout';
+import { ChatArea } from '@/components/features/ChatArea';
 
 function Sidebar() {
   return (
@@ -17,30 +18,6 @@ function Sidebar() {
       </div>
       <div className="flex-1 p-3 text-sm text-muted-foreground">
         Sessions will appear here...
-      </div>
-    </div>
-  );
-}
-
-function ChatArea() {
-  return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 p-4 overflow-y-auto">
-        <div className="text-center text-muted-foreground py-8">
-          Start a conversation...
-        </div>
-      </div>
-      <div className="p-4 border-t border-border">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Type a message..."
-            className="flex-1 px-4 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-          <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg">
-            Send
-          </button>
-        </div>
       </div>
     </div>
   );
