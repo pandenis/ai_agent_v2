@@ -1,15 +1,17 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useChatStore, ChatMessage } from '@/lib/stores/chat-store';
 import { api } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 
 export function SessionList() {
+  const queryClient = useQueryClient();
   const { activeSessionId, setActiveSession, setSessions } = useSessionStore();
-  const { setSession, setMessages, setLoading } = useChatStore();
+  const { setSession, setMessages, setLoading, clearMessages } = useChatStore();
+  const [isCreating, setIsCreating] = useState(false);
 
   // Fetch sessions
   const { data: sessions, isLoading, error } = useQuery({
@@ -32,7 +34,6 @@ export function SessionList() {
 
     try {
       const messages = await api.getMessages(sessionId);
-      // Convert API messages to ChatMessage format
       const chatMessages: ChatMessage[] = messages.map((msg) => ({
         id: msg.id || crypto.randomUUID(),
         role: msg.role,
@@ -45,6 +46,23 @@ export function SessionList() {
       console.error('Failed to load messages:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleNewSession = async () => {
+    setIsCreating(true);
+    try {
+      const newSession = await api.createSession({ agent_name: 'mistral' });
+      // Refresh sessions list
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      // Switch to new session
+      setActiveSession(newSession.session_id);
+      setSession(newSession.session_id);
+      clearMessages();
+    } catch (err) {
+      console.error('Failed to create session:', err);
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -84,8 +102,12 @@ export function SessionList() {
 
       {/* New Dialog Button */}
       <div className="p-3">
-        <button className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium">
-          + New Dialog
+        <button 
+          onClick={handleNewSession}
+          disabled={isCreating}
+          className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium disabled:opacity-50"
+        >
+          {isCreating ? 'Creating...' : '+ New Dialog'}
         </button>
       </div>
 
