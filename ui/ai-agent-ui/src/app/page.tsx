@@ -1,27 +1,6 @@
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { ChatArea } from '@/components/features/ChatArea';
-
-function Sidebar() {
-  return (
-    <div className="flex flex-col h-full">
-      <div className="p-3 border-b border-border">
-        <input
-          type="search"
-          placeholder="🔍 Search dialogs..."
-          className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background"
-        />
-      </div>
-      <div className="p-3">
-        <button className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium">
-          + New Dialog
-        </button>
-      </div>
-      <div className="flex-1 p-3 text-sm text-muted-foreground">
-        Sessions will appear here...
-      </div>
-    </div>
-  );
-}
+import { SessionList } from '@/components/features/SessionList';
 
 function ContextPanel() {
   return (
@@ -37,7 +16,7 @@ function ContextPanel() {
 export default function Home() {
   return (
     <MainLayout
-      sidebar={<Sidebar />}
+      sidebar={<SessionList />}
       contextPanel={<ContextPanel />}
     >
       <ChatArea />

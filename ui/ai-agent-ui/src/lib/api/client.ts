@@ -1,10 +1,6 @@
 /**
  * API Client for AI Agent Backend
- * 
- * Handles all communication with the backend API.
- * Base URL defaults to localhost:8000 for development.
  */
-
 import type {
   OrchestrateRequest,
   OrchestrateResponse,
@@ -17,90 +13,65 @@ import type {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-class ApiClient {
-  private baseUrl: string;
+async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const url = `${API_BASE}${endpoint}`;
+  
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
-  constructor(baseUrl: string = API_BASE) {
-    this.baseUrl = baseUrl;
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status}`);
   }
 
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-    
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    });
+  return response.json();
+}
 
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status}`);
-    }
-
-    return response.json();
-  }
-
-  // ============ Orchestrate ============
-
-  async orchestrate(request: OrchestrateRequest): Promise<OrchestrateResponse> {
-    return this.request<OrchestrateResponse>('/api/v1/orchestrate', {
+export const api = {
+  orchestrate: (req: OrchestrateRequest): Promise<OrchestrateResponse> => {
+    return request<OrchestrateResponse>('/api/v1/orchestrate', {
       method: 'POST',
-      body: JSON.stringify(request),
+      body: JSON.stringify(req),
     });
-  }
+  },
 
-  // ============ Sessions ============
+  getSessions: (): Promise<Session[]> => {
+    return request<Session[]>('/api/v1/sessions');
+  },
 
-  async getSessions(): Promise<Session[]> {
-    return this.request<Session[]>('/api/v1/sessions');
-  }
+  getSession: (sessionId: string): Promise<Session> => {
+    return request<Session>(`/api/v1/sessions/${sessionId}`);
+  },
 
-  async getSession(sessionId: string): Promise<Session> {
-    return this.request<Session>(`/api/v1/sessions/${sessionId}`);
-  }
-
-  async createSession(request?: CreateSessionRequest): Promise<Session> {
-    return this.request<Session>('/api/v1/sessions', {
+  createSession: (req?: CreateSessionRequest): Promise<Session> => {
+    return request<Session>('/api/v1/sessions', {
       method: 'POST',
-      body: JSON.stringify(request || {}),
+      body: JSON.stringify(req || {}),
     });
-  }
+  },
 
-  async deleteSession(sessionId: string): Promise<void> {
-    await this.request<void>(`/api/v1/sessions/${sessionId}`, {
+  deleteSession: (sessionId: string): Promise<void> => {
+    return request<void>(`/api/v1/sessions/${sessionId}`, {
       method: 'DELETE',
     });
-  }
+  },
 
-  // ============ Messages ============
+  getMessages: (sessionId: string): Promise<Message[]> => {
+    return request<Message[]>(`/api/v1/sessions/${sessionId}/messages`);
+  },
 
-  async getMessages(sessionId: string): Promise<Message[]> {
-    return this.request<Message[]>(`/api/v1/sessions/${sessionId}/messages`);
-  }
-
-  // ============ Memory / Facts ============
-
-  async getFacts(sessionId?: string): Promise<Fact[]> {
+  getFacts: (sessionId?: string): Promise<Fact[]> => {
     const endpoint = sessionId
       ? `/api/v1/memory/facts?session_id=${sessionId}`
       : '/api/v1/memory/facts';
-    return this.request<Fact[]>(endpoint);
-  }
+    return request<Fact[]>(endpoint);
+  },
 
-  // ============ Health ============
-
-  async health(): Promise<HealthResponse> {
-    return this.request<HealthResponse>('/api/v1/health');
-  }
-}
-
-// Export singleton instance
-export const api = new ApiClient();
-
-// Export class for testing
-export { ApiClient };
+  health: (): Promise<HealthResponse> => {
+    return request<HealthResponse>('/api/v1/health');
+  },
+};
