@@ -8,6 +8,7 @@ import { MessageContent } from './MessageContent';
 
 export function ChatArea() {
   const [input, setInput] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { messages, isLoading, currentSessionId, addMessage, setLoading, setError } = useChatStore();
 
@@ -23,7 +24,6 @@ export function ChatArea() {
     const userMessage = input.trim();
     setInput('');
 
-    // Add user message
     addMessage({ role: 'user', content: userMessage });
     setLoading(true);
 
@@ -33,7 +33,6 @@ export function ChatArea() {
         session_id: currentSessionId || 'default-session',
       });
 
-      // Add assistant message
       addMessage({
         role: 'assistant',
         content: response.text,
@@ -56,6 +55,12 @@ export function ChatArea() {
     }
   };
 
+  const handleCopy = async (id: string, content: string) => {
+    await navigator.clipboard.writeText(content);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Messages */}
@@ -69,13 +74,28 @@ export function ChatArea() {
             <div
               key={message.id}
               className={cn(
-                'max-w-[80%] p-4 rounded-lg',
+                'group relative max-w-[80%] p-4 rounded-lg',
                 message.role === 'user'
                   ? 'ml-auto bg-primary text-primary-foreground'
                   : 'mr-auto bg-muted'
               )}
             >
+              {/* Copy button */}
+              <button
+                onClick={() => handleCopy(message.id, message.content)}
+                className={cn(
+                  'absolute top-2 right-2 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity',
+                  message.role === 'user' 
+                    ? 'hover:bg-white/20' 
+                    : 'hover:bg-black/10'
+                )}
+                title="Copy message"
+              >
+                {copiedId === message.id ? '✓' : '📋'}
+              </button>
+
               <MessageContent content={message.content} />
+              
               {message.metadata && (
                 <div className="mt-2 text-xs opacity-70 flex gap-2 flex-wrap">
                   {message.metadata.strategy && (
@@ -96,7 +116,6 @@ export function ChatArea() {
           ))
         )}
 
-        {/* Loading indicator */}
         {isLoading && (
           <div className="mr-auto bg-muted p-4 rounded-lg">
             <div className="flex items-center gap-2 text-sm">
