@@ -558,6 +558,7 @@ async def get_memory_stats(memory_service: MemoryService = Depends(get_memory_se
 async def orchestrate_query(
         request: OrchestrateRequest,
         orchestrator: IntelligentOrchestrator = Depends(get_orchestrator),
+        db: AsyncSession = Depends(get_db),
 ):
     """
     Intelligent query orchestration with all production features.
@@ -594,6 +595,27 @@ async def orchestrate_query(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal processing error: {str(e)}"
         )
+
+    # Save messages to database
+    from app.models.memory import ConversationMessage
+
+    # Save user message
+    user_msg = ConversationMessage(
+        session_id=request.session_id,
+        role="user",
+        content=sanitized_query,
+    )
+    db.add(user_msg)
+
+    # Save assistant message
+    assistant_msg = ConversationMessage(
+        session_id=request.session_id,
+        role="assistant",
+        content=result.get("text", ""),
+    )
+    db.add(assistant_msg)
+
+    await db.commit()
 
     # Build response
     metadata = result.get("metadata", {})
