@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { tokens } from '@/lib/design-tokens';
+import { ThemeToggle } from '@/components/features/ThemeToggle';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -46,6 +46,8 @@ export function MainLayout({ children, sidebar, contextPanel }: MainLayoutProps)
           <span className="font-semibold text-lg">AI Agent</span>
           
           <div className="flex-1" />
+
+          <ThemeToggle />
           
           <button
             onClick={() => setContextOpen(!contextOpen)}
