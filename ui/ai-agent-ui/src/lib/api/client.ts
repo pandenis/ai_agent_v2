@@ -9,6 +9,7 @@ import type {
   Message,
   Fact,
   FactsResponse,
+  MessagesResponse,
   HealthResponse,
 } from '@/types/api';
 
@@ -61,8 +62,9 @@ export const api = {
     });
   },
 
-  getMessages: (sessionId: string): Promise<Message[]> => {
-    return request<Message[]>(`/api/v1/sessions/${sessionId}/messages`);
+  getMessages: async (sessionId: string): Promise<Message[]> => {
+    const response = await request<MessagesResponse>(`/api/v1/sessions/${sessionId}/messages`);
+    return response.messages;
   },
 
   getFacts: async (sessionId?: string): Promise<Fact[]> => {

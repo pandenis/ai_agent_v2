@@ -3,13 +3,13 @@
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSessionStore } from '@/lib/stores/session-store';
-import { useChatStore } from '@/lib/stores/chat-store';
+import { useChatStore, ChatMessage } from '@/lib/stores/chat-store';
 import { api } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 
 export function SessionList() {
   const { activeSessionId, setActiveSession, setSessions } = useSessionStore();
-  const { setSession } = useChatStore();
+  const { setSession, setMessages, setLoading } = useChatStore();
 
   // Fetch sessions
   const { data: sessions, isLoading, error } = useQuery({
@@ -18,11 +18,6 @@ export function SessionList() {
     refetchInterval: 30000,
   });
 
-  // Debug logging
-  useEffect(() => {
-    console.log('Sessions query:', { sessions, isLoading, error });
-  }, [sessions, isLoading, error]);
-
   // Sync to store
   useEffect(() => {
     if (sessions) {
@@ -30,9 +25,27 @@ export function SessionList() {
     }
   }, [sessions, setSessions]);
 
-  const handleSelectSession = (sessionId: string) => {
+  const handleSelectSession = async (sessionId: string) => {
     setActiveSession(sessionId);
     setSession(sessionId);
+    setLoading(true);
+
+    try {
+      const messages = await api.getMessages(sessionId);
+      // Convert API messages to ChatMessage format
+      const chatMessages: ChatMessage[] = messages.map((msg) => ({
+        id: msg.id || crypto.randomUUID(),
+        role: msg.role,
+        content: msg.content,
+        timestamp: new Date(msg.timestamp),
+        metadata: msg.metadata,
+      }));
+      setMessages(chatMessages);
+    } catch (err) {
+      console.error('Failed to load messages:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -50,7 +63,6 @@ export function SessionList() {
     return date.toLocaleDateString();
   };
 
-  // Show error if any
   if (error) {
     return (
       <div className="p-3 text-sm text-red-500">
@@ -76,7 +88,6 @@ export function SessionList() {
           + New Dialog
         </button>
       </div>
-
 
       {/* Session List */}
       <div className="flex-1 overflow-y-auto">

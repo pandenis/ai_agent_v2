@@ -1,7 +1,5 @@
 /**
  * Chat Store - Manages chat messages and state
- * 
- * Uses Zustand for simple, performant state management.
  */
 
 import { create } from 'zustand';
@@ -23,14 +21,13 @@ export interface ChatMessage {
 }
 
 interface ChatState {
-  // State
   messages: ChatMessage[];
   currentSessionId: string | null;
   isLoading: boolean;
   error: string | null;
 
-  // Actions
   addMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
+  setMessages: (messages: ChatMessage[]) => void;
   setSession: (sessionId: string) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -40,13 +37,11 @@ interface ChatState {
 export const useChatStore = create<ChatState>()(
   devtools(
     (set) => ({
-      // Initial state
       messages: [],
       currentSessionId: null,
       isLoading: false,
       error: null,
 
-      // Actions
       addMessage: (message) =>
         set(
           (state) => ({
@@ -63,6 +58,9 @@ export const useChatStore = create<ChatState>()(
           false,
           'addMessage'
         ),
+
+      setMessages: (messages) =>
+        set({ messages }, false, 'setMessages'),
 
       setSession: (sessionId) =>
         set(

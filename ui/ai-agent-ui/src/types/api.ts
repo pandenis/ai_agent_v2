@@ -79,3 +79,10 @@ export interface HealthResponse {
   status: 'healthy' | 'degraded' | 'unhealthy';
   version?: string;
 }
+
+// Messages response wrapper
+export interface MessagesResponse {
+  session_id: string;
+  messages: Message[];
+  total: number;
+}
