@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/features/ThemeToggle';
 
@@ -13,6 +13,27 @@ interface MainLayoutProps {
 export function MainLayout({ children, sidebar, contextPanel }: MainLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [contextOpen, setContextOpen] = useState(false);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if typing in input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      if (e.key === 'F1') {
+        e.preventDefault();
+        setSidebarOpen(prev => !prev);
+      } else if (e.key === 'F2') {
+        e.preventDefault();
+        setContextOpen(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div className="flex h-screen bg-background">
@@ -44,6 +65,14 @@ export function MainLayout({ children, sidebar, contextPanel }: MainLayoutProps)
           </button>
           
           <span className="font-semibold text-lg">AI Agent</span>
+          
+          {/* Keyboard hints */}
+          <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground ml-4">
+            <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">F1</kbd>
+            <span>Sidebar</span>
+            <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px] ml-2">F2</kbd>
+            <span>Context</span>
+          </div>
           
           <div className="flex-1" />
 
