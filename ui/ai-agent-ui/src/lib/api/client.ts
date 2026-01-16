@@ -30,6 +30,11 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     throw new Error(`API Error: ${response.status}`);
   }
 
+  // Handle 204 No Content
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return response.json();
 }
 
