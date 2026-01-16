@@ -1,17 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useChatStore, ChatMessage } from '@/lib/stores/chat-store';
 import { api } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
+import { generateUUID } from '@/lib/utils/uuid';
 
 export function SessionList() {
   const queryClient = useQueryClient();
   const { activeSessionId, setActiveSession, setSessions } = useSessionStore();
   const { setSession, setMessages, setLoading, clearMessages } = useChatStore();
   const [isCreating, setIsCreating] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch sessions
   const { data: sessions, isLoading, error } = useQuery({
@@ -19,6 +21,16 @@ export function SessionList() {
     queryFn: api.getSessions,
     refetchInterval: 30000,
   });
+
+  // Filter sessions by search query
+  const filteredSessions = useMemo(() => {
+    if (!sessions || !searchQuery.trim()) return sessions;
+    const query = searchQuery.toLowerCase();
+    return sessions.filter(session => 
+      session.agent_name?.toLowerCase().includes(query) ||
+      session.session_id.toLowerCase().includes(query)
+    );
+  }, [sessions, searchQuery]);
 
   // Sync to store
   useEffect(() => {
@@ -35,7 +47,7 @@ export function SessionList() {
     try {
       const messages = await api.getMessages(sessionId);
       const chatMessages: ChatMessage[] = messages.map((msg) => ({
-        id: msg.id || crypto.randomUUID(),
+        id: msg.id || generateUUID(),
         role: msg.role,
         content: msg.content,
         timestamp: new Date(msg.timestamp),
@@ -53,9 +65,7 @@ export function SessionList() {
     setIsCreating(true);
     try {
       const newSession = await api.createSession({ agent_name: 'mistral' });
-      // Refresh sessions list
       queryClient.invalidateQueries({ queryKey: ['sessions'] });
-      // Switch to new session
       setActiveSession(newSession.session_id);
       setSession(newSession.session_id);
       clearMessages();
@@ -63,6 +73,24 @@ export function SessionList() {
       console.error('Failed to create session:', err);
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleDeleteSession = async (e: React.MouseEvent, sessionId: string) => {
+    e.stopPropagation(); // Don't select the session
+    if (!confirm('Delete this session?')) return;
+    
+    try {
+      await api.deleteSession(sessionId);
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      
+      // If deleted the active session, clear it
+      if (activeSessionId === sessionId) {
+        setActiveSession(null);
+        clearMessages();
+      }
+    } catch (err) {
+      console.error('Failed to delete session:', err);
     }
   };
 
@@ -95,8 +123,10 @@ export function SessionList() {
       <div className="p-3 border-b border-border">
         <input
           type="search"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="🔍 Search dialogs..."
-          className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background"
+          className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
 
@@ -119,30 +149,39 @@ export function SessionList() {
               <div key={i} className="h-16 bg-muted rounded-md animate-pulse" />
             ))}
           </div>
-        ) : sessions?.length === 0 ? (
+        ) : filteredSessions?.length === 0 ? (
           <div className="p-3 text-sm text-muted-foreground text-center">
-            No sessions yet
+            {searchQuery ? 'No matching sessions' : 'No sessions yet'}
           </div>
         ) : (
           <div className="p-2 space-y-1">
-            {sessions?.map((session) => (
-              <button
+            {filteredSessions?.map((session) => (
+              <div
                 key={session.session_id}
-                onClick={() => handleSelectSession(session.session_id)}
                 className={cn(
-                  'w-full p-3 rounded-lg text-left transition-colors',
+                  'group relative w-full p-3 rounded-lg text-left transition-colors cursor-pointer',
                   activeSessionId === session.session_id
                     ? 'bg-primary/10 border border-primary/20'
                     : 'hover:bg-accent'
                 )}
+                onClick={() => handleSelectSession(session.session_id)}
               >
-                <div className="font-medium text-sm truncate">
+                <div className="font-medium text-sm truncate pr-6">
                   {session.agent_name || 'Untitled'}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
                   {formatDate(session.created_at)} • {session.message_count} msgs
                 </div>
-              </button>
+                
+                {/* Delete button */}
+                <button
+                  onClick={(e) => handleDeleteSession(e, session.session_id)}
+                  className="absolute top-2 right-2 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/20 text-destructive transition-opacity"
+                  title="Delete session"
+                >
+                  🗑️
+                </button>
+              </div>
             ))}
           </div>
         )}

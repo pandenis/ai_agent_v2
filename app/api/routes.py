@@ -218,6 +218,37 @@ async def get_session(session_id: str, db: AsyncSession = Depends(get_db)):
     return SessionResponse(session_id=session.session_id, agent_name=session.agent_name, created_at=session.created_at)
 
 
+@router.delete(
+    "/sessions/{session_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a session",
+    description="Deletes a session and all its messages",
+)
+async def delete_session(session_id: str, db: AsyncSession = Depends(get_db)):
+    """Delete session and its messages"""
+    from app.models.session import Session
+    from app.models.memory import ConversationMessage
+    
+    # Check if session exists
+    result = await db.execute(select(Session).where(Session.session_id == session_id))
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Session {session_id} not found")
+    
+    # Delete messages first
+    await db.execute(
+        ConversationMessage.__table__.delete().where(
+            ConversationMessage.session_id == session_id
+        )
+    )
+    
+    # Delete session
+    await db.delete(session)
+    await db.commit()
+    
+    return None
+
+
 @router.get(
     "/sessions/{session_id}/messages",
     summary="Get session messages",
