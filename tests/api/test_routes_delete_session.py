@@ -71,3 +71,53 @@ class TestDeleteSessionEndpoint:
         # Try to get messages - should 404 (session gone)
         messages_after = client.get(f"/api/v1/sessions/{session_id}/messages")
         assert messages_after.status_code == 404
+
+
+class TestRenameSessionEndpoint:
+    """Tests for PATCH /api/v1/sessions/{session_id}"""
+
+    def test_rename_session_returns_200(self):
+        """Test: Rename existing session returns 200"""
+        # Create a session first
+        create_response = client.post(
+            "/api/v1/sessions",
+            json={"agent_name": "mistral"}
+        )
+        assert create_response.status_code == 201
+        session_id = create_response.json()["session_id"]
+        
+        # Rename the session
+        response = client.patch(
+            f"/api/v1/sessions/{session_id}",
+            json={"agent_name": "My Custom Chat"}
+        )
+        assert response.status_code == 200
+        assert response.json()["agent_name"] == "My Custom Chat"
+
+    def test_rename_session_not_found_returns_404(self):
+        """Test: Rename non-existent session returns 404"""
+        response = client.patch(
+            "/api/v1/sessions/non-existent-id",
+            json={"agent_name": "New Name"}
+        )
+        assert response.status_code == 404
+
+    def test_rename_session_persists(self):
+        """Test: Renamed session keeps new name"""
+        # Create a session
+        create_response = client.post(
+            "/api/v1/sessions",
+            json={"agent_name": "mistral"}
+        )
+        session_id = create_response.json()["session_id"]
+        
+        # Rename it
+        client.patch(
+            f"/api/v1/sessions/{session_id}",
+            json={"agent_name": "Renamed Session"}
+        )
+        
+        # Get it again - should have new name
+        get_response = client.get(f"/api/v1/sessions/{session_id}")
+        assert get_response.status_code == 200
+        assert get_response.json()["agent_name"] == "Renamed Session"

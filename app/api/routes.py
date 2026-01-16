@@ -218,6 +218,37 @@ async def get_session(session_id: str, db: AsyncSession = Depends(get_db)):
     return SessionResponse(session_id=session.session_id, agent_name=session.agent_name, created_at=session.created_at)
 
 
+@router.patch(
+    "/sessions/{session_id}",
+    response_model=SessionResponse,
+    summary="Rename a session",
+    description="Updates the session name/agent_name",
+)
+async def rename_session(session_id: str, update_data: dict, db: AsyncSession = Depends(get_db)):
+    """Rename/update a session"""
+    from app.models.session import Session
+    
+    # Check if session exists
+    result = await db.execute(select(Session).where(Session.session_id == session_id))
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Session {session_id} not found")
+    
+    # Update agent_name if provided
+    if "agent_name" in update_data:
+        session.agent_name = update_data["agent_name"]
+    
+    await db.commit()
+    await db.refresh(session)
+    
+    return SessionResponse(
+        session_id=session.session_id,
+        agent_name=session.agent_name,
+        created_at=session.created_at,
+        message_count=0  # TODO: count messages
+    )
+
+
 @router.delete(
     "/sessions/{session_id}",
     status_code=status.HTTP_204_NO_CONTENT,
