@@ -61,6 +61,13 @@ export const api = {
     });
   },
 
+  renameSession: (sessionId: string, newName: string): Promise<Session> => {
+    return request<Session>(`/api/v1/sessions/${sessionId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ agent_name: newName }),
+    });
+  },
+
   deleteSession: (sessionId: string): Promise<void> => {
     return request<void>(`/api/v1/sessions/${sessionId}`, {
       method: 'DELETE',

@@ -14,6 +14,8 @@ export function SessionList() {
   const { setSession, setMessages, setLoading, clearMessages } = useChatStore();
   const [isCreating, setIsCreating] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
 
   // Fetch sessions
   const { data: sessions, isLoading, error } = useQuery({
@@ -40,6 +42,8 @@ export function SessionList() {
   }, [sessions, setSessions]);
 
   const handleSelectSession = async (sessionId: string) => {
+    if (editingId) return; // Don't select while editing
+    
     setActiveSession(sessionId);
     setSession(sessionId);
     setLoading(true);
@@ -77,20 +81,49 @@ export function SessionList() {
   };
 
   const handleDeleteSession = async (e: React.MouseEvent, sessionId: string) => {
-    e.stopPropagation(); // Don't select the session
+    e.stopPropagation();
     if (!confirm('Delete this session?')) return;
     
     try {
       await api.deleteSession(sessionId);
       queryClient.invalidateQueries({ queryKey: ['sessions'] });
       
-      // If deleted the active session, clear it
       if (activeSessionId === sessionId) {
         setActiveSession(null);
         clearMessages();
       }
     } catch (err) {
       console.error('Failed to delete session:', err);
+    }
+  };
+
+  const handleStartRename = (e: React.MouseEvent, sessionId: string, currentName: string) => {
+    e.stopPropagation();
+    setEditingId(sessionId);
+    setEditName(currentName);
+  };
+
+  const handleRename = async (sessionId: string) => {
+    if (!editName.trim()) {
+      setEditingId(null);
+      return;
+    }
+    
+    try {
+      await api.renameSession(sessionId, editName.trim());
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+    } catch (err) {
+      console.error('Failed to rename session:', err);
+    } finally {
+      setEditingId(null);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, sessionId: string) => {
+    if (e.key === 'Enter') {
+      handleRename(sessionId);
+    } else if (e.key === 'Escape') {
+      setEditingId(null);
     }
   };
 
@@ -166,21 +199,47 @@ export function SessionList() {
                 )}
                 onClick={() => handleSelectSession(session.session_id)}
               >
-                <div className="font-medium text-sm truncate pr-6">
-                  {session.agent_name || 'Untitled'}
-                </div>
+                {editingId === session.session_id ? (
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    onBlur={() => handleRename(session.session_id)}
+                    onKeyDown={(e) => handleKeyDown(e, session.session_id)}
+                    className="w-full px-2 py-1 text-sm rounded border border-primary bg-background focus:outline-none"
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <div 
+                    className="font-medium text-sm truncate pr-12"
+                    onDoubleClick={(e) => handleStartRename(e, session.session_id, session.agent_name || '')}
+                    title="Double-click to rename"
+                  >
+                    {session.agent_name || 'Untitled'}
+                  </div>
+                )}
                 <div className="text-xs text-muted-foreground mt-1">
                   {formatDate(session.created_at)} • {session.message_count} msgs
                 </div>
                 
-                {/* Delete button */}
-                <button
-                  onClick={(e) => handleDeleteSession(e, session.session_id)}
-                  className="absolute top-2 right-2 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/20 text-destructive transition-opacity"
-                  title="Delete session"
-                >
-                  🗑️
-                </button>
+                {/* Action buttons */}
+                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={(e) => handleStartRename(e, session.session_id, session.agent_name || '')}
+                    className="p-1 rounded hover:bg-accent"
+                    title="Rename"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    onClick={(e) => handleDeleteSession(e, session.session_id)}
+                    className="p-1 rounded hover:bg-destructive/20 text-destructive"
+                    title="Delete"
+                  >
+                    🗑️
+                  </button>
+                </div>
               </div>
             ))}
           </div>
