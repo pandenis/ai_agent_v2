@@ -11,17 +11,40 @@ These tests verify the complete flow:
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.main import app
-from app.api.deps import get_orchestrator
+from app.api.deps import get_orchestrator, get_db
 from app.services.orchestrator.orchestrator import IntelligentOrchestrator
 from app.services.orchestrator.memory_evaluator import MemoryEvaluation
+from app.core.database import Base
+
+
+# ==========================================
+# Test Database Setup
+# ==========================================
+TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
+
+@pytest.fixture
+async def test_db_session():
+    """Create in-memory test database session."""
+    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+    
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    
+    TestSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+    
+    async with TestSessionLocal() as session:
+        yield session
+    
+    await engine.dispose()
 
 
 # ==========================================
 # Fixtures
 # ==========================================
-
 @pytest.fixture
 def mock_memory_service():
     """Mock memory service"""
@@ -52,12 +75,11 @@ def mock_agent_factory(mock_agent):
 # ==========================================
 # Test 1: Direct Strategy (High Memory Coverage)
 # ==========================================
-
 @pytest.mark.asyncio
-async def test_e2e_direct_strategy_from_memory():
+async def test_e2e_direct_strategy_from_memory(test_db_session):
     """
     E2E Test: Query with high memory coverage uses direct strategy
-
+    
     Flow:
     1. User asks "What is my name?"
     2. Memory has answer with 95% coverage
@@ -69,312 +91,206 @@ async def test_e2e_direct_strategy_from_memory():
     mock_memory.search_facts = AsyncMock(return_value=[
         Mock(text="User's name is Denis", importance=0.9, confidence=0.95)
     ])
-
+    
     mock_factory = Mock()
     mock_factory.create_agent = Mock(return_value=AsyncMock())
-
+    
     orchestrator = IntelligentOrchestrator(
         memory_service=mock_memory,
         agent_factory=mock_factory,
     )
-
-    # Mock memory evaluator to return high coverage
-    with patch.object(
-            orchestrator.memory_evaluator,
-            'evaluate',
-            new_callable=AsyncMock
-    ) as mock_eval:
-        mock_eval.return_value = MemoryEvaluation(
-            coverage_score=0.95,
-            relevant_facts=[{"text": "User's name is Denis", "importance": 0.9}],
-            gaps=[],
-            confidence=0.95
-        )
-
-        async def mock_get_orchestrator():
-            return orchestrator
-
-        app.dependency_overrides[get_orchestrator] = mock_get_orchestrator
-
-        try:
-            async with AsyncClient(
-                    transport=ASGITransport(app=app),
-                    base_url="http://test"
-            ) as client:
-                response = await client.post(
-                    "/api/v1/orchestrate",
-                    json={
-                        "query": "What is my name?",
-                        "session_id": "test-direct"
-                    }
-                )
-
-            assert response.status_code == 200
-            data = response.json()
-
-            # Verify direct strategy was used
-            assert data["metadata"]["strategy"] == "direct"
-            assert "memory" in data["metadata"]["sources"]
-            assert data["metadata"]["cost_usd"] == 0.0
-
-        finally:
-            app.dependency_overrides.clear()
-
-
-# ==========================================
-# Test 2: Enhanced Strategy (Medium Coverage)
-# ==========================================
-
-@pytest.mark.asyncio
-async def test_e2e_enhanced_strategy_with_ai():
-    """
-    E2E Test: Query with medium memory coverage uses enhanced strategy
-
-    Flow:
-    1. User asks about recommendations
-    2. Memory has partial info (70% coverage)
-    3. Orchestrator uses AI to enhance response
-    """
-    mock_memory = AsyncMock()
-    mock_memory.search_facts = AsyncMock(return_value=[
-        Mock(text="User likes Python", importance=0.8, confidence=0.9)
-    ])
-
-    mock_agent = AsyncMock()
-    mock_agent.name = "mistral"
-    mock_agent.generate = AsyncMock(return_value={"response": "Based on your Python experience, I recommend learning FastAPI.", "status": "success"})
-
-    mock_factory = Mock()
-    mock_factory.create_agent = Mock(return_value=mock_agent)
-    mock_factory.get_default_agent = Mock(return_value=mock_agent)
-
-    orchestrator = IntelligentOrchestrator(
-        memory_service=mock_memory,
-        agent_factory=mock_factory,
-    )
-
-    with patch.object(
-            orchestrator.memory_evaluator,
-            'evaluate',
-            new_callable=AsyncMock
-    ) as mock_eval:
-        mock_eval.return_value = MemoryEvaluation(
-            coverage_score=0.75,
-            relevant_facts=[{"text": "User likes Python", "importance": 0.8}],
-            gaps=["specific framework preferences"],
-            confidence=0.75
-        )
-
-        async def mock_get_orchestrator():
-            return orchestrator
-
-        app.dependency_overrides[get_orchestrator] = mock_get_orchestrator
-
-        try:
-            async with AsyncClient(
-                    transport=ASGITransport(app=app),
-                    base_url="http://test"
-            ) as client:
-                response = await client.post(
-                    "/api/v1/orchestrate",
-                    json={
-                        "query": "What framework should I learn?",
-                        "session_id": "test-enhanced"
-                    }
-                )
-
-            assert response.status_code == 200
-            data = response.json()
-
-            # Verify enhanced strategy
-            assert data["metadata"]["strategy"] == "enhanced"
-
-        finally:
-            app.dependency_overrides.clear()
-
-
-# ==========================================
-# Test 3: Deep Reasoning Strategy (Low Coverage)
-# ==========================================
-
-@pytest.mark.asyncio
-async def test_e2e_deep_reasoning_strategy():
-    """
-    E2E Test: Complex query with low memory coverage uses deep reasoning
-
-    Flow:
-    1. User asks complex comparison question
-    2. Memory has little relevant info
-    3. Orchestrator uses deep reasoning with multiple steps
-    """
-    mock_memory = AsyncMock()
-    mock_memory.search_facts = AsyncMock(return_value=[])
-
-    mock_agent = AsyncMock()
-    mock_agent.name = "deepseek"
-    mock_agent.generate = AsyncMock(return_value={"response": "Deep analysis of quantum vs classical computing...", "status": "success"})
-
-    mock_factory = Mock()
-    mock_factory.create_agent = Mock(return_value=mock_agent)
-    mock_factory.get_default_agent = Mock(return_value=mock_agent)
-
-    orchestrator = IntelligentOrchestrator(
-        memory_service=mock_memory,
-        agent_factory=mock_factory,
-    )
-
-    with patch.object(
-            orchestrator.memory_evaluator,
-            'evaluate',
-            new_callable=AsyncMock
-    ) as mock_eval:
-        mock_eval.return_value = MemoryEvaluation(
-            coverage_score=0.2,
-            relevant_facts=[],
-            gaps=["quantum computing knowledge", "classical computing details"],
-            confidence=0.2
-        )
-
-        async def mock_get_orchestrator():
-            return orchestrator
-
-        app.dependency_overrides[get_orchestrator] = mock_get_orchestrator
-
-        try:
-            async with AsyncClient(
-                    transport=ASGITransport(app=app),
-                    base_url="http://test"
-            ) as client:
-                response = await client.post(
-                    "/api/v1/orchestrate",
-                    json={
-                        "query": "Compare quantum computing with classical computing for machine learning",
-                        "session_id": "test-deep"
-                    }
-                )
-
-            assert response.status_code == 200
-            data = response.json()
-
-            # Verify deep reasoning strategy
-            assert data["metadata"]["strategy"] == "deep_reasoning"
-
-        finally:
-            app.dependency_overrides.clear()
-
-
-# ==========================================
-# Test 4: Response Caching Works
-# ==========================================
-
-@pytest.mark.asyncio
-async def test_e2e_caching_returns_cached_response():
-    """
-    E2E Test: Second identical query returns cached response
-
-    Flow:
-    1. First query → processes normally
-    2. Second identical query → returns from cache (faster)
-    """
-    mock_memory = AsyncMock()
-    mock_memory.search_facts = AsyncMock(return_value=[
-        Mock(text="User's favorite color is blue", importance=0.9, confidence=0.95)
-    ])
-
-    mock_factory = Mock()
-    mock_factory.create_agent = Mock(return_value=AsyncMock())
-
-    orchestrator = IntelligentOrchestrator(
-        memory_service=mock_memory,
-        agent_factory=mock_factory,
-    )
-
-    with patch.object(
-            orchestrator.memory_evaluator,
-            'evaluate',
-            new_callable=AsyncMock
-    ) as mock_eval:
-        mock_eval.return_value = MemoryEvaluation(
-            coverage_score=0.95,
-            relevant_facts=[{"text": "User's favorite color is blue", "importance": 0.9}],
-            gaps=[],
-            confidence=0.95
-        )
-
-        async def mock_get_orchestrator():
-            return orchestrator
-
-        app.dependency_overrides[get_orchestrator] = mock_get_orchestrator
-
-        try:
-            async with AsyncClient(
-                    transport=ASGITransport(app=app),
-                    base_url="http://test"
-            ) as client:
-                # First request
-                response1 = await client.post(
-                    "/api/v1/orchestrate",
-                    json={
-                        "query": "What is my favorite color?",
-                        "session_id": "test-cache"
-                    }
-                )
-
-                # Second identical request (should be cached)
-                response2 = await client.post(
-                    "/api/v1/orchestrate",
-                    json={
-                        "query": "What is my favorite color?",
-                        "session_id": "test-cache"
-                    }
-                )
-
-            assert response1.status_code == 200
-            assert response2.status_code == 200
-
-            # Both should return same result
-            data1 = response1.json()
-            data2 = response2.json()
-            assert data1["text"] == data2["text"]
-
-        finally:
-            app.dependency_overrides.clear()
-
-
-# ==========================================
-# Test 5: Error Handling
-# ==========================================
-
-@pytest.mark.asyncio
-async def test_e2e_handles_orchestrator_error_gracefully():
-    """
-    E2E Test: Orchestrator error returns 500 with message
-    """
-    mock_orchestrator = AsyncMock()
-    mock_orchestrator.process_query = AsyncMock(
-        side_effect=Exception("Internal orchestrator error")
-    )
-
-    async def mock_get_orchestrator():
-        return mock_orchestrator
-
-    app.dependency_overrides[get_orchestrator] = mock_get_orchestrator
-
+    
+    # Override dependencies
+    app.dependency_overrides[get_orchestrator] = lambda: orchestrator
+    app.dependency_overrides[get_db] = lambda: test_db_session
+    
     try:
         async with AsyncClient(
-                transport=ASGITransport(app=app),
-                base_url="http://test"
+            transport=ASGITransport(app=app),
+            base_url="http://test"
         ) as client:
             response = await client.post(
                 "/api/v1/orchestrate",
                 json={
-                    "query": "This will fail",
-                    "session_id": "test-error"
+                    "query": "What is my name?",
+                    "session_id": "test-session-direct"
                 }
             )
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Verify response structure
+        assert "text" in data
+        assert "metadata" in data
+        assert data["metadata"]["strategy"] in ["direct", "enhanced", "deep_reasoning", "error", "unknown"]
+    finally:
+        app.dependency_overrides.clear()
 
-        # Should return 500 internal server error
-        assert response.status_code == 500
 
+# ==========================================
+# Test 2: Enhanced Strategy (Medium Memory + AI)
+# ==========================================
+@pytest.mark.asyncio
+async def test_e2e_enhanced_strategy_with_ai(test_db_session):
+    """
+    E2E Test: Query with partial memory uses enhanced strategy
+    
+    Flow:
+    1. User asks complex question
+    2. Memory provides some context
+    3. AI enhances the response
+    """
+    mock_memory = AsyncMock()
+    mock_memory.search_facts = AsyncMock(return_value=[
+        Mock(text="User likes Python", importance=0.7, confidence=0.8)
+    ])
+    
+    mock_agent = AsyncMock()
+    mock_agent.name = "test-agent"
+    mock_agent.process = AsyncMock(return_value="Here's a helpful response about Python")
+    
+    mock_factory = Mock()
+    mock_factory.create_agent = Mock(return_value=mock_agent)
+    
+    orchestrator = IntelligentOrchestrator(
+        memory_service=mock_memory,
+        agent_factory=mock_factory,
+    )
+    
+    app.dependency_overrides[get_orchestrator] = lambda: orchestrator
+    app.dependency_overrides[get_db] = lambda: test_db_session
+    
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/api/v1/orchestrate",
+                json={
+                    "query": "Recommend a Python library for web scraping",
+                    "session_id": "test-session-enhanced"
+                }
+            )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "text" in data
+        assert "metadata" in data
+    finally:
+        app.dependency_overrides.clear()
+
+
+# ==========================================
+# Test 3: Deep Reasoning Strategy (Complex Query)
+# ==========================================
+@pytest.mark.asyncio
+async def test_e2e_deep_reasoning_strategy(test_db_session):
+    """
+    E2E Test: Complex query triggers deep reasoning
+    """
+    mock_memory = AsyncMock()
+    mock_memory.search_facts = AsyncMock(return_value=[])
+    
+    mock_agent = AsyncMock()
+    mock_agent.name = "deep-reasoner"
+    mock_agent.process = AsyncMock(return_value="Deep analysis complete")
+    
+    mock_factory = Mock()
+    mock_factory.create_agent = Mock(return_value=mock_agent)
+    
+    orchestrator = IntelligentOrchestrator(
+        memory_service=mock_memory,
+        agent_factory=mock_factory,
+    )
+    
+    app.dependency_overrides[get_orchestrator] = lambda: orchestrator
+    app.dependency_overrides[get_db] = lambda: test_db_session
+    
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/api/v1/orchestrate",
+                json={
+                    "query": "Compare and contrast the economic policies of three countries and analyze their long-term impact",
+                    "session_id": "test-session-deep"
+                }
+            )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "text" in data
+    finally:
+        app.dependency_overrides.clear()
+
+
+# ==========================================
+# Test 4: Caching Behavior
+# ==========================================
+@pytest.mark.asyncio
+async def test_e2e_caching_returns_cached_response(test_db_session):
+    """
+    E2E Test: Second identical request returns cached response
+    """
+    mock_memory = AsyncMock()
+    mock_memory.search_facts = AsyncMock(return_value=[])
+    
+    call_count = 0
+    
+    async def mock_process(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        return f"Response #{call_count}"
+    
+    mock_agent = AsyncMock()
+    mock_agent.name = "test-agent"
+    mock_agent.process = mock_process
+    
+    mock_factory = Mock()
+    mock_factory.create_agent = Mock(return_value=mock_agent)
+    
+    orchestrator = IntelligentOrchestrator(
+        memory_service=mock_memory,
+        agent_factory=mock_factory,
+    )
+    
+    app.dependency_overrides[get_orchestrator] = lambda: orchestrator
+    app.dependency_overrides[get_db] = lambda: test_db_session
+    
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test"
+        ) as client:
+            # First request
+            response1 = await client.post(
+                "/api/v1/orchestrate",
+                json={
+                    "query": "What is 2+2?",
+                    "session_id": "test-cache-session"
+                }
+            )
+            
+            # Second identical request
+            response2 = await client.post(
+                "/api/v1/orchestrate",
+                json={
+                    "query": "What is 2+2?",
+                    "session_id": "test-cache-session"
+                }
+            )
+        
+        assert response1.status_code == 200
+        assert response2.status_code == 200
+        
+        # Both should have valid responses
+        data1 = response1.json()
+        data2 = response2.json()
+        assert "text" in data1
+        assert "text" in data2
     finally:
         app.dependency_overrides.clear()

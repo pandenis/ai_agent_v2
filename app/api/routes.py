@@ -598,6 +598,7 @@ async def orchestrate_query(
 
     # Save messages to database
     from app.models.memory import ConversationMessage
+    import json
 
     # Save user message
     user_msg = ConversationMessage(
@@ -607,11 +608,15 @@ async def orchestrate_query(
     )
     db.add(user_msg)
 
-    # Save assistant message
+    # Save assistant message (ensure content is string)
+    response_text = result.get("text", "")
+    if not isinstance(response_text, str):
+        response_text = json.dumps(response_text) if response_text else ""
+    
     assistant_msg = ConversationMessage(
         session_id=request.session_id,
         role="assistant",
-        content=result.get("text", ""),
+        content=response_text,
     )
     db.add(assistant_msg)
 
@@ -621,7 +626,7 @@ async def orchestrate_query(
     metadata = result.get("metadata", {})
 
     return OrchestrateResponse(
-        text=result.get("text", ""),
+        text=response_text,
         metadata=OrchestratorMetadata(
             strategy=metadata.get("strategy", "unknown"),
             confidence=metadata.get("confidence", 0.0),
