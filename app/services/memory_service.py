@@ -2,7 +2,7 @@
 Memory service for managing conversation history and facts
 Extended to support Memorisator v2 (FactModel)
 """
-
+import re
 import uuid
 from datetime import datetime
 from typing import List, Optional
@@ -141,18 +141,37 @@ class MemoryService:
 
     async def add_facts(self, facts: List[Fact]) -> List[FactModel]:
         """
-        Add multiple facts to database (Memorisator v2)
+        Add multiple facts to database with duplicate prevention.
 
         Args:
             facts: List of Fact dataclass objects
 
         Returns:
-            List of saved FactModel objects
+            List of saved FactModel objects (excludes duplicates)
         """
         saved_facts = []
 
+        # Get existing facts for duplicate check
+        existing_facts = await self.get_facts()
+        existing_texts = [f.text for f in existing_facts]
+
         for fact in facts:
             try:
+                # Check for duplicates
+                is_duplicate = False
+                for existing_text in existing_texts:
+                    similarity = self._calculate_similarity(fact.text, existing_text)
+                    if similarity >= 0.70:
+                        logger.debug(
+                            f"Skipping duplicate fact: '{fact.text[:50]}...' "
+                            f"(similarity {similarity:.2f} with existing)"
+                        )
+                        is_duplicate = True
+                        break
+
+                if is_duplicate:
+                    continue
+
                 # Convert Fact dataclass to FactModel
                 fact_model = FactModel(
                     fact_id=fact.fact_id,
@@ -177,6 +196,9 @@ class MemoryService:
                 self.db.add(fact_model)
                 saved_facts.append(fact_model)
 
+                # Also add to existing_texts to prevent duplicates within same batch
+                existing_texts.append(fact.text)
+
                 logger.debug(f"Added fact: {fact.text[:50]}...")
 
             except Exception as e:
@@ -194,6 +216,36 @@ class MemoryService:
             logger.info(f"Saved {len(saved_facts)} facts to database")
 
         return saved_facts
+
+    def _calculate_similarity(self, text1: str, text2: str) -> float:
+        """
+        Calculate Jaccard similarity between two texts.
+
+        Args:
+            text1: First text
+            text2: Second text
+
+        Returns:
+            Similarity score 0.0-1.0
+        """
+        import re  # Or add to imports at top of file
+
+        # Normalize: lowercase and remove punctuation
+        text1_clean = re.sub(r'[^\w\s]', '', text1.lower())
+        text2_clean = re.sub(r'[^\w\s]', '', text2.lower())
+
+        # Tokenize
+        words1 = set(text1_clean.split())
+        words2 = set(text2_clean.split())
+
+        if not words1 or not words2:
+            return 0.0
+
+        # Jaccard similarity
+        intersection = len(words1 & words2)
+        union = len(words1 | words2)
+
+        return intersection / union if union > 0 else 0.0
 
     async def get_facts(
         self,
