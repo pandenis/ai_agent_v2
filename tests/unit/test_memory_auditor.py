@@ -67,7 +67,7 @@ class TestMemoryAuditorDuplicateDetection:
 
         # Assert
         assert len(duplicates) == 1
-        assert duplicates[0].similarity_score >= 0.85
+        assert duplicates[0].similarity_score >= 0.80
 
     def test_find_duplicates_no_duplicates(self):
         """Test: No duplicates when facts are different"""

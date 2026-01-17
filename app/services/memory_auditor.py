@@ -30,7 +30,7 @@ Usage:
 import logging
 from dataclasses import dataclass, field
 from typing import List, Optional, TYPE_CHECKING
-from difflib import SequenceMatcher
+import re
 
 from app.models.memory_v2 import Fact
 
@@ -66,7 +66,7 @@ class MemoryAuditor:
         similarity_threshold: Minimum similarity score to consider as duplicate (0.0-1.0)
     """
 
-    def __init__(self, similarity_threshold: float = 0.85):
+    def __init__(self, similarity_threshold: float = 0.80):
         """
         Initialize MemoryAuditor
 
@@ -238,27 +238,35 @@ class MemoryAuditor:
         """
         return [f.fact_id for f in facts if f.fact_id != primary_id]
 
+    import re
+
     def _calculate_similarity(self, text1: str, text2: str) -> float:
         """
-        Calculate text similarity between two strings
-
-        Uses SequenceMatcher for fuzzy matching
+        Calculate Jaccard similarity between two texts.
 
         Args:
             text1: First text
             text2: Second text
 
         Returns:
-            Similarity score (0.0-1.0)
+            Similarity score 0.0-1.0
         """
-        if not text1 or not text2:
+        # Normalize: lowercase and remove punctuation
+        text1_clean = re.sub(r'[^\w\s]', '', text1.lower())
+        text2_clean = re.sub(r'[^\w\s]', '', text2.lower())
+
+        # Tokenize
+        words1 = set(text1_clean.split())
+        words2 = set(text2_clean.split())
+
+        if not words1 or not words2:
             return 0.0
 
-        # Normalize texts for comparison
-        t1 = text1.lower().strip()
-        t2 = text2.lower().strip()
+        # Jaccard similarity
+        intersection = len(words1 & words2)
+        union = len(words1 | words2)
 
-        return SequenceMatcher(None, t1, t2).ratio()
+        return intersection / union if union > 0 else 0.0
 
     async def deduplicate_all(
         self,
