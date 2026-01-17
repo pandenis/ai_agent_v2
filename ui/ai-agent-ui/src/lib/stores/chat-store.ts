@@ -5,6 +5,19 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { Strategy } from '@/types/api';
 
+// UUID fallback for browsers without crypto.randomUUID
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older browsers
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export interface ResponseMetadata {
   strategy?: Strategy;
   cached?: boolean;
@@ -62,7 +75,7 @@ export const useChatStore = create<ChatState>()(
                 ...state.messages,
                 {
                   ...message,
-                  id: crypto.randomUUID(),
+                  id: generateUUID(),
                   timestamp: new Date(),
                 },
               ],
