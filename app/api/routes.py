@@ -701,3 +701,19 @@ async def orchestrate_query(
         ),
         debug=result.get("debug") if request.include_debug else None,
     )
+
+# ============================================================================
+# System Stats Endpoints
+# ============================================================================
+
+@router.get(
+    "/system/cache-stats",
+    summary="Get cache statistics",
+    description="Returns cache performance metrics including hits, misses, and hit rate",
+)
+async def get_cache_stats(
+    orchestrator: IntelligentOrchestrator = Depends(get_orchestrator),
+):
+    """Get cache statistics from the shared response cache."""
+    stats = orchestrator.response_cache.get_stats()
+    return stats
