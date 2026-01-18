@@ -38,6 +38,26 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   return response.json();
 }
 
+// Types for new endpoints
+export interface CacheStats {
+  hits: number;
+  misses: number;
+  hit_rate: number;
+  size: number;
+  max_size: number;
+  estimated_bytes?: number;
+  strategy_distribution?: Record<string, number>;
+}
+
+export interface SessionStats {
+  session_id: string;
+  message_count: number;
+  user_messages: number;
+  assistant_messages: number;
+  agent_name: string;
+  created_at: string | null;
+}
+
 export const api = {
   orchestrate: (req: OrchestrateRequest): Promise<OrchestrateResponse> => {
     return request<OrchestrateResponse>('/api/v1/orchestrate', {
@@ -89,5 +109,15 @@ export const api = {
 
   health: (): Promise<HealthResponse> => {
     return request<HealthResponse>('/api/v1/health');
+  },
+
+  // New: Cache statistics
+  getCacheStats: (): Promise<CacheStats> => {
+    return request<CacheStats>('/api/v1/system/cache-stats');
+  },
+
+  // New: Session statistics
+  getSessionStats: (sessionId: string): Promise<SessionStats> => {
+    return request<SessionStats>(`/api/v1/sessions/${sessionId}/stats`);
   },
 };

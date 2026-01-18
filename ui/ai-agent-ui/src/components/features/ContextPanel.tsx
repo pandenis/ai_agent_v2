@@ -10,16 +10,31 @@ export function ContextPanel() {
   const { currentSessionId, messages, lastMetadata } = useChatStore();
 
   // Fetch facts
-  const { data: facts, isLoading, error } = useQuery({
+  const { data: facts, isLoading: factsLoading, error: factsError } = useQuery({
     queryKey: ['facts', currentSessionId],
     queryFn: () => api.getFacts(currentSessionId || undefined),
     refetchInterval: 60000,
   });
 
-  // Calculate stats
-  const messageCount = messages.length;
-  const userMessages = messages.filter(m => m.role === 'user').length;
-  const assistantMessages = messages.filter(m => m.role === 'assistant').length;
+  // Fetch cache stats
+  const { data: cacheStats } = useQuery({
+    queryKey: ['cache-stats'],
+    queryFn: () => api.getCacheStats(),
+    refetchInterval: 30000, // Refresh every 30s
+  });
+
+  // Fetch session stats
+  const { data: sessionStats } = useQuery({
+    queryKey: ['session-stats', currentSessionId],
+    queryFn: () => currentSessionId ? api.getSessionStats(currentSessionId) : null,
+    enabled: !!currentSessionId,
+    refetchInterval: 10000, // Refresh every 10s
+  });
+
+  // Calculate local stats (fallback)
+  const messageCount = sessionStats?.message_count ?? messages.length;
+  const userMessages = sessionStats?.user_messages ?? messages.filter(m => m.role === 'user').length;
+  const assistantMessages = sessionStats?.assistant_messages ?? messages.filter(m => m.role === 'assistant').length;
 
   return (
     <div className="flex flex-col h-full">
@@ -43,13 +58,13 @@ export function ContextPanel() {
               Memory ({facts?.length || 0} facts)
             </h4>
             
-            {isLoading ? (
+            {factsLoading ? (
               <div className="space-y-2">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="h-16 bg-muted rounded animate-pulse" />
                 ))}
               </div>
-            ) : error ? (
+            ) : factsError ? (
               <div className="text-sm text-red-500">
                 Error loading facts
               </div>
@@ -197,45 +212,85 @@ export function ContextPanel() {
 
         {/* System Stats Tab */}
         <TabPanel id="system">
-          <div className="p-4">
-            <h4 className="text-sm font-medium mb-3">📈 Session Stats</h4>
-            
-            <div className="space-y-3">
-              {/* Message counts */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-muted p-3 rounded-lg">
-                  <div className="text-muted-foreground text-xs">Total Messages</div>
-                  <div className="font-semibold text-lg">{messageCount}</div>
+          <div className="p-4 space-y-6">
+            {/* Session Stats */}
+            <div>
+              <h4 className="text-sm font-medium mb-3">📈 Session Stats</h4>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-muted p-3 rounded-lg">
+                    <div className="text-muted-foreground text-xs">Total Messages</div>
+                    <div className="font-semibold text-lg">{messageCount}</div>
+                  </div>
+                  <div className="bg-muted p-3 rounded-lg">
+                    <div className="text-muted-foreground text-xs">You / AI</div>
+                    <div className="font-semibold text-lg">{userMessages} / {assistantMessages}</div>
+                  </div>
                 </div>
-                <div className="bg-muted p-3 rounded-lg">
-                  <div className="text-muted-foreground text-xs">You / AI</div>
-                  <div className="font-semibold text-lg">{userMessages} / {assistantMessages}</div>
-                </div>
-              </div>
 
-              {/* Session ID */}
-              <div className="bg-muted p-3 rounded-lg">
-                <div className="text-muted-foreground text-xs mb-1">Session ID</div>
-                <div className="font-mono text-xs truncate">
-                  {currentSessionId || 'No session'}
+                <div className="bg-muted p-3 rounded-lg">
+                  <div className="text-muted-foreground text-xs mb-1">Session ID</div>
+                  <div className="font-mono text-xs truncate">
+                    {currentSessionId || 'No session'}
+                  </div>
                 </div>
-              </div>
 
-              {/* Facts count */}
-              <div className="bg-muted p-3 rounded-lg">
-                <div className="text-muted-foreground text-xs">Memory Facts</div>
-                <div className="font-semibold text-lg">{facts?.length || 0}</div>
+                <div className="bg-muted p-3 rounded-lg">
+                  <div className="text-muted-foreground text-xs">Memory Facts</div>
+                  <div className="font-semibold text-lg">{facts?.length || 0}</div>
+                </div>
               </div>
             </div>
 
-            {/* Future: Cache stats will go here */}
-            <div className="mt-6">
-              <h4 className="text-sm font-medium mb-3 text-muted-foreground">
-                💾 Cache Stats (coming soon)
-              </h4>
-              <div className="text-xs text-muted-foreground">
-                Cache statistics will be available after T4 implementation
-              </div>
+            {/* Cache Stats */}
+            <div>
+              <h4 className="text-sm font-medium mb-3">💾 Cache Performance</h4>
+              {cacheStats ? (
+                <div className="space-y-3">
+                  {/* Hit Rate */}
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm text-muted-foreground">Hit Rate</span>
+                      <span className="text-sm font-medium">{(cacheStats.hit_rate * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-green-500 transition-all duration-300"
+                        style={{ width: `${cacheStats.hit_rate * 100}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-muted p-3 rounded-lg">
+                      <div className="text-muted-foreground text-xs">Hits</div>
+                      <div className="font-semibold text-lg text-green-500">{cacheStats.hits}</div>
+                    </div>
+                    <div className="bg-muted p-3 rounded-lg">
+                      <div className="text-muted-foreground text-xs">Misses</div>
+                      <div className="font-semibold text-lg text-orange-500">{cacheStats.misses}</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-muted p-3 rounded-lg">
+                    <div className="text-muted-foreground text-xs">Cache Size</div>
+                    <div className="font-semibold">{cacheStats.size} / {cacheStats.max_size}</div>
+                  </div>
+
+                  {cacheStats.estimated_bytes && (
+                    <div className="bg-muted p-3 rounded-lg">
+                      <div className="text-muted-foreground text-xs">Memory Usage</div>
+                      <div className="font-semibold">
+                        {(cacheStats.estimated_bytes / 1024).toFixed(1)} KB
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  Loading cache stats...
+                </div>
+              )}
             </div>
           </div>
         </TabPanel>
