@@ -717,3 +717,48 @@ async def get_cache_stats(
     """Get cache statistics from the shared response cache."""
     stats = orchestrator.response_cache.get_stats()
     return stats
+
+
+@router.get(
+    "/sessions/{session_id}/stats",
+    summary="Get session statistics",
+    description="Returns statistics for a specific session including message counts",
+)
+async def get_session_stats(
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get statistics for a specific session."""
+    from app.models.session import Session
+    from app.models.memory import ConversationMessage
+    
+    # Check if session exists
+    result = await db.execute(
+        select(Session).where(Session.session_id == session_id)
+    )
+    session = result.scalar_one_or_none()
+    
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session {session_id} not found"
+        )
+    
+    # Get message counts
+    messages_result = await db.execute(
+        select(ConversationMessage).where(ConversationMessage.session_id == session_id)
+    )
+    messages = messages_result.scalars().all()
+    
+    user_messages = sum(1 for m in messages if m.role == "user")
+    assistant_messages = sum(1 for m in messages if m.role == "assistant")
+    
+    return {
+        "session_id": session_id,
+        "message_count": len(messages),
+        "user_messages": user_messages,
+        "assistant_messages": assistant_messages,
+        "agent_name": session.agent_name,
+        "created_at": session.created_at.isoformat() if session.created_at else None,
+        
+    }
