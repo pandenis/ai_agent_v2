@@ -23,6 +23,7 @@ from app.schemas.agent import (
     DocumentUpload,
     EnhancedChatRequest,
     EnhancedChatResponse,
+    QueryAnalysisResponse,
     SessionCreate,
     SessionResponse,
     WebSearchRequest,
@@ -687,6 +688,19 @@ async def orchestrate_query(
     # Build response
     metadata = result.get("metadata", {})
 
+    # Build query_analysis response if available
+    query_analysis_data = result.get("query_analysis")
+    query_analysis_response = None
+    if query_analysis_data:
+        query_analysis_response = QueryAnalysisResponse(
+            complexity=query_analysis_data.get("complexity", "unknown"),
+            intent=query_analysis_data.get("intent", "unknown"),
+            topics=query_analysis_data.get("topics", []),
+            entities=query_analysis_data.get("entities", []),
+            query_type=query_analysis_data.get("query_type", "general"),
+            confidence=query_analysis_data.get("confidence", 0.0)
+        )
+
     return OrchestrateResponse(
         text=response_text,
         metadata=OrchestratorMetadata(
@@ -699,6 +713,7 @@ async def orchestrate_query(
             cached=metadata.get("cached", False),
             memory_coverage=metadata.get("memory_coverage", 0.0),
         ),
+        query_analysis=query_analysis_response,
         debug=result.get("debug") if request.include_debug else None,
     )
 
