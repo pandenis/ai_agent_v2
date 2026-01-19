@@ -1,11 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Brain, Zap, Activity } from 'lucide-react';
+import { Brain, Zap, Activity, ChevronDown } from 'lucide-react';
 import { useChatStore } from '@/lib/stores/chat-store';
 import { api } from '@/lib/api/client';
 import { Tabs, TabList, Tab, TabPanel } from '@/components/ui/Tabs';
-import { Brain, Zap, Activity, ChevronDown } from 'lucide-react';
 
 export function ContextPanel() {
   const [queryAnalysisOpen, setQueryAnalysisOpen] = useState(true);
