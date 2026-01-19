@@ -33,10 +33,20 @@ export interface ResponseMetadata {
   reasoning_depth?: number;
 }
 
+export interface QueryAnalysis {
+  complexity: 'simple' | 'medium' | 'complex';
+  intent: string;
+  topics: string[];
+  entities: string[];
+  query_type: string;
+  confidence: number;
+}
+
 export interface OrchestrateResponse {
   text: string;
   model_used?: string;
   metadata: ResponseMetadata;
+  query_analysis?: QueryAnalysis;
 }
 
 export interface Session {
