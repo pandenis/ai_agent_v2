@@ -5,8 +5,10 @@ import { Brain, Zap, Activity } from 'lucide-react';
 import { useChatStore } from '@/lib/stores/chat-store';
 import { api } from '@/lib/api/client';
 import { Tabs, TabList, Tab, TabPanel } from '@/components/ui/Tabs';
+import { Brain, Zap, Activity, ChevronDown } from 'lucide-react';
 
 export function ContextPanel() {
+  const [queryAnalysisOpen, setQueryAnalysisOpen] = useState(true);
   const { currentSessionId, messages, lastMetadata } = useChatStore();
 
   // Fetch facts
@@ -205,6 +207,86 @@ export function ContextPanel() {
                     {lastMetadata.reasoning_depth || 1}
                   </span>
                 </div>
+                {/* Query Analysis - Collapsible */}
+                {lastMetadata.query_analysis && (
+                  <div className="border-t border-border pt-3 mt-3">
+                    <button
+                      onClick={() => setQueryAnalysisOpen(!queryAnalysisOpen)}
+                      className="flex items-center justify-between w-full text-sm font-medium mb-2"
+                    >
+                      <span>🔍 Query Analysis</span>
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform ${queryAnalysisOpen ? 'rotate-180' : ''}`}
+                      />
+                    </button>
+
+                    {queryAnalysisOpen && (
+                      <div className="space-y-2 pl-2">
+                        {/* Complexity */}
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-muted-foreground">Complexity</span>
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            lastMetadata.query_analysis.complexity === 'simple' ? 'bg-green-500/20 text-green-500' :
+                            lastMetadata.query_analysis.complexity === 'medium' ? 'bg-yellow-500/20 text-yellow-500' :
+                            'bg-red-500/20 text-red-500'
+                          }`}>
+                            {lastMetadata.query_analysis.complexity}
+                          </span>
+                        </div>
+
+                        {/* Intent */}
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-muted-foreground">Intent</span>
+                          <span className="text-xs font-medium">
+                            {lastMetadata.query_analysis.intent}
+                          </span>
+                        </div>
+
+                        {/* Query Type */}
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-muted-foreground">Type</span>
+                          <span className="text-xs font-medium">
+                            {lastMetadata.query_analysis.query_type}
+                          </span>
+                        </div>
+
+                        {/* Topics */}
+                        {lastMetadata.query_analysis.topics?.length > 0 && (
+                          <div>
+                            <span className="text-xs text-muted-foreground">Topics</span>
+                            <div className="flex gap-1 mt-1 flex-wrap">
+                              {lastMetadata.query_analysis.topics.map((topic, i) => (
+                                <span
+                                  key={i}
+                                  className="px-1.5 py-0.5 bg-blue-500/20 text-blue-500 text-xs rounded"
+                                >
+                                  {topic}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Entities */}
+                        {lastMetadata.query_analysis.entities?.length > 0 && (
+                          <div>
+                            <span className="text-xs text-muted-foreground">Entities</span>
+                            <div className="flex gap-1 mt-1 flex-wrap">
+                              {lastMetadata.query_analysis.entities.map((entity, i) => (
+                                <span
+                                  key={i}
+                                  className="px-1.5 py-0.5 bg-purple-500/20 text-purple-500 text-xs rounded"
+                                >
+                                  {entity}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
