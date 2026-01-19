@@ -62,3 +62,44 @@ class TestQueryAnalysisResponse:
         assert response.query_analysis is not None
         assert response.query_analysis.complexity == "medium"
         assert response.query_analysis.topics == ["weather"]
+
+
+class TestOrchestrateResponseWithQueryAnalysis:
+    """Tests for OrchestrateResponse with query_analysis"""
+
+    def test_orchestrate_response_serializes_query_analysis(self):
+        """Test: OrchestrateResponse correctly serializes query_analysis to dict"""
+        # Arrange
+        from app.schemas.agent import QueryAnalysisResponse, OrchestrateResponse, OrchestratorMetadata
+        
+        query_analysis = QueryAnalysisResponse(
+            complexity="simple",
+            intent="question",
+            topics=["name", "personal"],
+            entities=["Denis"],
+            query_type="personal_query",
+            confidence=0.85
+        )
+        metadata = OrchestratorMetadata(
+            strategy="direct",
+            confidence=0.9,
+            sources=["memory"],
+            elapsed_time_ms=10.5,
+            cost_usd=0.0,
+            cached=False,
+            memory_coverage=0.8
+        )
+        response = OrchestrateResponse(
+            text="Your name is Denis",
+            metadata=metadata,
+            query_analysis=query_analysis
+        )
+        
+        # Act
+        response_dict = response.model_dump()
+        
+        # Assert
+        assert "query_analysis" in response_dict
+        assert response_dict["query_analysis"]["complexity"] == "simple"
+        assert response_dict["query_analysis"]["topics"] == ["name", "personal"]
+        assert response_dict["query_analysis"]["entities"] == ["Denis"]
