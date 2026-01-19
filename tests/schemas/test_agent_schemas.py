@@ -103,3 +103,41 @@ class TestOrchestrateResponseWithQueryAnalysis:
         assert response_dict["query_analysis"]["complexity"] == "simple"
         assert response_dict["query_analysis"]["topics"] == ["name", "personal"]
         assert response_dict["query_analysis"]["entities"] == ["Denis"]
+
+
+class TestOrchestratorQueryAnalysisIntegration:
+    """Tests for orchestrator returning query_analysis"""
+
+    def test_query_analysis_fields_match_schema(self):
+        """Test: QueryAnalysis dataclass fields map to QueryAnalysisResponse"""
+        # This test verifies the mapping we'll need in routes.py
+        from app.services.orchestrator.query_analyzer import QueryAnalysis
+        from app.schemas.agent import QueryAnalysisResponse
+        
+        # Arrange - create a QueryAnalysis (dataclass from orchestrator)
+        analysis = QueryAnalysis(
+            complexity="simple",
+            intent="question",
+            query_type="personal_query",
+            entities=["Denis"],
+            topics=["name"],
+            requires_memory=True,
+            requires_reasoning=False,
+            confidence=0.85
+        )
+        
+        # Act - map to QueryAnalysisResponse (pydantic schema for API)
+        response = QueryAnalysisResponse(
+            complexity=analysis.complexity,
+            intent=analysis.intent,
+            topics=analysis.topics,
+            entities=analysis.entities,
+            query_type=analysis.query_type,
+            confidence=analysis.confidence
+        )
+        
+        # Assert
+        assert response.complexity == "simple"
+        assert response.intent == "question"
+        assert response.topics == ["name"]
+        assert response.entities == ["Denis"]
