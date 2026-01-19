@@ -42,6 +42,7 @@ export function ChatArea() {
           elapsed_time_ms: response.metadata.elapsed_time_ms,
           memory_coverage: response.metadata.memory_coverage,
           confidence: response.metadata.confidence,
+          query_analysis: response.query_analysis,
         },
       });
     } catch (error) {
