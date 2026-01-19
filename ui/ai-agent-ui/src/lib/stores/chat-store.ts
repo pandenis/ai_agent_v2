@@ -4,6 +4,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { Strategy } from '@/types/api';
+import type { Strategy, QueryAnalysis } from '@/types/api';
 
 // UUID fallback for browsers without crypto.randomUUID
 function generateUUID(): string {
@@ -27,6 +28,7 @@ export interface ResponseMetadata {
   cost_usd?: number;
   reasoning_depth?: number;
   sources?: string[];
+  query_analysis?: QueryAnalysis;
 }
 
 export interface ChatMessage {
