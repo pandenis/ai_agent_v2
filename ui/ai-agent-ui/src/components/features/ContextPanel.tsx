@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Brain, Zap, Activity, ChevronDown } from 'lucide-react';
 import { useChatStore } from '@/lib/stores/chat-store';
 import { api } from '@/lib/api/client';
 import { Tabs, TabList, Tab, TabPanel } from '@/components/ui/Tabs';
+import { Brain, Zap, Activity, ChevronDown, Target, Database, DollarSign, HardDrive, Layers, Cpu } from 'lucide-react';
 
 export function ContextPanel() {
   const [queryAnalysisOpen, setQueryAnalysisOpen] = useState(true);
@@ -121,7 +121,9 @@ export function ContextPanel() {
               <div className="space-y-3">
                 {/* Strategy */}
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Strategy</span>
+                  <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <Cpu className="w-3.5 h-3.5" /> Strategy
+                  </span>
                   <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                     lastMetadata.strategy === 'direct' ? 'bg-green-500/20 text-green-500' :
                     lastMetadata.strategy === 'enhanced' ? 'bg-blue-500/20 text-blue-500' :
@@ -134,12 +136,14 @@ export function ContextPanel() {
                 {/* Confidence */}
                 <div>
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm text-muted-foreground">Confidence</span>
+                    <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                      <Target className="w-3.5 h-3.5" /> Confidence
+                    </span>
                     <span className="text-sm font-medium">{((lastMetadata.confidence || 0) * 100).toFixed(0)}%</span>
                   </div>
                   <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-primary transition-all duration-300"
+                    <div
+                      className="h-full bg-primary transition-all duration-500 ease-out"
                       style={{ width: `${(lastMetadata.confidence || 0) * 100}%` }}
                     />
                   </div>
@@ -148,12 +152,14 @@ export function ContextPanel() {
                 {/* Memory Coverage */}
                 <div>
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm text-muted-foreground">Memory Coverage</span>
+                    <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                      <Brain className="w-3.5 h-3.5" /> Memory Coverage
+                    </span>
                     <span className="text-sm font-medium">{((lastMetadata.memory_coverage || 0) * 100).toFixed(0)}%</span>
                   </div>
                   <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-green-500 transition-all duration-300"
+                    <div
+                      className="h-full bg-green-500 transition-all duration-500 ease-out"
                       style={{ width: `${(lastMetadata.memory_coverage || 0) * 100}%` }}
                     />
                   </div>
@@ -162,7 +168,9 @@ export function ContextPanel() {
                 {/* Sources */}
                 {lastMetadata.sources && lastMetadata.sources.length > 0 && (
                   <div>
-                    <span className="text-sm text-muted-foreground">Sources</span>
+                    <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                      <Database className="w-3.5 h-3.5" /> Sources
+                    </span>
                     <div className="flex gap-1 mt-1 flex-wrap">
                       {lastMetadata.sources.map((source, i) => (
                         <span
@@ -178,23 +186,29 @@ export function ContextPanel() {
 
                 {/* Time */}
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Response Time</span>
+                  <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5" /> Response Time
+                  </span>
                   <span className="text-sm font-medium">
-                    ⚡ {lastMetadata.elapsed_time_ms?.toFixed(2) || 0}ms
+                    {lastMetadata.elapsed_time_ms?.toFixed(2) || 0}ms
                   </span>
                 </div>
 
                 {/* Cost */}
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Cost</span>
+                  <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <DollarSign className="w-3.5 h-3.5" /> Cost
+                  </span>
                   <span className="text-sm font-medium">
-                    💰 ${lastMetadata.cost_usd?.toFixed(6) || '0.000000'}
+                    ${lastMetadata.cost_usd?.toFixed(6) || '0.000000'}
                   </span>
                 </div>
 
                 {/* Cached */}
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Cached</span>
+                  <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <HardDrive className="w-3.5 h-3.5" /> Cached
+                  </span>
                   <span className="text-sm font-medium">
                     {lastMetadata.cached ? '✅ Yes' : '❌ No'}
                   </span>
@@ -202,7 +216,9 @@ export function ContextPanel() {
 
                 {/* Reasoning Depth */}
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Reasoning Depth</span>
+                  <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5" /> Reasoning Depth
+                  </span>
                   <span className="text-sm font-medium">
                     {lastMetadata.reasoning_depth || 1}
                   </span>
