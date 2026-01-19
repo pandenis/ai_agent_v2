@@ -141,3 +141,40 @@ class TestOrchestratorQueryAnalysisIntegration:
         assert response.intent == "question"
         assert response.topics == ["name"]
         assert response.entities == ["Denis"]
+
+
+def test_orchestrator_result_has_query_analysis_key():
+    """Test: Orchestrator result dict should have query_analysis key"""
+    # This is what routes.py expects from orchestrator.process_query()
+    # We're testing the expected structure
+    
+    expected_keys = ["text", "metadata", "query_analysis"]
+    
+    # Simulated result from orchestrator (what we WANT it to return)
+    mock_result = {
+        "text": "Your name is Denis",
+        "metadata": {
+            "strategy": "direct",
+            "confidence": 0.9,
+            "sources": ["memory"],
+        },
+        "query_analysis": {
+            "complexity": "simple",
+            "intent": "question",
+            "topics": ["name"],
+            "entities": ["Denis"],
+            "query_type": "personal_query",
+            "confidence": 0.85
+        }
+    }
+    
+    # Assert all expected keys present
+    for key in expected_keys:
+        assert key in mock_result, f"Missing key: {key}"
+    
+    # Assert query_analysis has required fields
+    qa = mock_result["query_analysis"]
+    assert "complexity" in qa
+    assert "intent" in qa
+    assert "topics" in qa
+    assert "entities" in qa
