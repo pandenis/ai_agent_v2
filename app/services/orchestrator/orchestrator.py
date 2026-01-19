@@ -196,6 +196,14 @@ class IntelligentOrchestrator:
                         "chain_executed": True,
                         "chain_steps": len(chain.steps),
                         "cached": False
+                    },
+                    "query_analysis": {
+                        "complexity": query_analysis.complexity,
+                        "intent": query_analysis.intent,
+                        "topics": query_analysis.topics,
+                        "entities": query_analysis.entities,
+                        "query_type": query_analysis.query_type,
+                        "confidence": query_analysis.confidence
                     }
                 }
 
@@ -280,6 +288,14 @@ class IntelligentOrchestrator:
                     "synthesis_confidence": synthesis_confidence if strategy.strategy == "deep_reasoning" else None,
                     "ab_variant": ab_variant,
                     "cached": False
+                },
+                "query_analysis": {
+                    "complexity": query_analysis.complexity,
+                    "intent": query_analysis.intent,
+                    "topics": query_analysis.topics,
+                    "entities": query_analysis.entities,
+                    "query_type": query_analysis.query_type,
+                    "confidence": query_analysis.confidence
                 }
             }
 
