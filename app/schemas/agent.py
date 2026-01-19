@@ -179,6 +179,20 @@ class OrchestrateRequest(BaseModel):
     use_chains: bool = Field(default=False, description="Use chain execution mode")
     include_debug: bool = Field(default=False, description="Include debug info")
 
+# ============================================================================
+# QUERY ANALYSIS SCHEMAS
+# ============================================================================
+
+
+class QueryAnalysisResponse(BaseModel):
+    """Query analysis information for UI display"""
+    complexity: str = Field(..., description="Query complexity: simple/medium/complex")
+    intent: str = Field(..., description="Query intent: question/command/statement")
+    topics: List[str] = Field(default_factory=list, description="Detected topics")
+    entities: List[str] = Field(default_factory=list, description="Extracted entities")
+    query_type: str = Field(default="general", description="Query type classification")
+    confidence: float = Field(default=0.0, description="Analysis confidence score")
+
 
 class OrchestratorMetadata(BaseModel):
     """Metadata from orchestrator response"""
@@ -196,4 +210,5 @@ class OrchestrateResponse(BaseModel):
     """Response from orchestrate endpoint"""
     text: str
     metadata: OrchestratorMetadata
+    query_analysis: Optional[QueryAnalysisResponse] = None
     debug: Optional[Dict[str, Any]] = None
