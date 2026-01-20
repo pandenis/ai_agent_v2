@@ -121,7 +121,10 @@ export function ContextPanel() {
               <div className="space-y-3">
                 {/* Strategy */}
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                  <span
+                    className="text-sm text-muted-foreground flex items-center gap-1.5"
+                    title="AI processing strategy: direct (memory only), enhanced (AI + memory), or deep_reasoning (multi-step)"
+                  >
                     <Cpu className="w-3.5 h-3.5" /> Strategy
                   </span>
                   <span className={`px-2 py-0.5 rounded text-xs font-medium ${
@@ -136,7 +139,10 @@ export function ContextPanel() {
                 {/* Confidence */}
                 <div>
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <span
+                      className="text-sm text-muted-foreground flex items-center gap-1.5"
+                      title="How confident the AI is in this response (0-100%)"
+                    >
                       <Target className="w-3.5 h-3.5" /> Confidence
                     </span>
                     <span className="text-sm font-medium">{((lastMetadata.confidence || 0) * 100).toFixed(0)}%</span>
@@ -152,7 +158,10 @@ export function ContextPanel() {
                 {/* Memory Coverage */}
                 <div>
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <span
+                      className="text-sm text-muted-foreground flex items-center gap-1.5"
+                      title="How much of the query was answered from stored memory facts"
+                    >
                       <Brain className="w-3.5 h-3.5" /> Memory Coverage
                     </span>
                     <span className="text-sm font-medium">{((lastMetadata.memory_coverage || 0) * 100).toFixed(0)}%</span>
@@ -168,7 +177,10 @@ export function ContextPanel() {
                 {/* Sources */}
                 {lastMetadata.sources && lastMetadata.sources.length > 0 && (
                   <div>
-                    <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <span
+                      className="text-sm text-muted-foreground flex items-center gap-1.5"
+                      title="Data sources used to generate this response"
+                    >
                       <Database className="w-3.5 h-3.5" /> Sources
                     </span>
                     <div className="flex gap-1 mt-1 flex-wrap">
@@ -186,7 +198,10 @@ export function ContextPanel() {
 
                 {/* Time */}
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                  <span
+                    className="text-sm text-muted-foreground flex items-center gap-1.5"
+                    title="Total processing time in milliseconds"
+                  >
                     <Zap className="w-3.5 h-3.5" /> Response Time
                   </span>
                   <span className="text-sm font-medium">
@@ -196,7 +211,10 @@ export function ContextPanel() {
 
                 {/* Cost */}
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                  <span
+                    className="text-sm text-muted-foreground flex items-center gap-1.5"
+                    title="Estimated API cost for this response in USD"
+                  >
                     <DollarSign className="w-3.5 h-3.5" /> Cost
                   </span>
                   <span className="text-sm font-medium">
@@ -206,7 +224,10 @@ export function ContextPanel() {
 
                 {/* Cached */}
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                  <span
+                    className="text-sm text-muted-foreground flex items-center gap-1.5"
+                    title="Whether this response was served from cache (faster, free)"
+                  >
                     <HardDrive className="w-3.5 h-3.5" /> Cached
                   </span>
                   <span className="text-sm font-medium">
@@ -216,13 +237,17 @@ export function ContextPanel() {
 
                 {/* Reasoning Depth */}
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                  <span
+                    className="text-sm text-muted-foreground flex items-center gap-1.5"
+                    title="Number of reasoning steps used for complex queries"
+                  >
                     <Layers className="w-3.5 h-3.5" /> Reasoning Depth
                   </span>
                   <span className="text-sm font-medium">
                     {lastMetadata.reasoning_depth || 1}
                   </span>
                 </div>
+
                 {/* Query Analysis - Collapsible */}
                 {lastMetadata.query_analysis && (
                   <div className="border-t border-border pt-3 mt-3">
