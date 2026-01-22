@@ -132,7 +132,7 @@ class MemoryService:
         fact = result.scalar_one_or_none()
         if fact:
             fact.usage_count += 1
-            fact.last_used = datetime.utcnow()
+            fact.last_accessed = datetime.utcnow()
             await self.db.commit()
 
     # ========================

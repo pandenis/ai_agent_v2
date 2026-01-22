@@ -89,4 +89,4 @@ async def test_update_fact_usage(test_db):
     updated_facts = await service.search_facts("Test fact for usage")
     assert len(updated_facts) == 1
     assert updated_facts[0].usage_count == initial_count + 1
-    assert updated_facts[0].last_used is not None
+    assert updated_facts[0].last_accessed is not None
