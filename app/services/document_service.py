@@ -57,7 +57,7 @@ class DocumentService:
         if not is_valid:
             raise ValueError(f"Invalid search query: {error}")
 
-        results = self.collection.query(query_texts=[query], n_results=n_results)
+        results = self.collection.query(query_texts=[sanitized_query], n_results=n_results)
 
         # Format results
         formatted_results = []
