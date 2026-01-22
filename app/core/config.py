@@ -25,6 +25,8 @@ class Settings(BaseSettings):
 
     # Security
     secret_key: str = Field(default="changeme", description="Secret key for JWT and encryption")
+    allowed_origins: str = Field(default="http://localhost:3000,http://127.0.0.1:3000",
+                                 description="Comma-separated CORS origins")
     api_key_groq: Optional[str] = None
 
     # Ollama (legacy single model)
@@ -83,6 +85,10 @@ class Settings(BaseSettings):
     memorisator_async: bool = True  # Extract facts asynchronously (non-blocking)
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore")
+
+    def get_cors_origins(self) -> list:
+        """Parse CORS origins from comma-separated string"""
+        return [origin.strip() for origin in self.allowed_origins.split(",") if origin.strip()]
 
 
 # Global settings instance
