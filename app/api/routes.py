@@ -237,7 +237,17 @@ async def rename_session(session_id: str, update_data: dict, db: AsyncSession = 
     
     # Update agent_name if provided
     if "agent_name" in update_data:
-        session.agent_name = update_data["agent_name"]
+        new_name = update_data["agent_name"]
+        if new_name:
+            is_valid, sanitized_name, error = validate_input(new_name)
+            if not is_valid:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid agent name: {error}"
+                )
+            session.agent_name = sanitized_name
+        else:
+            session.agent_name = new_name
     
     await db.commit()
     await db.refresh(session)
