@@ -171,33 +171,38 @@ async def create_session(session_data: SessionCreate, db: AsyncSession = Depends
     description="Returns list of all chat sessions ordered by last activity",
 )
 async def get_sessions(limit: int = 50, skip: int = 0, db: AsyncSession = Depends(get_db)):
-    """Get list of all sessions"""
+    """Get list of all sessions with message counts (optimized single query)"""
     from app.models.session import Session
     from app.models.memory import ConversationMessage
     from sqlalchemy import func
 
-    result = await db.execute(select(Session).order_by(desc(Session.last_activity)).offset(skip).limit(limit))
-    sessions = result.scalars().all()
-
-    # Подсчитываем сообщения для каждой сессии
-    session_responses = []
-    for s in sessions:
-        # Считаем количество сообщений в этой сессии
-        count_result = await db.execute(
-            select(func.count(ConversationMessage.id)).where(ConversationMessage.session_id == s.session_id)
+    # BUG-05 FIX: Single query with LEFT JOIN and GROUP BY instead of N+1 queries
+    stmt = (
+        select(
+            Session.session_id,
+            Session.agent_name,
+            Session.created_at,
+            func.count(ConversationMessage.id).label("message_count")
         )
-        message_count = count_result.scalar() or 0
+        .outerjoin(ConversationMessage, Session.session_id == ConversationMessage.session_id)
+        .group_by(Session.session_id, Session.agent_name, Session.created_at)
+        .order_by(desc(Session.created_at))
+        .offset(skip)
+        .limit(limit)
+    )
 
-        session_responses.append(
-            SessionResponse(
-                session_id=s.session_id,
-                agent_name=s.agent_name,
-                created_at=s.created_at,
-                message_count=message_count
-            )
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    return [
+        SessionResponse(
+            session_id=row.session_id,
+            agent_name=row.agent_name,
+            created_at=row.created_at,
+            message_count=row.message_count
         )
-
-    return session_responses
+        for row in rows
+    ]
 
 
 @router.get(
