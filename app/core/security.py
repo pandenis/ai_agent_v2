@@ -16,10 +16,11 @@ class SecurityValidator:
     # Dangerous patterns
     DANGEROUS_PATTERNS = [
         r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]",  # Control characters
-        r"[;&|`$]",  # Shell injection
-        r"\$\(",  # Command substitution
-        r"`[^`]*`",  # Backticks
-        r"(?i)(curl|wget|nc|netcat)\s",  # Network commands
+        # BUG-06 FIX: More targeted patterns - allow $, |, ` in normal context
+        r"\$\([^)]*\)",  # Command substitution $(...)
+        r";\s*(rm|cat|curl|wget|nc|bash|sh|python|chmod|chown)\b",  # Command chaining with dangerous commands
+        r"\|\s*(bash|sh|python)\b",  # Piping to shell interpreters
+        r"(?i)(curl|wget|nc|netcat)\s+[a-z]+://",  # Network commands with URLs
     ]
 
     @classmethod

