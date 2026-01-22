@@ -115,17 +115,17 @@ class EnhancedChatService:
             # Get relevant facts
             facts = await self.memory_service.search_facts(query=message, min_importance=0.5)
             if facts:
-                # Сортируем по importance (по убыванию), если есть поле importance
+                # Sort by importance attribute (FactModel objects, not dicts)
                 sorted_facts = sorted(
                     facts,
-                    key=lambda f: f.get("importance", 0),
+                    key=lambda f: getattr(f, 'importance', 0.0),  # ✅ FIX: Use getattr for attribute access
                     reverse=True,
                 )
                 top_facts = sorted_facts[: self.facts_limit]
 
                 sources.append("user_facts")
                 context_parts.append(
-                    "Relevant facts:\n" + "\n".join(f"- {f['text']}" for f in top_facts)
+                    "Relevant facts:\n" + "\n".join(f"- {f.text}" for f in top_facts)  # ✅ FIX: Use .text attribute
                 )
 
         # 4. Build enhanced prompt with context

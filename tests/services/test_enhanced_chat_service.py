@@ -215,10 +215,15 @@ class TestProcessMessage:
     @pytest.mark.asyncio
     async def test_process_message_includes_facts(self):
         """Test: process_message includes relevant facts."""
-        self.memory_service.search_facts = AsyncMock(return_value=[
-            {"text": "User likes Python", "importance": 0.8},
-            {"text": "User is a developer", "importance": 0.9},
-        ])
+        fact1 = MagicMock()
+        fact1.text = "User likes Python"
+        fact1.importance = 0.8
+
+        fact2 = MagicMock()
+        fact2.text = "User is a developer"
+        fact2.importance = 0.9
+
+        self.memory_service.search_facts = AsyncMock(return_value=[fact1, fact2])
 
         result = await self.service.process_message(
             session_id="test-session-123",

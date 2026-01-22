@@ -128,7 +128,10 @@ async def test_process_message_with_memory(enhanced_chat_service):
     enhanced_chat_service.memory_service.get_conversation_history.return_value = [
         SimpleNamespace(role="user", content="Previous message")
     ]
-    enhanced_chat_service.memory_service.search_facts.return_value = [{"text": "User prefers Python", "importance": 0.8}]
+    fact_mock = MagicMock()
+    fact_mock.text = "User prefers Python"
+    fact_mock.importance = 0.8
+    enhanced_chat_service.memory_service.search_facts.return_value = [fact_mock]
 
     result = await enhanced_chat_service.process_message(
         session_id="test-session", message="Hello!", agent_name="mistral", include_memory=True
@@ -186,13 +189,19 @@ async def test_history_limit_truncates_history(enhanced_chat_service):
 @pytest.mark.asyncio
 async def test_facts_limit_and_sorting(enhanced_chat_service):
     """facts_limit controls how many facts go into the prompt, sorted by importance"""
-    # Подготовим 5 фактов с разной важностью
+
+    def make_fact(text, importance):
+        f = MagicMock()
+        f.text = text
+        f.importance = importance
+        return f
+
     enhanced_chat_service.memory_service.search_facts.return_value = [
-        {"text": "fact_low_1", "importance": 0.6},
-        {"text": "fact_high_1", "importance": 0.95},
-        {"text": "fact_mid", "importance": 0.8},
-        {"text": "fact_high_2", "importance": 0.9},
-        {"text": "fact_low_2", "importance": 0.51},
+        make_fact("fact_low_1", 0.6),
+        make_fact("fact_high_1", 0.95),
+        make_fact("fact_mid", 0.8),
+        make_fact("fact_high_2", 0.9),
+        make_fact("fact_low_2", 0.51),
     ]
 
     # Ограничим до 3 фактов
