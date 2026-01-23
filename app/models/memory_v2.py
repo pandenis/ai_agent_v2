@@ -25,6 +25,9 @@ class Fact:
     fact_id: str
     text: str
 
+    # Thread isolation (NEW - Epic 1)
+    thread_id: Optional[str] = None
+
     # Scoring
     importance: float = 0.5  # 0.0-1.0: How important is this fact?
     confidence: float = 0.8  # 0.0-1.0: How confident are we in this fact?
@@ -60,6 +63,14 @@ class FactModel(Base):
     # Primary key
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     fact_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+
+    # Thread isolation (NEW - Epic 1)
+    thread_id: Mapped[Optional[str]] = mapped_column(
+        String(64),
+        nullable=True,  # Nullable for backward compatibility
+        index=True,  # Indexed for efficient filtering
+        comment="Thread/session ID for fact isolation"
+    )
 
     # Core fields
     text: Mapped[str] = mapped_column(Text, nullable=False)
@@ -108,6 +119,7 @@ class FactModel(Base):
         return Fact(
             fact_id=self.fact_id,
             text=self.text,
+            thread_id=self.thread_id,
             importance=self.importance,
             confidence=self.confidence,
             tags=self.tags or [],
