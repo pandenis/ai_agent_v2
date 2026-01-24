@@ -132,6 +132,38 @@ class MemoryService:
         )
         return list(result.scalars().all())
 
+    async def clear_thread_facts(self, thread_id: Optional[str]) -> int:
+        """
+        Delete all facts for a specific thread (session reset).
+
+        Used when user resets/deletes a session to clear all thread-specific memory.
+        Facts in other threads are NOT affected.
+
+        Args:
+            thread_id: Thread ID to clear. Use None to clear global facts only.
+
+        Returns:
+            Number of facts deleted
+        """
+        # Find all facts for this thread
+        result = await self.db.execute(
+            select(FactModel).where(FactModel.thread_id == thread_id)
+        )
+        facts_to_delete = list(result.scalars().all())
+
+        deleted_count = len(facts_to_delete)
+
+        # Delete each fact
+        for fact in facts_to_delete:
+            await self.db.delete(fact)
+
+        # Commit if we deleted anything
+        if deleted_count > 0:
+            await self.db.commit()
+            logger.info(f"Cleared {deleted_count} facts for thread: {thread_id}")
+
+        return deleted_count
+
     async def update_fact_usage(self, fact_id: str):
         """Update fact usage statistics (Memorisator v2)"""
         result = await self.db.execute(
