@@ -15,6 +15,8 @@ from app.services.document_service import DocumentService
 from app.services.fact_extractor import FactExtractor
 from app.services.memory_service import MemoryService
 from app.services.web_search_service import WebSearchService
+from app.schemas.memory_commands import MemoryWriteCommand
+from app.services.memory_write_gate import MemoryWriteGate
 
 
 class EnhancedChatService:
@@ -38,6 +40,7 @@ class EnhancedChatService:
         document_service: DocumentService,
         web_search_service: WebSearchService,
         fact_extractor: Optional[FactExtractor] = None,
+        write_gate: Optional[MemoryWriteGate] = None,
         history_limit: int = 5,
         facts_limit: int = 5,
     ):
@@ -52,6 +55,7 @@ class EnhancedChatService:
 
         self.history_limit = history_limit
         self.facts_limit = facts_limit
+        self.write_gate = write_gate
 
         logger.info(f"EnhancedChatService initialized (Memorisator: {self.memorisator_enabled})")
 
@@ -219,7 +223,7 @@ class EnhancedChatService:
         Extract facts from conversation and save to database
 
         Args:
-            session_id: Session ID
+            session_id: Session ID (used as thread_id for isolation)
             user_message: User's message
             assistant_message: Assistant's response
 
@@ -246,7 +250,7 @@ class EnhancedChatService:
                 f
                 for f in facts
                 if f.importance >= settings.fact_importance_threshold
-                and f.confidence >= settings.fact_confidence_threshold
+                   and f.confidence >= settings.fact_confidence_threshold
             ]
 
             if not filtered_facts:
@@ -257,22 +261,45 @@ class EnhancedChatService:
                 )
                 return 0
 
+            # Set thread_id and source_session_id on each fact
             for fact in filtered_facts:
                 fact.source_session_id = session_id
+                fact.thread_id = session_id  # NEW: Set thread_id for isolation
 
-            # Save to database
-            saved_facts = await self.memory_service.add_facts(filtered_facts)
+            # Save through write gate if available, otherwise direct
+            if self.write_gate:
+                # Use centralized write gate
+                command = MemoryWriteCommand(
+                    facts=filtered_facts,
+                    thread_id=session_id,
+                    source="chat_service",
+                    operation="add"
+                )
+                result = await self.write_gate.execute(command)
 
-            logger.info(
-                f"Extracted and saved {len(saved_facts)} facts from session {session_id} "
-                f"({len(facts) - len(filtered_facts)} filtered out)"
-            )
+                if result.success:
+                    logger.info(
+                        f"Extracted and saved {result.facts_written} facts via WriteGate "
+                        f"from session {session_id}"
+                    )
+                    return result.facts_written
+                else:
+                    logger.warning(f"WriteGate failed: {result.error}")
+                    return 0
+            else:
+                # Backward compatibility: direct write
+                saved_facts = await self.memory_service.add_facts(filtered_facts)
 
-            # Log extracted facts for debugging
-            for fact in saved_facts[:3]:  # Log first 3
-                logger.debug(f"  - {fact.text} (importance: {fact.importance}, " f"confidence: {fact.confidence})")
+                logger.info(
+                    f"Extracted and saved {len(saved_facts)} facts from session {session_id} "
+                    f"({len(facts) - len(filtered_facts)} filtered out)"
+                )
 
-            return len(saved_facts)
+                # Log extracted facts for debugging
+                for fact in saved_facts[:3]:  # Log first 3
+                    logger.debug(f"  - {fact.text} (importance: {fact.importance}, confidence: {fact.confidence})")
+
+                return len(saved_facts)
 
         except Exception as e:
             # Don't let fact extraction errors break the chat
