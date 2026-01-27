@@ -2,11 +2,9 @@
 FastAPI dependencies - Updated with get_orchestrator
 This module provides dependency injection for FastAPI routes.
 """
-from typing import AsyncGenerator
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
-from app.core.agent_config import agent_registry
 from app.services.agent_factory import agent_factory
 from app.services.agent_service import AgentService
 from app.services.document_service import DocumentService
@@ -15,6 +13,7 @@ from app.services.memory_service import MemoryService
 from app.services.web_search_service import WebSearchService
 from app.services.orchestrator.orchestrator import IntelligentOrchestrator
 from app.services.orchestrator.response_cache import ResponseCache
+from app.services.memory_write_gate import MemoryWriteGate
 
 
 async def get_memory_service(db: AsyncSession = Depends(get_db)) -> MemoryService:
@@ -75,3 +74,9 @@ async def get_orchestrator(
         web_search_service=WebSearchService(),
         response_cache=_shared_cache,  # Shared cache!
     )
+
+def get_write_gate(
+    memory_service: MemoryService = Depends(get_memory_service)
+) -> MemoryWriteGate:
+    """Dependency for MemoryWriteGate - centralized memory write operations."""
+    return MemoryWriteGate(memory_service)

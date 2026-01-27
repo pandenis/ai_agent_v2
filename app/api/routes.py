@@ -38,6 +38,9 @@ from app.services.document_service import DocumentService
 from app.services.enhanced_chat_service import EnhancedChatService
 from app.services.memory_service import MemoryService
 from app.services.web_search_service import WebSearchService
+from app.api.deps import get_write_gate
+from app.schemas.memory_commands import MemoryWriteCommand
+from app.services.memory_write_gate import MemoryWriteGate
 
 # Security module import
 from security.input_validation import SecurityValidator, validate_input
@@ -397,6 +400,7 @@ async def enhanced_chat(
     db: AsyncSession = Depends(get_db),
     agent_service: AgentService = Depends(get_agent_service),
     memory_service: MemoryService = Depends(get_memory_service),
+    write_gate: MemoryWriteGate = Depends(get_write_gate),
 ):
     """Enhanced chat with multi-source intelligence and agent selection"""
 
@@ -418,6 +422,7 @@ async def enhanced_chat(
         memory_service=memory_service,
         document_service=document_service,
         web_search_service=web_search_service,
+        write_gate=write_gate,
     )
 
     result = await enhanced_service.process_message(
@@ -595,14 +600,33 @@ async def get_fact_by_id(
     description="Delete a fact by its ID",
 )
 async def delete_fact(
-    fact_id: str, memory_service: MemoryService = Depends(get_memory_service), db: AsyncSession = Depends(get_db)
+        fact_id: str,
+        memory_service: MemoryService = Depends(get_memory_service),
+        write_gate: MemoryWriteGate = Depends(get_write_gate),
+        db: AsyncSession = Depends(get_db)
 ):
-    """Delete a fact by ID"""
+    """Delete a fact by ID using MemoryWriteGate"""
 
-    success = await memory_service.delete_fact(fact_id)
-
-    if not success:
+    # First check if fact exists and get its thread_id
+    fact = await memory_service.get_fact_by_id(fact_id)
+    if not fact:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Fact with ID {fact_id} not found")
+
+    # Create delete command with fact's thread_id
+    command = MemoryWriteCommand(
+        facts=[],
+        thread_id=fact.thread_id or "default",
+        source="api",
+        operation="delete",
+        metadata={"fact_id": fact_id}
+    )
+
+    # Execute through gate (clears thread facts)
+    result = await write_gate.execute(command)
+
+    if not result.success:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"Failed to delete fact: {result.error}")
 
     return FactDeleteResponse(success=True, fact_id=fact_id, message="Fact deleted successfully")
 
