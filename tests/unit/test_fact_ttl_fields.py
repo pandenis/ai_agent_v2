@@ -116,3 +116,27 @@ class TestFactModelTTLFields:
         assert fact.expires_at is not None
         # Allow 1 second tolerance for DB operations
         assert abs((fact.expires_at - expiry).total_seconds()) < 1
+
+class TestFactModelToDataclassConversion:
+    """Test that to_dataclass() includes TTL fields"""
+
+    @pytest.mark.asyncio
+    async def test_to_dataclass_includes_ttl_days(self, test_db):
+        """Test: to_dataclass() includes ttl_days field"""
+        from app.models.memory_v2 import FactModel
+
+        # Arrange
+        fact_model = FactModel(
+            fact_id="convert-ttl-1",
+            text="Fact with TTL",
+            ttl_days=7
+        )
+        test_db.add(fact_model)
+        await test_db.commit()
+        await test_db.refresh(fact_model)
+
+        # Act
+        fact_dataclass = fact_model.to_dataclass()
+
+        # Assert
+        assert fact_dataclass.ttl_days == 7

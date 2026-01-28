@@ -141,6 +141,7 @@ class FactModel(Base):
             fact_id=self.fact_id,
             text=self.text,
             thread_id=self.thread_id,
+            ttl_days=self.ttl_days,
             importance=self.importance,
             confidence=self.confidence,
             tags=self.tags or [],
