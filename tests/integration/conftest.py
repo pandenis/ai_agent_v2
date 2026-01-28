@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from sqlalchemy.pool import StaticPool
 from unittest.mock import AsyncMock, MagicMock
 from datetime import datetime
+from app.models.memory_v2 import FactModel
 
 # Detect CI environment
 IN_CI = os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true"
@@ -28,6 +29,7 @@ IN_CI = os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "t
 async def test_engine():
     """Create async SQLite engine for testing."""
     from app.core.database import Base
+    from app.models.memory_v2 import FactModel
     
     engine = create_async_engine(
         "sqlite+aiosqlite:///:memory:",
