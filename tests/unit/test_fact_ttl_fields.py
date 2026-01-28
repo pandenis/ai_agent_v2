@@ -140,3 +140,26 @@ class TestFactModelToDataclassConversion:
 
         # Assert
         assert fact_dataclass.ttl_days == 7
+
+    @pytest.mark.asyncio
+    async def test_to_dataclass_includes_expires_at(self, test_db):
+        """Test: to_dataclass() includes expires_at field"""
+        from app.models.memory_v2 import FactModel
+
+        # Arrange
+        expiry = datetime.utcnow() + timedelta(days=14)
+        fact_model = FactModel(
+            fact_id="convert-expires-1",
+            text="Expiring fact",
+            expires_at=expiry
+        )
+        test_db.add(fact_model)
+        await test_db.commit()
+        await test_db.refresh(fact_model)
+
+        # Act
+        fact_dataclass = fact_model.to_dataclass()
+
+        # Assert
+        assert fact_dataclass.expires_at is not None
+        assert abs((fact_dataclass.expires_at - expiry).total_seconds()) < 1
