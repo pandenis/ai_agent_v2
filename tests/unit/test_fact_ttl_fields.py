@@ -26,3 +26,16 @@ class TestFactDataclassTTLFields:
         # Assert
         assert hasattr(fact, "ttl_days")
         assert fact.ttl_days == 30
+
+    def test_fact_ttl_days_default_none(self):
+        """Test: ttl_days defaults to None (never expires)"""
+        from app.models.memory_v2 import Fact
+
+        # Arrange & Act
+        fact = Fact(
+            fact_id="test-ttl-2",
+            text="User's name is Denis"
+        )
+
+        # Assert
+        assert fact.ttl_days is None
