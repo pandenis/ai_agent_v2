@@ -57,3 +57,16 @@ class TestFactDataclassTTLFields:
         # Assert
         assert hasattr(fact, "expires_at")
         assert fact.expires_at == expiry
+
+    def test_fact_expires_at_default_none(self):
+        """Test: expires_at defaults to None (never expires)"""
+        from app.models.memory_v2 import Fact
+
+        # Arrange & Act
+        fact = Fact(
+            fact_id="test-expires-2",
+            text="User lives in Tel Aviv"
+        )
+
+        # Assert
+        assert fact.expires_at is None
