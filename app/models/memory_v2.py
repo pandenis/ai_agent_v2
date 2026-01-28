@@ -25,8 +25,13 @@ class Fact:
     fact_id: str
     text: str
 
-    # Thread isolation (NEW - Epic 1)
+    # Thread isolation (Epic 1)
     thread_id: Optional[str] = None
+
+    # TTL & Lifecycle (Epic 3 - Task 3.1)
+    ttl_days: Optional[int] = None  # Time-to-live in days (None = never expires)
+
+    # Metadata (renamed from metadata to avoid SQLAlchemy conflict)
 
     # Scoring
     importance: float = 0.5  # 0.0-1.0: How important is this fact?
