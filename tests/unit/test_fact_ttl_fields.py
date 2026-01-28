@@ -92,3 +92,27 @@ class TestFactModelTTLFields:
 
         # Assert
         assert fact.ttl_days == 30
+
+    @pytest.mark.asyncio
+    async def test_fact_model_has_expires_at_column(self, test_db):
+        """Test: FactModel has expires_at column"""
+        from app.models.memory_v2 import FactModel
+
+        # Arrange
+        expiry = datetime.utcnow() + timedelta(days=30)
+
+        # Act
+        fact = FactModel(
+            fact_id="model-expires-1",
+            text="Expiring fact",
+            expires_at=expiry
+        )
+
+        test_db.add(fact)
+        await test_db.commit()
+        await test_db.refresh(fact)
+
+        # Assert
+        assert fact.expires_at is not None
+        # Allow 1 second tolerance for DB operations
+        assert abs((fact.expires_at - expiry).total_seconds()) < 1

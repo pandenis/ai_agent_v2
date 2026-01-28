@@ -84,6 +84,12 @@ class FactModel(Base):
         nullable=True,
         comment="Time-to-live in days (NULL = never expires)"
     )
+    expires_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime,
+        nullable=True,
+        index=True,
+        comment="Expiration timestamp for cleanup queries"
+    )
 
     # Metadata (renamed to avoid SQLAlchemy conflict)
 
