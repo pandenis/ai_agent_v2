@@ -70,13 +70,22 @@ class FactModel(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     fact_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
 
-    # Thread isolation (NEW - Epic 1)
+    # Thread isolation (Epic 1)
     thread_id: Mapped[Optional[str]] = mapped_column(
         String(64),
-        nullable=True,  # Nullable for backward compatibility
-        index=True,  # Indexed for efficient filtering
-        comment="Thread/session ID for fact isolation"
+        nullable=True,
+        index=True,
+        comment="Thread/session ID for isolation"
     )
+
+    # TTL & Lifecycle (Epic 3 - Task 3.1)
+    ttl_days: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        comment="Time-to-live in days (NULL = never expires)"
+    )
+
+    # Metadata (renamed to avoid SQLAlchemy conflict)
 
     # Core fields
     text: Mapped[str] = mapped_column(Text, nullable=False)

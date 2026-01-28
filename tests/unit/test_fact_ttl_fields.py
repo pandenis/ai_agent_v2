@@ -70,3 +70,25 @@ class TestFactDataclassTTLFields:
 
         # Assert
         assert fact.expires_at is None
+
+class TestFactModelTTLFields:
+    """Test TTL fields on FactModel SQLAlchemy model"""
+
+    @pytest.mark.asyncio
+    async def test_fact_model_has_ttl_days_column(self, test_db):
+        """Test: FactModel has ttl_days column"""
+        from app.models.memory_v2 import FactModel
+
+        # Arrange & Act
+        fact = FactModel(
+            fact_id="model-ttl-1",
+            text="Test fact with TTL",
+            ttl_days=30
+        )
+
+        test_db.add(fact)
+        await test_db.commit()
+        await test_db.refresh(fact)
+
+        # Assert
+        assert fact.ttl_days == 30
