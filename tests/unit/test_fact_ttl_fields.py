@@ -39,3 +39,21 @@ class TestFactDataclassTTLFields:
 
         # Assert
         assert fact.ttl_days is None
+
+    def test_fact_has_expires_at_field(self):
+        """Test: Fact dataclass has expires_at field"""
+        from app.models.memory_v2 import Fact
+
+        # Arrange
+        expiry = datetime.now() + timedelta(days=30)
+
+        # Act
+        fact = Fact(
+            fact_id="test-expires-1",
+            text="Weather is sunny",
+            expires_at=expiry
+        )
+
+        # Assert
+        assert hasattr(fact, "expires_at")
+        assert fact.expires_at == expiry

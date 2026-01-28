@@ -30,6 +30,7 @@ class Fact:
 
     # TTL & Lifecycle (Epic 3 - Task 3.1)
     ttl_days: Optional[int] = None  # Time-to-live in days (None = never expires)
+    expires_at: Optional[datetime] = None  # Expiration timestamp
 
     # Metadata (renamed from metadata to avoid SQLAlchemy conflict)
 
