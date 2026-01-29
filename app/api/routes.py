@@ -602,31 +602,19 @@ async def get_fact_by_id(
 async def delete_fact(
         fact_id: str,
         memory_service: MemoryService = Depends(get_memory_service),
-        write_gate: MemoryWriteGate = Depends(get_write_gate),
         db: AsyncSession = Depends(get_db)
 ):
-    """Delete a fact by ID using MemoryWriteGate"""
-
-    # First check if fact exists and get its thread_id
+    """Delete a single fact by ID (uses MemoryService directly, not WriteGate)"""
+    # First check if fact exists
     fact = await memory_service.get_fact_by_id(fact_id)
     if not fact:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Fact with ID {fact_id} not found")
 
-    # Create delete command with fact's thread_id
-    command = MemoryWriteCommand(
-        facts=[],
-        thread_id=fact.thread_id or "default",
-        source="api",
-        operation="delete",
-        metadata={"fact_id": fact_id}
-    )
-
-    # Execute through gate (clears thread facts)
-    result = await write_gate.execute(command)
-
-    if not result.success:
+    # Delete single fact directly (WriteGate is for bulk/thread operations)
+    deleted = await memory_service.delete_fact(fact_id)
+    if not deleted:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail=f"Failed to delete fact: {result.error}")
+                            detail=f"Failed to delete fact: {fact_id}")
 
     return FactDeleteResponse(success=True, fact_id=fact_id, message="Fact deleted successfully")
 

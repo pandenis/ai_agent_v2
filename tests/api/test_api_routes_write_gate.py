@@ -52,58 +52,6 @@ class TestGetWriteGateDependency:
 
         await engine.dispose()
 
-
-class TestDeleteFactEndpointWithGate:
-    """Test DELETE /memory/facts/{fact_id} uses MemoryWriteGate."""
-
-    @pytest.mark.asyncio
-    async def test_delete_fact_uses_write_gate(self):
-        """Test: DELETE endpoint uses write_gate for deletion."""
-        from app.main import app
-        from app.api.deps import get_write_gate, get_memory_service
-        from app.services.memory_write_gate import MemoryWriteGate, WriteResult
-
-        # Create mock write gate
-        mock_gate = MagicMock(spec=MemoryWriteGate)
-        mock_gate.execute = AsyncMock(return_value=WriteResult(
-            success=True,
-            facts_written=1,
-            operation="delete",
-            thread_id="default",
-            source="api",
-            fact_ids=["test-fact-123"]
-        ))
-
-        # Create mock memory service
-        mock_memory = MagicMock()
-        mock_memory.get_fact_by_id = AsyncMock(return_value=MagicMock(
-            fact_id="test-fact-123",
-            thread_id="default"
-        ))
-
-        # Override dependencies
-        app.dependency_overrides[get_write_gate] = lambda: mock_gate
-        app.dependency_overrides[get_memory_service] = lambda: mock_memory
-
-        try:
-            async with AsyncClient(
-                transport=ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
-                response = await client.delete("/api/v1/memory/facts/test-fact-123")
-
-                # Should use write_gate.execute
-                mock_gate.execute.assert_called_once()
-
-                # Check the command
-                call_args = mock_gate.execute.call_args
-                command = call_args[0][0]
-                assert command.operation == "delete"
-                assert command.source == "api"
-        finally:
-            app.dependency_overrides.clear()
-
-
 class TestEnhancedChatEndpointWithGate:
     """Test /chat/enhanced endpoint receives write_gate."""
 
@@ -179,47 +127,6 @@ class TestEnhancedChatEndpointWithGate:
 
 
 class TestDeleteFactWithThreadId:
-    """Test DELETE respects thread isolation."""
-
-    @pytest.mark.asyncio
-    async def test_delete_includes_thread_id_in_command(self):
-        """Test: DELETE command includes fact's thread_id."""
-        from app.main import app
-        from app.api.deps import get_write_gate, get_memory_service
-        from app.services.memory_write_gate import MemoryWriteGate, WriteResult
-
-        # Create mock with specific thread_id
-        mock_gate = MagicMock(spec=MemoryWriteGate)
-        mock_gate.execute = AsyncMock(return_value=WriteResult(
-            success=True,
-            facts_written=1,
-            operation="delete",
-            thread_id="thread-xyz",
-            source="api"
-        ))
-
-        mock_memory = MagicMock()
-        mock_memory.get_fact_by_id = AsyncMock(return_value=MagicMock(
-            fact_id="fact-to-delete",
-            thread_id="thread-xyz"  # Fact belongs to this thread
-        ))
-
-        app.dependency_overrides[get_write_gate] = lambda: mock_gate
-        app.dependency_overrides[get_memory_service] = lambda: mock_memory
-
-        try:
-            async with AsyncClient(
-                transport=ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
-                await client.delete("/api/v1/memory/facts/fact-to-delete")
-
-                # Check thread_id in command
-                call_args = mock_gate.execute.call_args
-                command = call_args[0][0]
-                assert command.thread_id == "thread-xyz"
-        finally:
-            app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     async def test_delete_nonexistent_fact_returns_404(self):
