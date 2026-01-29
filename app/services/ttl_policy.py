@@ -9,7 +9,7 @@ enabling automatic expiration of facts based on their nature.
 
 from dataclasses import dataclass
 from typing import Optional
-
+from datetime import datetime, timedelta
 
 @dataclass
 class TTLPolicy:
@@ -65,3 +65,18 @@ def get_policy_for_fact_type(fact_type: str) -> TTLPolicy:
         TTLPolicy for the fact type, or default (static) if unknown
     """
     return DEFAULT_POLICIES.get(fact_type, DEFAULT_POLICIES["static"])
+
+def calculate_expires_at(created: datetime, ttl_days: Optional[int]) -> Optional[datetime]:
+    """
+    Calculate expiration timestamp based on creation time and TTL.
+
+    Args:
+        created: When the fact was created
+        ttl_days: Time-to-live in days (None = never expires)
+
+    Returns:
+        Expiration datetime, or None if ttl_days is None
+    """
+    if ttl_days is None:
+        return None
+    return created + timedelta(days=ttl_days)

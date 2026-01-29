@@ -5,6 +5,7 @@ Task 3.2: Create TTL policy configuration per memory/fact type
 """
 
 import pytest
+from datetime import datetime, timedelta
 
 
 class TestTTLPolicyDataclass:
@@ -101,3 +102,28 @@ class TestGetPolicyForFactType:
 
         assert policy.fact_type == "static"
         assert policy.default_ttl_days is None
+
+class TestCalculateExpiration:
+    """Test calculate_expires_at function"""
+
+    def test_calculate_expires_at_with_ttl(self):
+        """Test: calculates correct expiration date"""
+        from app.services.ttl_policy import calculate_expires_at
+
+        created = datetime(2026, 1, 29, 12, 0, 0)
+        ttl_days = 30
+
+        expires_at = calculate_expires_at(created, ttl_days)
+
+        expected = datetime(2026, 2, 28, 12, 0, 0)
+        assert expires_at == expected
+
+    def test_calculate_expires_at_none_ttl_returns_none(self):
+        """Test: None ttl_days returns None (never expires)"""
+        from app.services.ttl_policy import calculate_expires_at
+
+        created = datetime(2026, 1, 29, 12, 0, 0)
+
+        expires_at = calculate_expires_at(created, None)
+
+        assert expires_at is None
