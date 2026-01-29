@@ -163,3 +163,19 @@ class TestApplyPolicyToFact:
         # Should be ~1 day from created
         delta = updated_fact.expires_at - updated_fact.created
         assert delta.days == 1
+
+    def test_apply_policy_permanent_fact_no_expiration(self):
+        """Test: static facts get None for ttl_days and expires_at"""
+        from app.services.ttl_policy import apply_ttl_policy
+        from app.models.memory_v2 import Fact
+
+        fact = Fact(
+            fact_id="test-3",
+            text="User's name is Denis",
+            fact_type="static"
+        )
+
+        updated_fact = apply_ttl_policy(fact)
+
+        assert updated_fact.ttl_days is None
+        assert updated_fact.expires_at is None
