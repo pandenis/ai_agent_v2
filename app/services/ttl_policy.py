@@ -10,6 +10,10 @@ enabling automatic expiration of facts based on their nature.
 from dataclasses import dataclass
 from typing import Optional
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.memory_v2 import Fact
 
 @dataclass
 class TTLPolicy:
@@ -80,3 +84,21 @@ def calculate_expires_at(created: datetime, ttl_days: Optional[int]) -> Optional
     if ttl_days is None:
         return None
     return created + timedelta(days=ttl_days)
+
+def apply_ttl_policy(fact: "Fact") -> "Fact":
+    """
+    Apply TTL policy to a fact based on its fact_type.
+
+    Sets ttl_days and expires_at based on the default policy
+    for the fact's type.
+
+    Args:
+        fact: Fact to apply policy to
+
+    Returns:
+        The fact with ttl_days and expires_at set
+    """
+    policy = get_policy_for_fact_type(fact.fact_type)
+    fact.ttl_days = policy.default_ttl_days
+    fact.expires_at = calculate_expires_at(fact.created, fact.ttl_days)
+    return fact

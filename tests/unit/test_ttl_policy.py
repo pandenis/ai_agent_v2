@@ -127,3 +127,39 @@ class TestCalculateExpiration:
         expires_at = calculate_expires_at(created, None)
 
         assert expires_at is None
+
+class TestApplyPolicyToFact:
+    """Test apply_ttl_policy function"""
+
+    def test_apply_policy_sets_ttl_days(self):
+        """Test: apply_ttl_policy sets ttl_days from policy"""
+        from app.services.ttl_policy import apply_ttl_policy
+        from app.models.memory_v2 import Fact
+
+        fact = Fact(
+            fact_id="test-1",
+            text="Weather is sunny",
+            fact_type="weather"
+        )
+
+        updated_fact = apply_ttl_policy(fact)
+
+        assert updated_fact.ttl_days == 1  # weather policy
+
+    def test_apply_policy_sets_expires_at(self):
+        """Test: apply_ttl_policy calculates expires_at"""
+        from app.services.ttl_policy import apply_ttl_policy
+        from app.models.memory_v2 import Fact
+
+        fact = Fact(
+            fact_id="test-2",
+            text="Weather is sunny",
+            fact_type="weather"
+        )
+
+        updated_fact = apply_ttl_policy(fact)
+
+        assert updated_fact.expires_at is not None
+        # Should be ~1 day from created
+        delta = updated_fact.expires_at - updated_fact.created
+        assert delta.days == 1
