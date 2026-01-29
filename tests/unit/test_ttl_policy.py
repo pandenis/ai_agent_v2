@@ -25,3 +25,17 @@ class TestTTLPolicyDataclass:
         assert policy.fact_type == "weather"
         assert policy.default_ttl_days == 1
         assert policy.description == "Weather info - expires daily"
+
+    def test_ttl_policy_allows_none_for_permanent(self):
+        """Test: TTLPolicy allows None ttl_days for permanent facts"""
+        from app.services.ttl_policy import TTLPolicy
+
+        # Arrange & Act
+        policy = TTLPolicy(
+            fact_type="static",
+            default_ttl_days=None,
+            description="Permanent facts - never expire"
+        )
+
+        # Assert
+        assert policy.default_ttl_days is None
