@@ -52,3 +52,30 @@ class TestDefaultPolicies:
 
         for fact_type in expected_types:
             assert fact_type in DEFAULT_POLICIES, f"Missing policy for {fact_type}"
+
+    def test_static_policy_never_expires(self):
+        """Test: static facts never expire (ttl_days=None)"""
+        from app.services.ttl_policy import DEFAULT_POLICIES
+
+        policy = DEFAULT_POLICIES["static"]
+
+        assert policy.fact_type == "static"
+        assert policy.default_ttl_days is None
+
+    def test_weather_policy_expires_daily(self):
+        """Test: weather facts expire after 1 day"""
+        from app.services.ttl_policy import DEFAULT_POLICIES
+
+        policy = DEFAULT_POLICIES["weather"]
+
+        assert policy.fact_type == "weather"
+        assert policy.default_ttl_days == 1
+
+    def test_event_policy_expires_monthly(self):
+        """Test: event facts expire after 30 days"""
+        from app.services.ttl_policy import DEFAULT_POLICIES
+
+        policy = DEFAULT_POLICIES["event"]
+
+        assert policy.fact_type == "event"
+        assert policy.default_ttl_days == 30
