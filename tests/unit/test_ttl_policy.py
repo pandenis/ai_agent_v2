@@ -39,3 +39,16 @@ class TestTTLPolicyDataclass:
 
         # Assert
         assert policy.default_ttl_days is None
+
+class TestDefaultPolicies:
+    """Test default TTL policies for each fact type"""
+
+    def test_default_policies_exist(self):
+        """Test: DEFAULT_POLICIES dict exists with all fact types"""
+        from app.services.ttl_policy import DEFAULT_POLICIES
+
+        # Assert all fact types have policies
+        expected_types = ["static", "weather", "event", "preference", "knowledge"]
+
+        for fact_type in expected_types:
+            assert fact_type in DEFAULT_POLICIES, f"Missing policy for {fact_type}"
