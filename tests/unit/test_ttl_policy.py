@@ -79,3 +79,25 @@ class TestDefaultPolicies:
 
         assert policy.fact_type == "event"
         assert policy.default_ttl_days == 30
+
+
+class TestGetPolicyForFactType:
+    """Test get_policy_for_fact_type function"""
+
+    def test_get_policy_returns_correct_policy(self):
+        """Test: get_policy_for_fact_type returns matching policy"""
+        from app.services.ttl_policy import get_policy_for_fact_type
+
+        policy = get_policy_for_fact_type("weather")
+
+        assert policy.fact_type == "weather"
+        assert policy.default_ttl_days == 1
+
+    def test_get_policy_unknown_type_returns_default(self):
+        """Test: unknown fact_type returns default policy (static)"""
+        from app.services.ttl_policy import get_policy_for_fact_type
+
+        policy = get_policy_for_fact_type("unknown_type")
+
+        assert policy.fact_type == "static"
+        assert policy.default_ttl_days is None

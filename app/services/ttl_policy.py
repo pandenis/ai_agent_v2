@@ -53,3 +53,15 @@ DEFAULT_POLICIES = {
         description="Learned facts - 90 day refresh cycle"
     ),
 }
+
+def get_policy_for_fact_type(fact_type: str) -> TTLPolicy:
+    """
+    Get TTL policy for a specific fact type.
+
+    Args:
+        fact_type: The fact type to get policy for
+
+    Returns:
+        TTLPolicy for the fact type, or default (static) if unknown
+    """
+    return DEFAULT_POLICIES.get(fact_type, DEFAULT_POLICIES["static"])
