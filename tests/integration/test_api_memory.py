@@ -181,9 +181,29 @@ class TestDeleteFact:
     @pytest.mark.asyncio
     async def test_delete_fact_success(self, client_with_mock_memory):
         """Test: DELETE /memory/facts/{id} deletes fact."""
-        # Arrange
+        # Arrange - mock fact exists
+        from app.models.memory_v2 import FactModel
+        from app.api.deps import get_write_gate
+        from app.main import app
+        from app.services.memory_write_gate import WriteResult
+
+        mock_fact = MagicMock(spec=FactModel)
+        mock_fact.thread_id = "test-thread"
+        client_with_mock_memory.mock_memory_service.get_fact_by_id = AsyncMock(return_value=mock_fact)
         client_with_mock_memory.mock_memory_service.delete_fact = AsyncMock(return_value=True)
-        
+
+        # Mock WriteGate
+        mock_write_gate = MagicMock()
+        mock_write_gate.execute = AsyncMock(return_value=WriteResult(
+            success=True,
+            facts_written=1,
+            operation="delete",
+            thread_id="test-thread",
+            source="api",
+            fact_ids=[]
+        ))
+        app.dependency_overrides[get_write_gate] = lambda: mock_write_gate
+
         # Act
         response = await client_with_mock_memory.delete("/api/v1/memory/facts/fact-123")
         
