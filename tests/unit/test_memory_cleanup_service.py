@@ -128,3 +128,30 @@ class TestCleanupExpiredFacts:
         remaining = list(result.scalars().all())
         assert len(remaining) == 1
         assert remaining[0].fact_id == "valid-1"
+
+    @pytest.mark.asyncio
+    async def test_cleanup_returns_zero_when_none_expired(self, test_db):
+        """Test: cleanup_expired_facts returns 0 when no facts expired"""
+        from app.services.memory_cleanup_service import MemoryCleanupService
+        from app.models.memory_v2 import FactModel
+
+        # Arrange - only non-expired facts
+        now = datetime.utcnow()
+
+        valid_fact = FactModel(
+            fact_id="valid-1",
+            text="Current info",
+            fact_type="preference",
+            expires_at=now + timedelta(days=30)
+        )
+
+        test_db.add(valid_fact)
+        await test_db.commit()
+
+        service = MemoryCleanupService(db=test_db)
+
+        # Act
+        deleted_count = await service.cleanup_expired_facts()
+
+        # Assert
+        assert deleted_count == 0
