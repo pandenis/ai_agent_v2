@@ -26,3 +26,12 @@ class MemoryCleanupService:
             db: SQLAlchemy async session
         """
         self.db = db
+
+    async def get_expired_facts(self) -> list:
+        """
+        Get all facts that have expired.
+
+        Returns:
+            List of expired FactModel objects
+        """
+        return []

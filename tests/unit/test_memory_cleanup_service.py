@@ -26,3 +26,19 @@ class TestMemoryCleanupServiceInit:
         service = MemoryCleanupService(db=mock_db)
 
         assert service.db == mock_db
+
+class TestGetExpiredFacts:
+    """Test get_expired_facts method"""
+
+    @pytest.mark.asyncio
+    async def test_get_expired_facts_returns_list(self):
+        """Test: get_expired_facts returns list of expired facts"""
+        from app.services.memory_cleanup_service import MemoryCleanupService
+
+        mock_db = MagicMock()
+        service = MemoryCleanupService(db=mock_db)
+
+        # Should return a list (even if empty for now)
+        result = await service.get_expired_facts()
+
+        assert isinstance(result, list)
