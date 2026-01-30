@@ -31,14 +31,13 @@ class TestGetExpiredFacts:
     """Test get_expired_facts method"""
 
     @pytest.mark.asyncio
-    async def test_get_expired_facts_returns_list(self):
+    async def test_get_expired_facts_returns_list(self, test_db):
         """Test: get_expired_facts returns list of expired facts"""
         from app.services.memory_cleanup_service import MemoryCleanupService
 
-        mock_db = MagicMock()
-        service = MemoryCleanupService(db=mock_db)
+        service = MemoryCleanupService(db=test_db)
 
-        # Should return a list (even if empty for now)
+        # Should return a list (empty when no expired facts)
         result = await service.get_expired_facts()
 
         assert isinstance(result, list)

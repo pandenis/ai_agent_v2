@@ -61,6 +61,10 @@ class MemoryCleanupService:
         for fact in expired_facts:
             await self.db.delete(fact)
 
+        await self.db.commit()
+
+        return len(expired_facts)
+
     async def get_cleanup_stats(self) -> dict:
         """
         Get statistics about expired facts pending cleanup.
