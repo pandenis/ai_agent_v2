@@ -48,3 +48,19 @@ class MemoryCleanupService:
         )
 
         return list(result.scalars().all())
+
+    async def cleanup_expired_facts(self) -> int:
+        """
+        Delete all expired facts from database.
+
+        Returns:
+            Number of facts deleted
+        """
+        expired_facts = await self.get_expired_facts()
+
+        for fact in expired_facts:
+            await self.db.delete(fact)
+
+        await self.db.commit()
+
+        return len(expired_facts)
