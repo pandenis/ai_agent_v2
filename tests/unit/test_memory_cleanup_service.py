@@ -155,3 +155,58 @@ class TestCleanupExpiredFacts:
 
         # Assert
         assert deleted_count == 0
+
+
+class TestGetCleanupStats:
+    """Test get_cleanup_stats method"""
+
+    @pytest.mark.asyncio
+    async def test_get_cleanup_stats_returns_counts(self, test_db):
+        """Test: get_cleanup_stats returns expired count and breakdown"""
+        from app.services.memory_cleanup_service import MemoryCleanupService
+        from app.models.memory_v2 import FactModel
+
+        # Arrange
+        now = datetime.utcnow()
+
+        # 2 expired weather facts
+        test_db.add(FactModel(
+            fact_id="expired-w1",
+            text="Old weather 1",
+            fact_type="weather",
+            expires_at=now - timedelta(days=1)
+        ))
+        test_db.add(FactModel(
+            fact_id="expired-w2",
+            text="Old weather 2",
+            fact_type="weather",
+            expires_at=now - timedelta(days=2)
+        ))
+
+        # 1 expired event fact
+        test_db.add(FactModel(
+            fact_id="expired-e1",
+            text="Old event",
+            fact_type="event",
+            expires_at=now - timedelta(days=1)
+        ))
+
+        # 1 valid fact
+        test_db.add(FactModel(
+            fact_id="valid-1",
+            text="Valid",
+            fact_type="static",
+            expires_at=None
+        ))
+
+        await test_db.commit()
+
+        service = MemoryCleanupService(db=test_db)
+
+        # Act
+        stats = await service.get_cleanup_stats()
+
+        # Assert
+        assert stats["total_expired"] == 3
+        assert stats["by_type"]["weather"] == 2
+        assert stats["by_type"]["event"] == 1
