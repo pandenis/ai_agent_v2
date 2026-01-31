@@ -87,3 +87,13 @@ async def test_run_cleanup_dry_run_returns_stats(self):
         assert result["dry_run"] is True
         assert result["would_delete"] == 10
         mock_service.cleanup_expired_facts.assert_not_called()
+
+class TestCleanupAPIEndpoint:
+    """Test cleanup API endpoint handler"""
+
+    def test_cleanup_endpoint_handler_exists(self):
+        """Test: cleanup_endpoint_handler function exists"""
+        from app.cli.cleanup_commands import cleanup_endpoint_handler
+
+        assert cleanup_endpoint_handler is not None
+        assert callable(cleanup_endpoint_handler)

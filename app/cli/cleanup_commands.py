@@ -56,3 +56,29 @@ async def run_cleanup(db_session, dry_run: bool = False) -> dict:
         "dry_run": False,
         "deleted": deleted_count
     }
+
+
+async def cleanup_endpoint_handler(db_session, dry_run: bool = True) -> dict:
+    """
+    API endpoint handler for cleanup operations.
+
+    Args:
+        db_session: Database session
+        dry_run: If True, only report stats (default: True for safety)
+
+    Returns:
+        Dict with operation results
+    """
+    if dry_run:
+        stats = await get_cleanup_stats(db_session)
+        return {
+            "action": "stats",
+            "total_expired": stats["total_expired"],
+            "by_type": stats["by_type"]
+        }
+
+    result = await run_cleanup(db_session, dry_run=False)
+    return {
+        "action": "cleanup",
+        "deleted": result["deleted"]
+    }
