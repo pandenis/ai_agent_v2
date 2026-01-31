@@ -134,3 +134,18 @@ class TestCreateCleanupTask:
 
         assert create_cleanup_task is not None
         assert callable(create_cleanup_task)
+
+    @pytest.mark.asyncio
+    async def test_create_cleanup_task_returns_running_scheduler(self):
+        """Test: create_cleanup_task returns a running scheduler"""
+        from app.services.cleanup_scheduler import create_cleanup_task
+
+        mock_cleanup_service = MagicMock()
+
+        scheduler = await create_cleanup_task(mock_cleanup_service, interval_seconds=60)
+
+        assert scheduler.is_running is True
+        assert scheduler.interval_seconds == 60
+
+        # Cleanup
+        scheduler.stop()
