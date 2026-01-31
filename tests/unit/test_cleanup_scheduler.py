@@ -53,3 +53,20 @@ class TestRunCleanup:
         # Assert
         mock_cleanup_service.cleanup_expired_facts.assert_called_once()
         assert result == 5
+
+    @pytest.mark.asyncio
+    async def test_run_cleanup_returns_zero_when_none_expired(self):
+        """Test: run_cleanup returns 0 when no facts expired"""
+        from app.services.cleanup_scheduler import CleanupScheduler
+
+        # Arrange
+        mock_cleanup_service = MagicMock()
+        mock_cleanup_service.cleanup_expired_facts = AsyncMock(return_value=0)
+
+        scheduler = CleanupScheduler()
+
+        # Act
+        result = await scheduler.run_cleanup(mock_cleanup_service)
+
+        # Assert
+        assert result == 0
