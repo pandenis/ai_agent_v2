@@ -97,3 +97,40 @@ class TestCleanupAPIEndpoint:
 
         assert cleanup_endpoint_handler is not None
         assert callable(cleanup_endpoint_handler)
+
+    @pytest.mark.asyncio
+    async def test_cleanup_endpoint_handler_returns_stats_by_default(self):
+        """Test: cleanup_endpoint_handler returns stats with dry_run=True (default)"""
+        from app.cli.cleanup_commands import cleanup_endpoint_handler
+
+        mock_db = MagicMock()
+
+        with patch('app.services.memory_cleanup_service.MemoryCleanupService') as mock_service_class:
+            mock_service = MagicMock()
+            mock_service.get_cleanup_stats = AsyncMock(return_value={
+                "total_expired": 8,
+                "by_type": {"weather": 5, "knowledge": 3}
+            })
+            mock_service_class.return_value = mock_service
+
+            result = await cleanup_endpoint_handler(mock_db)
+
+            assert result["action"] == "stats"
+            assert result["total_expired"] == 8
+
+    @pytest.mark.asyncio
+    async def test_cleanup_endpoint_handler_deletes_when_not_dry_run(self):
+        """Test: cleanup_endpoint_handler deletes facts when dry_run=False"""
+        from app.cli.cleanup_commands import cleanup_endpoint_handler
+
+        mock_db = MagicMock()
+
+        with patch('app.services.memory_cleanup_service.MemoryCleanupService') as mock_service_class:
+            mock_service = MagicMock()
+            mock_service.cleanup_expired_facts = AsyncMock(return_value=8)
+            mock_service_class.return_value = mock_service
+
+            result = await cleanup_endpoint_handler(mock_db, dry_run=False)
+
+            assert result["action"] == "cleanup"
+            assert result["deleted"] == 8
