@@ -99,3 +99,26 @@ class TestSchedulerStartStop:
 
         assert hasattr(scheduler, 'stop')
         assert callable(scheduler.stop)
+
+    def test_start_sets_is_running_true(self):
+        """Test: start() sets is_running to True"""
+        from app.services.cleanup_scheduler import CleanupScheduler
+
+        scheduler = CleanupScheduler()
+        mock_cleanup_service = MagicMock()
+
+        scheduler.start(mock_cleanup_service)
+
+        assert scheduler.is_running is True
+
+    def test_stop_sets_is_running_false(self):
+        """Test: stop() sets is_running to False"""
+        from app.services.cleanup_scheduler import CleanupScheduler
+
+        scheduler = CleanupScheduler()
+        mock_cleanup_service = MagicMock()
+
+        scheduler.start(mock_cleanup_service)
+        scheduler.stop()
+
+        assert scheduler.is_running is False
