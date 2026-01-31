@@ -70,3 +70,32 @@ class TestRunCleanup:
 
         # Assert
         assert result == 0
+
+class TestSchedulerStartStop:
+    """Test scheduler start and stop functionality"""
+
+    def test_scheduler_is_running_initially_false(self):
+        """Test: Scheduler is not running after init"""
+        from app.services.cleanup_scheduler import CleanupScheduler
+
+        scheduler = CleanupScheduler()
+
+        assert scheduler.is_running is False
+
+    def test_scheduler_has_start_method(self):
+        """Test: Scheduler has start method"""
+        from app.services.cleanup_scheduler import CleanupScheduler
+
+        scheduler = CleanupScheduler()
+
+        assert hasattr(scheduler, 'start')
+        assert callable(scheduler.start)
+
+    def test_scheduler_has_stop_method(self):
+        """Test: Scheduler has stop method"""
+        from app.services.cleanup_scheduler import CleanupScheduler
+
+        scheduler = CleanupScheduler()
+
+        assert hasattr(scheduler, 'stop')
+        assert callable(scheduler.stop)
