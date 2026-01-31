@@ -24,3 +24,11 @@ class TestCleanupSchedulerInit:
         scheduler = CleanupScheduler(interval_seconds=3600)
 
         assert scheduler.interval_seconds == 3600
+
+    def test_cleanup_scheduler_default_interval_one_hour(self):
+        """Test: Default interval is 3600 seconds (1 hour)"""
+        from app.services.cleanup_scheduler import CleanupScheduler
+
+        scheduler = CleanupScheduler()
+
+        assert scheduler.interval_seconds == 3600
