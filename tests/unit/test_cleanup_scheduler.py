@@ -5,6 +5,7 @@ Task 3.4: Add scheduled cleanup task for expired facts
 """
 
 import pytest
+import asyncio
 from unittest.mock import MagicMock, AsyncMock
 
 
@@ -122,3 +123,14 @@ class TestSchedulerStartStop:
         scheduler.stop()
 
         assert scheduler.is_running is False
+
+class TestCreateCleanupTask:
+    """Test create_cleanup_task factory function"""
+
+    @pytest.mark.asyncio
+    async def test_create_cleanup_task_exists(self):
+        """Test: create_cleanup_task function exists"""
+        from app.services.cleanup_scheduler import create_cleanup_task
+
+        assert create_cleanup_task is not None
+        assert callable(create_cleanup_task)

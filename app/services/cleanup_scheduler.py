@@ -64,3 +64,21 @@ class CleanupScheduler:
             self._task.cancel()
             self._task = None
         logger.info("Cleanup scheduler stopped")
+
+async def create_cleanup_task(
+        cleanup_service,
+        interval_seconds: int = 3600
+) -> CleanupScheduler:
+    """
+    Create and start a cleanup scheduler task.
+
+    Args:
+        cleanup_service: MemoryCleanupService instance
+        interval_seconds: Interval between cleanups
+
+    Returns:
+        Started CleanupScheduler instance
+    """
+    scheduler = CleanupScheduler(interval_seconds=interval_seconds)
+    scheduler.start(cleanup_service)
+    return scheduler
