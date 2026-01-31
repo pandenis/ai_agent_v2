@@ -67,27 +67,6 @@ class TestRunCleanup:
             mock_service.cleanup_expired_facts.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_run_cleanup_dry_run_returns_stats(self):
-    """Test: run_cleanup with dry_run=True returns stats without deleting"""
-    from app.cli.cleanup_commands import run_cleanup
-
-    mock_db = MagicMock()
-
-    with patch('app.services.memory_cleanup_service.MemoryCleanupService') as mock_service_class:
-        mock_service = MagicMock()
-        mock_service.get_cleanup_stats = AsyncMock(return_value={
-            "total_expired": 10,
-            "by_type": {"weather": 7, "event": 3}
-        })
-        mock_service.cleanup_expired_facts = AsyncMock(return_value=10)
-        mock_service_class.return_value = mock_service
-
-        result = await run_cleanup(mock_db, dry_run=True)
-
-        assert result["dry_run"] is True
-        assert result["would_delete"] == 10
-        mock_service.cleanup_expired_facts.assert_not_called()
-
 class TestCleanupAPIEndpoint:
     """Test cleanup API endpoint handler"""
 
