@@ -28,3 +28,17 @@ class CleanupScheduler:
             interval_seconds: Interval between cleanups (default: 1 hour)
         """
         self.interval_seconds = interval_seconds
+
+    async def run_cleanup(self, cleanup_service) -> int:
+        """
+        Run a single cleanup cycle.
+
+        Args:
+            cleanup_service: MemoryCleanupService instance
+
+        Returns:
+            Number of facts deleted
+        """
+        deleted_count = await cleanup_service.cleanup_expired_facts()
+        logger.info(f"Cleanup completed: {deleted_count} expired facts removed")
+        return deleted_count

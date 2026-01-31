@@ -32,3 +32,24 @@ class TestCleanupSchedulerInit:
         scheduler = CleanupScheduler()
 
         assert scheduler.interval_seconds == 3600
+
+class TestRunCleanup:
+    """Test run_cleanup method"""
+
+    @pytest.mark.asyncio
+    async def test_run_cleanup_calls_cleanup_service(self):
+        """Test: run_cleanup executes MemoryCleanupService.cleanup_expired_facts"""
+        from app.services.cleanup_scheduler import CleanupScheduler
+
+        # Arrange
+        mock_cleanup_service = MagicMock()
+        mock_cleanup_service.cleanup_expired_facts = AsyncMock(return_value=5)
+
+        scheduler = CleanupScheduler()
+
+        # Act
+        result = await scheduler.run_cleanup(mock_cleanup_service)
+
+        # Assert
+        mock_cleanup_service.cleanup_expired_facts.assert_called_once()
+        assert result == 5
