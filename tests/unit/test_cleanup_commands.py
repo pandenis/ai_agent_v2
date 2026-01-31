@@ -37,3 +37,13 @@ class TestGetCleanupStats:
 
             assert result["total_expired"] == 5
             assert result["by_type"]["weather"] == 3
+
+class TestRunCleanup:
+    """Test run_cleanup CLI function"""
+
+    def test_run_cleanup_exists(self):
+        """Test: run_cleanup function exists"""
+        from app.cli.cleanup_commands import run_cleanup
+
+        assert run_cleanup is not None
+        assert callable(run_cleanup)

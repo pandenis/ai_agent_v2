@@ -27,3 +27,32 @@ async def get_cleanup_stats(db_session) -> dict:
 
     cleanup_service = MemoryCleanupService(db=db_session)
     return await cleanup_service.get_cleanup_stats()
+
+async def run_cleanup(db_session, dry_run: bool = False) -> dict:
+    """
+    Run cleanup of expired facts.
+
+    Args:
+        db_session: Database session
+        dry_run: If True, only report what would be deleted
+
+    Returns:
+        Dict with cleanup results
+    """
+    from app.services.memory_cleanup_service import MemoryCleanupService
+
+    cleanup_service = MemoryCleanupService(db=db_session)
+
+    if dry_run:
+        stats = await cleanup_service.get_cleanup_stats()
+        return {
+            "dry_run": True,
+            "would_delete": stats["total_expired"],
+            "by_type": stats["by_type"]
+        }
+
+    deleted_count = await cleanup_service.cleanup_expired_facts()
+    return {
+        "dry_run": False,
+        "deleted": deleted_count
+    }
