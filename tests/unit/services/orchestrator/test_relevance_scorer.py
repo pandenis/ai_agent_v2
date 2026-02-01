@@ -12,7 +12,7 @@ TDD Baby Steps:
 5. text_similarity_empty → 0.0 ✅
 6. recency_score_today → 1.0 ✅
 7. recency_score_90_days_old → 0.0 ✅
-8. recency_score_45_days_old → ~0.5
+8. recency_score_45_days_old → ~0.5 ✅
 9. calculate_relevance combines all
 10. score_facts returns sorted
 """
@@ -124,3 +124,27 @@ class TestRecencyScore:
 
         # Assert - 45/90 = 0.5, so score = 1.0 - 0.5 = 0.5
         assert result == 0.5
+
+
+class TestCalculateRelevance:
+    """Tests for combined relevance scoring"""
+
+    def test_calculate_relevance_combines_all_components(self):
+        """Test: Relevance = 0.5*similarity + 0.2*recency + 0.3*importance"""
+        # Arrange
+        scorer = RelevanceScorer()
+        query = "cat"
+        fact_text = "cat"  # similarity = 1.0
+        created_at = datetime.utcnow()  # recency = 1.0
+        importance = 1.0
+
+        # Act
+        result = scorer.calculate_relevance(
+            query=query,
+            fact_text=fact_text,
+            created_at=created_at,
+            importance=importance
+        )
+
+        # Assert - 0.5*1.0 + 0.2*1.0 + 0.3*1.0 = 1.0
+        assert result == 1.0

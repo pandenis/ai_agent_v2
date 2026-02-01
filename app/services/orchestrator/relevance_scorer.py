@@ -24,6 +24,11 @@ from datetime import datetime
 class RelevanceScorer:
     """Calculate relevance scores for memory retrieval"""
 
+    # Scoring weights
+    WEIGHT_SIMILARITY = 0.5
+    WEIGHT_RECENCY = 0.2
+    WEIGHT_IMPORTANCE = 0.3
+
     def text_similarity(self, query: str, text: str) -> float:
         """Calculate word overlap similarity between query and text.
 
@@ -63,3 +68,32 @@ class RelevanceScorer:
             return 0.0
 
         return 1.0 - (days_old / max_days)
+
+    def calculate_relevance(
+        self,
+        query: str,
+        fact_text: str,
+        created_at: datetime,
+        importance: float
+    ) -> float:
+        """Calculate combined relevance score.
+
+        Formula: 0.5 * similarity + 0.2 * recency + 0.3 * importance
+
+        Args:
+            query: Search query string
+            fact_text: Fact text to score
+            created_at: When the fact was created
+            importance: Pre-assigned importance (0.0-1.0)
+
+        Returns:
+            Combined relevance score (0.0-1.0)
+        """
+        similarity = self.text_similarity(query, fact_text)
+        recency = self.recency_score(created_at)
+
+        return (
+            self.WEIGHT_SIMILARITY * similarity +
+            self.WEIGHT_RECENCY * recency +
+            self.WEIGHT_IMPORTANCE * importance
+        )
