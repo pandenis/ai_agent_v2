@@ -278,3 +278,16 @@ class TestMemoryAccessTiers:
         assert access["min_score"] == 0.5
         assert "static" in access["fact_types"]
         assert "derived" in access["fact_types"]
+
+    def test_get_memory_access_for_deep_reasoning_strategy(self):
+        """Test: Deep reasoning should have lowest min_score threshold"""
+        # Arrange
+        scorer = RelevanceScorer()
+
+        # Act
+        access = scorer.get_memory_access("deep_reasoning")
+
+        # Assert
+        assert access["min_score"] == 0.3
+        assert "static" in access["fact_types"]
+        assert "temporal" in access["fact_types"]
