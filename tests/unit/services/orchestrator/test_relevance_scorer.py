@@ -17,9 +17,15 @@ TDD Baby Steps:
 10. score_facts returns sorted ✅
 
 Task 4.2 - min_score threshold:
-11. score_and_filter removes low scores
-12. score_and_filter keeps high scores
-13. score_and_filter with zero threshold returns all
+11. score_and_filter removes low scores ✅
+12. score_and_filter keeps high scores ✅
+13. score_and_filter with zero threshold returns all ✅
+
+Task 4.3 - tier-based access:
+14. get_memory_access for direct strategy
+15. get_memory_access for enhanced strategy
+16. get_memory_access for deep_reasoning strategy
+17. direct has highest min_score, deep_reasoning lowest
 """
 
 import pytest
@@ -204,65 +210,58 @@ class TestScoreAndFilter:
         assert len(result) == 1
         assert result[0]["text"] == "cat is cute"
 
-    class TestScoreAndFilter:
-        """Tests for min_score filtering"""
+    def test_score_and_filter_keeps_all_above_threshold(self):
+        """Test: All facts above min_score should be kept and sorted"""
+        # Arrange
+        scorer = RelevanceScorer()
+        query = "cat"
+        now = datetime.utcnow()
 
-        def test_score_and_filter_removes_low_scores(self):
-            """Test: Facts below min_score should be filtered out"""
-            # Arrange
-            scorer = RelevanceScorer()
-            query = "cat"
-            now = datetime.utcnow()
+        facts = [
+            {"text": "cat is cute", "created_at": now, "importance": 0.8},  # High
+            {"text": "my cat sleeps", "created_at": now, "importance": 0.6},  # Medium
+            {"text": "cat food", "created_at": now, "importance": 0.4},  # Lower but matches
+        ]
 
-            facts = [
-                {"text": "cat is cute", "created_at": now, "importance": 0.8},  # High relevance
-                {"text": "dog is friendly", "created_at": now, "importance": 0.5},  # Low relevance
-                {"text": "bird can fly", "created_at": now, "importance": 0.5},  # No match
-            ]
+        # Act - filter with low threshold
+        result = scorer.score_and_filter(query, facts, min_score=0.3)
 
-            # Act - filter with high threshold
-            result = scorer.score_and_filter(query, facts, min_score=0.5)
+        # Assert - all should pass, sorted by relevance
+        assert len(result) == 3
+        assert result[0]["relevance_score"] >= result[1]["relevance_score"]
+        assert result[1]["relevance_score"] >= result[2]["relevance_score"]
 
-            # Assert - only cat fact should pass
-            assert len(result) == 1
-            assert result[0]["text"] == "cat is cute"
+    def test_score_and_filter_zero_threshold_returns_all(self):
+        """Test: min_score=0.0 should return all facts"""
+        # Arrange
+        scorer = RelevanceScorer()
+        query = "cat"
+        now = datetime.utcnow()
 
-        def test_score_and_filter_keeps_all_above_threshold(self):
-            """Test: All facts above min_score should be kept and sorted"""
-            # Arrange
-            scorer = RelevanceScorer()
-            query = "cat"
-            now = datetime.utcnow()
+        facts = [
+            {"text": "cat is cute", "created_at": now, "importance": 0.8},
+            {"text": "dog is friendly", "created_at": now, "importance": 0.5},
+            {"text": "bird can fly", "created_at": now, "importance": 0.3},
+        ]
 
-            facts = [
-                {"text": "cat is cute", "created_at": now, "importance": 0.8},  # High
-                {"text": "my cat sleeps", "created_at": now, "importance": 0.6},  # Medium
-                {"text": "cat food", "created_at": now, "importance": 0.4},  # Lower but matches
-            ]
+        # Act - no filtering
+        result = scorer.score_and_filter(query, facts, min_score=0.0)
 
-            # Act - filter with low threshold
-            result = scorer.score_and_filter(query, facts, min_score=0.3)
+        # Assert - all facts returned
+        assert len(result) == 3
 
-            # Assert - all should pass, sorted by relevance
-            assert len(result) == 3
-            assert result[0]["relevance_score"] >= result[1]["relevance_score"]
-            assert result[1]["relevance_score"] >= result[2]["relevance_score"]
 
-        def test_score_and_filter_zero_threshold_returns_all(self):
-            """Test: min_score=0.0 should return all facts"""
-            # Arrange
-            scorer = RelevanceScorer()
-            query = "cat"
-            now = datetime.utcnow()
+class TestMemoryAccessTiers:
+    """Tests for tier-based memory access rules"""
 
-            facts = [
-                {"text": "cat is cute", "created_at": now, "importance": 0.8},
-                {"text": "dog is friendly", "created_at": now, "importance": 0.5},
-                {"text": "bird can fly", "created_at": now, "importance": 0.3},
-            ]
+    def test_get_memory_access_for_direct_strategy(self):
+        """Test: Direct strategy should have high min_score threshold"""
+        # Arrange
+        scorer = RelevanceScorer()
 
-            # Act - no filtering
-            result = scorer.score_and_filter(query, facts, min_score=0.0)
+        # Act
+        access = scorer.get_memory_access("direct")
 
-            # Assert - all facts returned
-            assert len(result) == 3
+        # Assert
+        assert access["min_score"] == 0.7
+        assert access["fact_types"] == ["static"]

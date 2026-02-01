@@ -30,6 +30,12 @@ class RelevanceScorer:
     WEIGHT_RECENCY = 0.2
     WEIGHT_IMPORTANCE = 0.3
 
+    MEMORY_ACCESS_TIERS = {
+        "direct": {"min_score": 0.7, "fact_types": ["static"]},
+        "enhanced": {"min_score": 0.5, "fact_types": ["static", "derived", "temporal"]},
+        "deep_reasoning": {"min_score": 0.3, "fact_types": ["static", "derived", "temporal"]},
+    }
+
     def text_similarity(self, query: str, text: str) -> float:
         """Calculate word overlap similarity between query and text.
 
@@ -152,3 +158,17 @@ class RelevanceScorer:
         filtered_facts = [f for f in scored_facts if f["relevance_score"] >= min_score]
 
         return filtered_facts
+
+    def get_memory_access(self, strategy: str) -> Dict[str, Any]:
+        """Get memory access rules for a strategy tier.
+
+        Args:
+            strategy: One of 'direct', 'enhanced', 'deep_reasoning'
+
+        Returns:
+            Dict with 'min_score' and 'fact_types' keys
+        """
+        return self.MEMORY_ACCESS_TIERS.get(
+            strategy,
+            self.MEMORY_ACCESS_TIERS["enhanced"]  # Default fallback
+        )
