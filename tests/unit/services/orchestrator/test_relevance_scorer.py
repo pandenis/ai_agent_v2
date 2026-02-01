@@ -8,7 +8,7 @@ TDD Baby Steps:
 1. text_similarity_identical → 1.0 ✅
 2. text_similarity_no_overlap → 0.0 ✅
 3. text_similarity_partial → 0.0-1.0 ✅
-4. text_similarity_case_insensitive
+4. text_similarity_case_insensitive ✅
 5. text_similarity_empty → 0.0
 6. recency_score_today → 1.0
 7. recency_score_90_days_old → 0.0
@@ -72,3 +72,14 @@ class TestTextSimilarity:
 
         # Assert
         assert result == 1.0
+
+    def test_text_similarity_empty_query_returns_zero(self):
+        """Test: Empty query should return 0.0 (no division by zero)"""
+        # Arrange
+        scorer = RelevanceScorer()
+
+        # Act
+        result = scorer.text_similarity("", "cat")
+
+        # Assert
+        assert result == 0.0
