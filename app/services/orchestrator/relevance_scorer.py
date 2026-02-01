@@ -129,3 +129,26 @@ class RelevanceScorer:
         scored_facts.sort(key=lambda f: f["relevance_score"], reverse=True)
 
         return scored_facts
+
+    def score_and_filter(
+        self,
+        query: str,
+        facts: List[Dict[str, Any]],
+        min_score: float = 0.0
+    ) -> List[Dict[str, Any]]:
+        """Score, filter, and sort facts by relevance.
+
+        Args:
+            query: Search query string
+            facts: List of fact dicts with 'text', 'created_at', 'importance'
+            min_score: Minimum relevance score threshold (0.0-1.0)
+
+        Returns:
+            Facts above min_score with 'relevance_score' added, sorted descending
+        """
+        scored_facts = self.score_facts(query, facts)
+
+        # Filter by min_score
+        filtered_facts = [f for f in scored_facts if f["relevance_score"] >= min_score]
+
+        return filtered_facts
