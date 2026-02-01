@@ -32,5 +32,10 @@ class RelevanceScorer:
         Returns:
             Similarity score from 0.0 (no overlap) to 1.0 (identical)
         """
-        # Minimal implementation for first test
-        return 1.0
+        query_words = set(query.lower().split())
+        text_words = set(text.lower().split())
+
+        intersection = query_words & text_words
+        union = query_words | text_words
+
+        return len(intersection) / len(union)
