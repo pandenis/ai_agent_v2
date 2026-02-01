@@ -265,3 +265,16 @@ class TestMemoryAccessTiers:
         # Assert
         assert access["min_score"] == 0.7
         assert access["fact_types"] == ["static"]
+
+    def test_get_memory_access_for_enhanced_strategy(self):
+        """Test: Enhanced strategy should have moderate min_score"""
+        # Arrange
+        scorer = RelevanceScorer()
+
+        # Act
+        access = scorer.get_memory_access("enhanced")
+
+        # Assert
+        assert access["min_score"] == 0.5
+        assert "static" in access["fact_types"]
+        assert "derived" in access["fact_types"]
