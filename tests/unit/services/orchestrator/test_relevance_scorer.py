@@ -6,8 +6,8 @@ Tests the scoring formula:
 
 TDD Baby Steps:
 1. text_similarity_identical → 1.0 ✅
-2. text_similarity_no_overlap → 0.0
-3. text_similarity_partial → 0.0-1.0
+2. text_similarity_no_overlap → 0.0 ✅
+3. text_similarity_partial → 0.0-1.0 ✅
 4. text_similarity_case_insensitive
 5. text_similarity_empty → 0.0
 6. recency_score_today → 1.0
@@ -45,3 +45,30 @@ class TestTextSimilarity:
 
         # Assert
         assert result == 0.0
+
+    def test_text_similarity_partial_overlap_returns_ratio(self):
+        """Test: Partial word overlap returns Jaccard ratio"""
+        # Arrange
+        scorer = RelevanceScorer()
+
+        # Act - "cats" is shared, 4 unique words total
+        # query: {i, love, cats} = 3 words
+        # text: {cats, are, great} = 3 words
+        # intersection: {cats} = 1 word
+        # union: {i, love, cats, are, great} = 5 words
+        # Jaccard = 1/5 = 0.2
+        result = scorer.text_similarity("I love cats", "cats are great")
+
+        # Assert
+        assert result == 0.2
+
+    def test_text_similarity_case_insensitive(self):
+        """Test: Comparison should be case-insensitive"""
+        # Arrange
+        scorer = RelevanceScorer()
+
+        # Act
+        result = scorer.text_similarity("CAT", "cat")
+
+        # Assert
+        assert result == 1.0
