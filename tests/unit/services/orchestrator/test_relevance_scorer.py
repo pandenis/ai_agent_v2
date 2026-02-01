@@ -291,3 +291,17 @@ class TestMemoryAccessTiers:
         assert access["min_score"] == 0.3
         assert "static" in access["fact_types"]
         assert "temporal" in access["fact_types"]
+
+    def test_tier_thresholds_order(self):
+        """Test: direct > enhanced > deep_reasoning min_score"""
+        # Arrange
+        scorer = RelevanceScorer()
+
+        # Act
+        direct = scorer.get_memory_access("direct")
+        enhanced = scorer.get_memory_access("enhanced")
+        deep = scorer.get_memory_access("deep_reasoning")
+
+        # Assert - direct is most restrictive, deep is least
+        assert direct["min_score"] > enhanced["min_score"]
+        assert enhanced["min_score"] > deep["min_score"]
