@@ -203,3 +203,47 @@ class TestScoreAndFilter:
         # Assert - only cat fact should pass
         assert len(result) == 1
         assert result[0]["text"] == "cat is cute"
+
+    class TestScoreAndFilter:
+        """Tests for min_score filtering"""
+
+        def test_score_and_filter_removes_low_scores(self):
+            """Test: Facts below min_score should be filtered out"""
+            # Arrange
+            scorer = RelevanceScorer()
+            query = "cat"
+            now = datetime.utcnow()
+
+            facts = [
+                {"text": "cat is cute", "created_at": now, "importance": 0.8},  # High relevance
+                {"text": "dog is friendly", "created_at": now, "importance": 0.5},  # Low relevance
+                {"text": "bird can fly", "created_at": now, "importance": 0.5},  # No match
+            ]
+
+            # Act - filter with high threshold
+            result = scorer.score_and_filter(query, facts, min_score=0.5)
+
+            # Assert - only cat fact should pass
+            assert len(result) == 1
+            assert result[0]["text"] == "cat is cute"
+
+        def test_score_and_filter_keeps_all_above_threshold(self):
+            """Test: All facts above min_score should be kept and sorted"""
+            # Arrange
+            scorer = RelevanceScorer()
+            query = "cat"
+            now = datetime.utcnow()
+
+            facts = [
+                {"text": "cat is cute", "created_at": now, "importance": 0.8},  # High
+                {"text": "my cat sleeps", "created_at": now, "importance": 0.6},  # Medium
+                {"text": "cat food", "created_at": now, "importance": 0.4},  # Lower but matches
+            ]
+
+            # Act - filter with low threshold
+            result = scorer.score_and_filter(query, facts, min_score=0.3)
+
+            # Assert - all should pass, sorted by relevance
+            assert len(result) == 3
+            assert result[0]["relevance_score"] >= result[1]["relevance_score"]
+            assert result[1]["relevance_score"] >= result[2]["relevance_score"]
