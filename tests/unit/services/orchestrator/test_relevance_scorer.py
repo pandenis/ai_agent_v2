@@ -247,3 +247,22 @@ class TestScoreAndFilter:
             assert len(result) == 3
             assert result[0]["relevance_score"] >= result[1]["relevance_score"]
             assert result[1]["relevance_score"] >= result[2]["relevance_score"]
+
+        def test_score_and_filter_zero_threshold_returns_all(self):
+            """Test: min_score=0.0 should return all facts"""
+            # Arrange
+            scorer = RelevanceScorer()
+            query = "cat"
+            now = datetime.utcnow()
+
+            facts = [
+                {"text": "cat is cute", "created_at": now, "importance": 0.8},
+                {"text": "dog is friendly", "created_at": now, "importance": 0.5},
+                {"text": "bird can fly", "created_at": now, "importance": 0.3},
+            ]
+
+            # Act - no filtering
+            result = scorer.score_and_filter(query, facts, min_score=0.0)
+
+            # Assert - all facts returned
+            assert len(result) == 3
