@@ -55,5 +55,11 @@ class RelevanceScorer:
         Returns:
             Recency score from 0.0 (old) to 1.0 (new)
         """
-        # Minimal implementation for first test
-        return 1.0
+        days_old = (datetime.utcnow() - created_at).days
+
+        if days_old <= 0:
+            return 1.0
+        if days_old >= max_days:
+            return 0.0
+
+        return 1.0 - (days_old / max_days)

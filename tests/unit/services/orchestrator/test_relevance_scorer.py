@@ -10,7 +10,7 @@ TDD Baby Steps:
 3. text_similarity_partial → 0.0-1.0 ✅
 4. text_similarity_case_insensitive ✅
 5. text_similarity_empty → 0.0 ✅
-6. recency_score_today → 1.0
+6. recency_score_today → 1.0 ✅
 7. recency_score_90_days_old → 0.0
 8. recency_score_45_days_old → ~0.5
 9. calculate_relevance combines all
@@ -100,3 +100,15 @@ class TestRecencyScore:
 
         # Assert
         assert result == 1.0
+
+    def test_recency_score_90_days_old_returns_zero(self):
+        """Test: Fact created 90+ days ago should return 0.0"""
+        # Arrange
+        scorer = RelevanceScorer()
+        old_date = datetime.utcnow() - timedelta(days=90)
+
+        # Act
+        result = scorer.recency_score(old_date)
+
+        # Assert
+        assert result == 0.0
