@@ -13,7 +13,7 @@ TDD Baby Steps:
 6. recency_score_today → 1.0 ✅
 7. recency_score_90_days_old → 0.0 ✅
 8. recency_score_45_days_old → ~0.5 ✅
-9. calculate_relevance combines all
+9. calculate_relevance combines all ✅
 10. score_facts returns sorted
 """
 
@@ -148,3 +148,29 @@ class TestCalculateRelevance:
 
         # Assert - 0.5*1.0 + 0.2*1.0 + 0.3*1.0 = 1.0
         assert result == 1.0
+
+
+class TestScoreFacts:
+    """Tests for batch fact scoring"""
+
+    def test_score_facts_returns_sorted_by_relevance(self):
+        """Test: Facts should be returned sorted by relevance (descending)"""
+        # Arrange
+        scorer = RelevanceScorer()
+        query = "cat"
+        now = datetime.utcnow()
+
+        facts = [
+            {"text": "dog is friendly", "created_at": now, "importance": 0.9},  # Low similarity
+            {"text": "cat is cute", "created_at": now, "importance": 0.5},  # High similarity
+            {"text": "bird can fly", "created_at": now, "importance": 0.8},  # No similarity
+        ]
+
+        # Act
+        result = scorer.score_facts(query, facts)
+
+        # Assert - should be sorted by relevance descending
+        assert len(result) == 3
+        assert result[0]["text"] == "cat is cute"  # Best match
+        assert result[0]["relevance_score"] > result[1]["relevance_score"]
+        assert result[1]["relevance_score"] > result[2]["relevance_score"]

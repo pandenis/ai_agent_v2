@@ -19,6 +19,7 @@ Note:
 """
 
 from datetime import datetime
+from typing import List, Dict, Any
 
 
 class RelevanceScorer:
@@ -97,3 +98,34 @@ class RelevanceScorer:
             self.WEIGHT_RECENCY * recency +
             self.WEIGHT_IMPORTANCE * importance
         )
+
+    def score_facts(
+        self,
+        query: str,
+        facts: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Score and sort facts by relevance.
+
+        Args:
+            query: Search query string
+            facts: List of fact dicts with 'text', 'created_at', 'importance'
+
+        Returns:
+            Facts with 'relevance_score' added, sorted descending
+        """
+        scored_facts = []
+
+        for fact in facts:
+            relevance = self.calculate_relevance(
+                query=query,
+                fact_text=fact["text"],
+                created_at=fact["created_at"],
+                importance=fact["importance"]
+            )
+            scored_fact = {**fact, "relevance_score": relevance}
+            scored_facts.append(scored_fact)
+
+        # Sort by relevance descending
+        scored_facts.sort(key=lambda f: f["relevance_score"], reverse=True)
+
+        return scored_facts
