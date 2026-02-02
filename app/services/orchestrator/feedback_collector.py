@@ -1,4 +1,4 @@
-"""
+"""discovered
 FeedbackCollector - Collects and analyzes user feedback on responses.
 
 Features:

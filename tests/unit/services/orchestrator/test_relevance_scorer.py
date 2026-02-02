@@ -305,3 +305,19 @@ class TestMemoryAccessTiers:
         # Assert - direct is most restrictive, deep is least
         assert direct["min_score"] > enhanced["min_score"]
         assert enhanced["min_score"] > deep["min_score"]
+
+
+class TestTokenBudget:
+    """Tests for token budget accounting"""
+
+    def test_estimate_tokens_simple(self):
+        """Test: Token estimation approximates word count * 1.3"""
+        # Arrange
+        scorer = RelevanceScorer()
+        text = "The cat sat on the mat"  # 6 words
+
+        # Act
+        tokens = scorer.estimate_tokens(text)
+
+        # Assert - approximately 6 * 1.3 = 7.8, rounded to 8
+        assert tokens == 8

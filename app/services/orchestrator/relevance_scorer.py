@@ -172,3 +172,17 @@ class RelevanceScorer:
             strategy,
             self.MEMORY_ACCESS_TIERS["enhanced"]  # Default fallback
         )
+
+    def estimate_tokens(self, text: str) -> int:
+        """Estimate token count from text.
+
+        Uses approximation: tokens ≈ words * 1.3
+
+        Args:
+            text: Text to estimate tokens for
+
+        Returns:
+            Estimated token count (rounded)
+        """
+        word_count = len(text.split())
+        return round(word_count * 1.3)
