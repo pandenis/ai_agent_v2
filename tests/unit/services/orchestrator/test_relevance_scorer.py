@@ -359,3 +359,22 @@ class TestTokenBudget:
 
         # Assert
         assert len(result) == 0
+
+    def test_select_facts_large_budget_returns_all(self):
+        """Test: Large budget should return all facts"""
+        # Arrange
+        scorer = RelevanceScorer()
+        query = "cat"
+        now = datetime.utcnow()
+
+        facts = [
+            {"text": "cat is cute", "created_at": now, "importance": 0.8},
+            {"text": "cat sleeps", "created_at": now, "importance": 0.6},
+            {"text": "cat food", "created_at": now, "importance": 0.5},
+        ]
+
+        # Act - huge budget
+        result = scorer.select_facts_within_budget(query, facts, max_tokens=10000)
+
+        # Assert - all facts returned
+        assert len(result) == 3
