@@ -378,3 +378,23 @@ class TestTokenBudget:
 
         # Assert - all facts returned
         assert len(result) == 3
+
+    def test_select_facts_prioritizes_highest_relevance(self):
+        """Test: Should select highest relevance facts first when budget limited"""
+        # Arrange
+        scorer = RelevanceScorer()
+        query = "cat"
+        now = datetime.utcnow()
+
+        facts = [
+            {"text": "dog is friendly", "created_at": now, "importance": 0.9},  # Low relevance (no cat)
+            {"text": "cat is cute", "created_at": now, "importance": 0.5},  # High relevance
+            {"text": "bird can fly", "created_at": now, "importance": 0.8},  # No relevance
+        ]
+
+        # Act - budget fits only one fact
+        result = scorer.select_facts_within_budget(query, facts, max_tokens=5)
+
+        # Assert - should pick "cat is cute" (highest relevance) not "dog" (highest importance)
+        assert len(result) == 1
+        assert result[0]["text"] == "cat is cute"
