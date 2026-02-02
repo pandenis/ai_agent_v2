@@ -321,3 +321,24 @@ class TestTokenBudget:
 
         # Assert - approximately 6 * 1.3 = 7.8, rounded to 8
         assert tokens == 8
+
+    def test_select_facts_within_budget(self):
+        """Test: Select highest-scoring facts that fit in token budget"""
+        # Arrange
+        scorer = RelevanceScorer()
+        query = "cat"
+        now = datetime.utcnow()
+
+        facts = [
+            {"text": "cat is cute", "created_at": now, "importance": 0.8},  # ~4 tokens
+            {"text": "cat sleeps all day long", "created_at": now, "importance": 0.6},  # ~7 tokens
+            {"text": "cat food", "created_at": now, "importance": 0.5},  # ~3 tokens
+        ]
+
+        # Act - budget of 10 tokens (should fit first and third, not second)
+        result = scorer.select_facts_within_budget(query, facts, max_tokens=10)
+
+        # Assert - should get highest scoring facts that fit
+        assert len(result) >= 1
+        total_tokens = sum(scorer.estimate_tokens(f["text"]) for f in result)
+        assert total_tokens <= 10

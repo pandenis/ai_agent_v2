@@ -186,3 +186,34 @@ class RelevanceScorer:
         """
         word_count = len(text.split())
         return round(word_count * 1.3)
+
+    def select_facts_within_budget(
+            self,
+            query: str,
+            facts: List[Dict[str, Any]],
+            max_tokens: int = 2000
+    ) -> List[Dict[str, Any]]:
+        """Select highest-scoring facts that fit within token budget.
+
+        Args:
+            query: Search query string
+            facts: List of fact dicts with 'text', 'created_at', 'importance'
+            max_tokens: Maximum tokens allowed for context
+
+        Returns:
+            Facts that fit within budget, sorted by relevance
+        """
+        # Score and sort facts by relevance
+        scored_facts = self.score_facts(query, facts)
+
+        # Greedily select facts until budget exhausted
+        selected = []
+        used_tokens = 0
+
+        for fact in scored_facts:
+            fact_tokens = self.estimate_tokens(fact["text"])
+            if used_tokens + fact_tokens <= max_tokens:
+                selected.append(fact)
+                used_tokens += fact_tokens
+
+        return selected
