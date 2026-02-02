@@ -342,3 +342,20 @@ class TestTokenBudget:
         assert len(result) >= 1
         total_tokens = sum(scorer.estimate_tokens(f["text"]) for f in result)
         assert total_tokens <= 10
+
+    def test_select_facts_empty_budget_returns_empty(self):
+        """Test: Zero budget should return empty list"""
+        # Arrange
+        scorer = RelevanceScorer()
+        query = "cat"
+        now = datetime.utcnow()
+
+        facts = [
+            {"text": "cat is cute", "created_at": now, "importance": 0.8},
+        ]
+
+        # Act - zero budget
+        result = scorer.select_facts_within_budget(query, facts, max_tokens=0)
+
+        # Assert
+        assert len(result) == 0
