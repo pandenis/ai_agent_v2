@@ -84,3 +84,30 @@ class TestRelevanceScorerIntegration:
         # Assert - should pick "cat is cute" (highest relevance score)
         assert len(result) == 1
         assert "cat" in result[0]["text"]
+
+    def test_full_retrieval_gating_flow(self):
+        """Test: Complete flow - tier access → score → filter → budget"""
+        # Arrange
+        scorer = RelevanceScorer()
+        query = "weather today"
+        now = datetime.utcnow()
+
+        facts = [
+            {"text": "weather is sunny today", "created_at": now, "importance": 0.7},
+            {"text": "today is Monday", "created_at": now, "importance": 0.5},
+            {"text": "user likes coffee", "created_at": now, "importance": 0.8},
+            {"text": "weather forecast rain", "created_at": now, "importance": 0.6},
+        ]
+
+        # Act - full flow for enhanced strategy
+        access = scorer.get_memory_access("enhanced")
+        scored = scorer.score_and_filter(query, facts, min_score=access["min_score"])
+        final = scorer.select_facts_within_budget(query, scored, max_tokens=50)
+
+        # Assert
+        assert len(final) >= 1
+        # All results should have relevance scores
+        assert all("relevance_score" in f for f in final)
+        # Results should be sorted by relevance
+        for i in range(len(final) - 1):
+            assert final[i]["relevance_score"] >= final[i + 1]["relevance_score"]
