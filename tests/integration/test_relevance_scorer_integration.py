@@ -63,3 +63,24 @@ class TestRelevanceScorerIntegration:
         # Assert - deep_reasoning should return more facts (lower threshold)
         assert len(deep_results) >= len(direct_results)
         assert direct_access["min_score"] > deep_access["min_score"]
+
+    def test_token_budget_respects_relevance_order(self):
+        """Test: Token budget selects highest relevance facts first"""
+        # Arrange
+        scorer = RelevanceScorer()
+        query = "cat"
+        now = datetime.utcnow()
+        old_date = now - timedelta(days=60)  # Lower recency score
+
+        facts = [
+            {"text": "dog is a pet", "created_at": now, "importance": 0.9},  # No match, high importance
+            {"text": "cat is cute", "created_at": now, "importance": 0.5},  # Match, low importance
+            {"text": "old cat fact", "created_at": old_date, "importance": 0.8},  # Match, old
+        ]
+
+        # Act - small budget, only 1 fact fits
+        result = scorer.select_facts_within_budget(query, facts, max_tokens=5)
+
+        # Assert - should pick "cat is cute" (highest relevance score)
+        assert len(result) == 1
+        assert "cat" in result[0]["text"]
