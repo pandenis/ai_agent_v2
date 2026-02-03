@@ -39,3 +39,27 @@ class TestRelevanceScorerIntegration:
         # Assert - only cat-related facts should pass
         assert len(filtered) >= 1
         assert filtered[0]["text"] == "cat name is Whiskers"  # Best match first
+
+    def test_different_tiers_return_different_results(self):
+        """Test: direct tier is more restrictive than deep_reasoning"""
+        # Arrange
+        scorer = RelevanceScorer()
+        query = "cat"
+        now = datetime.utcnow()
+
+        facts = [
+            {"text": "cat is cute", "created_at": now, "importance": 0.8},  # High relevance
+            {"text": "my cat sleeps", "created_at": now, "importance": 0.5},  # Medium relevance
+            {"text": "pets are nice", "created_at": now, "importance": 0.6},  # Low relevance
+        ]
+
+        # Act - compare tiers
+        direct_access = scorer.get_memory_access("direct")
+        deep_access = scorer.get_memory_access("deep_reasoning")
+
+        direct_results = scorer.score_and_filter(query, facts, min_score=direct_access["min_score"])
+        deep_results = scorer.score_and_filter(query, facts, min_score=deep_access["min_score"])
+
+        # Assert - deep_reasoning should return more facts (lower threshold)
+        assert len(deep_results) >= len(direct_results)
+        assert direct_access["min_score"] > deep_access["min_score"]
