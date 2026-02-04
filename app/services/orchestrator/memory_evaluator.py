@@ -12,6 +12,7 @@ Features:
   * 0.5: 1 fact found (low coverage)
   * 0.7: 2-4 facts found (medium coverage)
   * 0.9: 5+ facts found (high coverage)
+- Relevance scoring with RelevanceScorer (v2.1)
 - Identify information gaps (topics not covered by memory)
 - Dependency injection support for testing
 - Graceful error handling (returns 0 coverage on failures)
@@ -30,8 +31,10 @@ Testing:
     >>> evaluator = MemoryEvaluator(memory_service=mock_service)
 """
 from dataclasses import dataclass
+from datetime import datetime
 from typing import List, Optional
 from app.services.memory_service import MemoryService
+from app.services.orchestrator.relevance_scorer import RelevanceScorer
 
 
 @dataclass
@@ -46,15 +49,20 @@ class MemoryEvaluation:
 class MemoryEvaluator:
     """Evaluates memory coverage for queries"""
 
-    def __init__(self, memory_service=None):
-        """Initialize with optional MemoryService (for testing)"""
+    def __init__(self, memory_service=None, relevance_scorer=None):
+        """Initialize with optional MemoryService and RelevanceScorer (for testing)"""
         self.memory_service = memory_service
+        self.relevance_scorer = relevance_scorer or RelevanceScorer()
 
     async def evaluate(self, query_analysis, session_id: str) -> MemoryEvaluation:
         """Evaluate memory coverage for a query"""
+        # Build search query from topics and entities
+        search_terms = query_analysis.topics + query_analysis.entities
+        search_query = " ".join(search_terms[:3]) if search_terms else ""
+
         # Search for relevant facts
         relevant_facts = await self._search_relevant_facts(
-            query_analysis, session_id
+            query_analysis, session_id, search_query
         )
 
         # Calculate coverage score
@@ -75,7 +83,7 @@ class MemoryEvaluator:
             confidence=evaluation_confidence
         )
 
-    async def _search_relevant_facts(self, query_analysis, session_id: str) -> List[dict]:
+    async def _search_relevant_facts(self, query_analysis, session_id: str, search_query: str) -> List[dict]:
         """Search memory for facts related to query"""
         # If no memory service provided (tests), return empty
         if not self.memory_service:
@@ -87,9 +95,6 @@ class MemoryEvaluator:
         if not search_terms:
             return []
 
-        # Use first topic/entity as search query
-        search_query = " ".join(search_terms[:3])  # Top 3 terms
-
         try:
             facts = await self.memory_service.search_facts(
                 query=search_query,
@@ -98,25 +103,46 @@ class MemoryEvaluator:
             )
 
             # Convert SQLAlchemy models to dicts for consistent handling
-            result = []
+            raw_facts = []
             for fact in facts:
                 if hasattr(fact, 'text'):
                     # SQLAlchemy model - convert to dict
-                    result.append({
+                    raw_facts.append({
                         'text': fact.text,
                         'importance': getattr(fact, 'importance', 0.5),
                         'confidence': getattr(fact, 'confidence', 0.8),
                         'tags': getattr(fact, 'tags', []),
+                        'created_at': getattr(fact, 'created_at', datetime.utcnow()),
                     })
                 elif isinstance(fact, dict):
-                    # Already a dict
-                    result.append(fact)
-            return result
+                    # Already a dict - ensure created_at exists
+                    if 'created_at' not in fact:
+                        fact['created_at'] = datetime.utcnow()
+                    raw_facts.append(fact)
+
+            # Score facts with RelevanceScorer
+            scored_facts = self._score_and_filter_facts(search_query, raw_facts)
+
+            return scored_facts
         except Exception as e:
             # Log and return empty on failure
             import logging
             logging.getLogger(__name__).warning(f"Memory search failed: {e}")
             return []
+
+    def _score_and_filter_facts(self, query: str, facts: List[dict]) -> List[dict]:
+        """Score and filter facts using RelevanceScorer"""
+        if not facts:
+            return []
+
+        # Use default min_score of 0.3 (deep_reasoning level - most inclusive)
+        scored_facts = self.relevance_scorer.score_and_filter(
+            query=query,
+            facts=facts,
+            min_score=0.3
+        )
+
+        return scored_facts
 
     def _calculate_coverage(self, query_analysis, relevant_facts: List[dict]) -> float:
         """Calculate how well memory covers the query (0-1)
