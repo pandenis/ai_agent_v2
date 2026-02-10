@@ -700,9 +700,19 @@ async def test_enhanced_answer_uses_sorted_context(
     async def capture_process(prompt):
         nonlocal captured_prompt
         captured_prompt = prompt
-        return "AI response based on context"
+        return {"response": "AI response based on context", "status": "success"}
 
     mock_agent.generate = capture_process
+
+    # Force enhanced strategy (real DecisionEngine would route to "direct")
+    forced_strategy = ResponseStrategy(
+        strategy="enhanced",
+        agent="mistral",
+        use_memory=True,
+        estimated_time=3.0,
+        estimated_cost=0.001
+    )
+    orchestrator.decision_engine.decide = MagicMock(return_value=forced_strategy)
 
     # Execute
     result = await orchestrator.process_query(
