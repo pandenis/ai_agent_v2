@@ -3,7 +3,6 @@
  */
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import type { Strategy } from '@/types/api';
 import type { Strategy, QueryAnalysis } from '@/types/api';
 
 // UUID fallback for browsers without crypto.randomUUID
