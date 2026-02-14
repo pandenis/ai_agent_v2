@@ -585,3 +585,246 @@ class TestMemoryMap:
         assert "Tokyo" in result or "sushi" in result
         if "economics" in result:
             assert result.index("Japan") < result.index("economics")
+
+    def test_build_context_for_query_emits_retrieval_log(self):
+        # Arrange
+        memory_map = MemoryMap()
+        n1 = MemoryNode(id="n1", content="User lives in Madrid", node_type="fact", importance=0.9)
+        n2 = MemoryNode(id="n2", content="User speaks Spanish", node_type="fact", importance=0.8)
+        n3 = MemoryNode(id="n3", content="User has a cat", node_type="fact", importance=0.5)
+        for node in [n1, n2, n3]:
+            memory_map.add_node(node)
+        memory_map.add_edge(MemoryEdge(source_id="n1", target_id="n2", edge_type="related_to", weight=0.8))
+
+        # Act
+        memory_map.build_context_for_query("Where does user live?", token_budget=500)
+
+        # Assert
+        log = memory_map.last_retrieval_log
+        assert log is not None
+        assert log.query == "Where does user live?"
+        assert log.nodes_scored == 3
+        assert log.nodes_returned >= 1
+        assert log.token_budget == 500
+        assert log.elapsed_ms >= 0
+
+    def test_build_context_for_query_logs_dropped_nodes(self):
+        # Arrange
+        memory_map = MemoryMap()
+        now = datetime.utcnow()
+        for i in range(1, 6):
+            node = MemoryNode(
+                id=f"n{i}",
+                content="x" * 200,
+                node_type="fact",
+                importance=1.0 - (i * 0.1),
+                last_accessed=now,
+            )
+            memory_map.add_node(node)
+        for i in range(2, 6):
+            memory_map.add_edge(MemoryEdge(source_id="n1", target_id=f"n{i}", edge_type="related_to", weight=1.0 - (i * 0.1)))
+
+        # Act
+        memory_map.build_context_for_query("test query", token_budget=50)
+
+        # Assert
+        log = memory_map.last_retrieval_log
+        assert log.nodes_dropped > 0
+        assert len(log.dropped_node_ids) == log.nodes_dropped
+        assert log.nodes_returned + log.nodes_dropped == log.nodes_scored
+
+    def test_build_context_for_query_log_on_empty_map(self):
+        # Arrange
+        memory_map = MemoryMap()
+
+        # Act
+        memory_map.build_context_for_query("anything", token_budget=500)
+
+        # Assert
+        log = memory_map.last_retrieval_log
+        assert log.nodes_scored == 0
+        assert log.nodes_returned == 0
+        assert log.nodes_dropped == 0
+
+    def test_retrieval_history_accumulates(self):
+        # Arrange
+        memory_map = MemoryMap()
+        n1 = MemoryNode(id="n1", content="User lives in Oslo", node_type="fact", importance=0.9)
+        n2 = MemoryNode(id="n2", content="User likes skiing", node_type="preference", importance=0.7)
+        memory_map.add_node(n1)
+        memory_map.add_node(n2)
+        memory_map.add_edge(MemoryEdge(source_id="n1", target_id="n2", edge_type="related_to", weight=0.7))
+
+        # Act
+        memory_map.build_context_for_query("Where does user live?", token_budget=500)
+        memory_map.build_context_for_query("What are user hobbies?", token_budget=500)
+        memory_map.build_context_for_query("Tell me about the user", token_budget=500)
+
+        # Assert
+        assert len(memory_map.retrieval_history) == 3
+        assert memory_map.retrieval_history[0].query == "Where does user live?"
+        assert memory_map.retrieval_history[2].query == "Tell me about the user"
+
+    def test_get_retrieval_history_returns_last_n(self):
+        # Arrange
+        memory_map = MemoryMap()
+        n1 = MemoryNode(id="n1", content="User is an engineer", node_type="fact", importance=0.8)
+        memory_map.add_node(n1)
+        for i in range(1, 6):
+            memory_map.build_context_for_query(f"query {i}", token_budget=500)
+
+        # Act
+        result = memory_map.get_retrieval_history(last_n=2)
+
+        # Assert
+        assert len(result) == 2
+        assert result[0].query == "query 4"
+        assert result[1].query == "query 5"
+
+    def test_get_retrieval_history_default_returns_all(self):
+        # Arrange
+        memory_map = MemoryMap()
+        n1 = MemoryNode(id="n1", content="User speaks Portuguese", node_type="fact", importance=0.6)
+        memory_map.add_node(n1)
+        for i in range(3):
+            memory_map.build_context_for_query(f"query {i}", token_budget=500)
+
+        # Act
+        result = memory_map.get_retrieval_history()
+
+        # Assert
+        assert len(result) == 3
+
+    def test_get_retrieval_history_empty(self):
+        # Arrange
+        memory_map = MemoryMap()
+
+        # Act
+        result = memory_map.get_retrieval_history()
+
+        # Assert
+        assert result == []
+
+    def test_get_retrieval_history_last_n_exceeds_history(self):
+        # Arrange
+        memory_map = MemoryMap()
+        n1 = MemoryNode(id="n1", content="User likes tea", node_type="preference", importance=0.5)
+        memory_map.add_node(n1)
+        memory_map.build_context_for_query("query 1", token_budget=500)
+        memory_map.build_context_for_query("query 2", token_budget=500)
+
+        # Act
+        result = memory_map.get_retrieval_history(last_n=10)
+
+        # Assert
+        assert len(result) == 2
+
+    def test_last_retrieval_log_matches_history_tail(self):
+        # Arrange
+        memory_map = MemoryMap()
+        n1 = MemoryNode(id="n1", content="User works remotely", node_type="fact", importance=0.7)
+        memory_map.add_node(n1)
+
+        # Act
+        memory_map.build_context_for_query("remote work?", token_budget=500)
+
+        # Assert
+        assert memory_map.last_retrieval_log is memory_map.retrieval_history[-1]
+
+    def test_add_node_logs_write(self):
+        # Arrange
+        memory_map = MemoryMap()
+
+        # Act
+        memory_map.add_node(MemoryNode(id="n1", content="User lives in Cairo", node_type="fact"))
+
+        # Assert
+        assert len(memory_map.write_history) == 1
+        assert memory_map.write_history[0].operation == "add_node"
+        assert memory_map.write_history[0].node_id == "n1"
+        assert memory_map.write_history[0].success is True
+        assert memory_map.write_history[0].dedup_detected is False
+
+    def test_add_edge_logs_write(self):
+        # Arrange
+        memory_map = MemoryMap()
+        memory_map.add_node(MemoryNode(id="n1", content="Node one", node_type="fact"))
+        memory_map.add_node(MemoryNode(id="n2", content="Node two", node_type="fact"))
+
+        # Act
+        memory_map.add_edge(MemoryEdge(source_id="n1", target_id="n2", edge_type="related_to", weight=0.8))
+
+        # Assert
+        edge_logs = [l for l in memory_map.write_history if l.operation == "add_edge"]
+        assert len(edge_logs) == 1
+        assert edge_logs[0].node_id == "n1"
+        assert edge_logs[0].target_id == "n2"
+        assert edge_logs[0].edge_type == "related_to"
+        assert edge_logs[0].success is True
+
+    def test_remove_node_logs_write(self):
+        # Arrange
+        memory_map = MemoryMap()
+        memory_map.add_node(MemoryNode(id="n1", content="Node one", node_type="fact"))
+
+        # Act
+        memory_map.remove_node("n1")
+
+        # Assert
+        remove_logs = [l for l in memory_map.write_history if l.operation == "remove_node"]
+        assert len(remove_logs) == 1
+        assert remove_logs[0].node_id == "n1"
+        assert remove_logs[0].success is True
+
+    def test_add_duplicate_node_logs_dedup(self):
+        # Arrange
+        memory_map = MemoryMap()
+        memory_map.add_node(MemoryNode(id="n1", content="User lives in Cairo", node_type="fact"))
+
+        # Act
+        memory_map.add_node(MemoryNode(id="n1", content="User lives in Cairo updated", node_type="fact"))
+
+        # Assert
+        assert len(memory_map.write_history) == 2
+        assert memory_map.write_history[1].dedup_detected is True
+        assert memory_map.write_history[1].success is False
+        assert memory_map.get_node("n1").content == "User lives in Cairo"
+
+    def test_get_write_history_returns_last_n(self):
+        # Arrange
+        memory_map = MemoryMap()
+        for i in range(1, 5):
+            memory_map.add_node(MemoryNode(id=f"n{i}", content=f"Node {i}", node_type="fact"))
+
+        # Act
+        result = memory_map.get_write_history(last_n=2)
+
+        # Assert
+        assert len(result) == 2
+        assert result[0].node_id == "n3"
+        assert result[1].node_id == "n4"
+
+    def test_get_write_history_empty(self):
+        # Arrange
+        memory_map = MemoryMap()
+
+        # Act
+        result = memory_map.get_write_history()
+
+        # Assert
+        assert result == []
+
+    def test_memory_map_metrics_wired_to_operations(self):
+        # Arrange
+        memory_map = MemoryMap()
+        memory_map.add_node(MemoryNode(id="n1", content="Node one", node_type="fact"))
+        memory_map.add_node(MemoryNode(id="n2", content="Node two", node_type="fact"))
+        memory_map.add_edge(MemoryEdge(source_id="n1", target_id="n2", edge_type="related_to"))
+
+        # Act
+        memory_map.build_context_for_query("test query", 500)
+
+        # Assert
+        assert memory_map.metrics.total_writes == 3
+        assert memory_map.metrics.total_retrievals == 1
+        assert memory_map.metrics.total_nodes_scored >= 1

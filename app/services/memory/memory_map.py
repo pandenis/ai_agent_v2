@@ -1,9 +1,15 @@
+import logging
+import time
 from collections import deque
 from datetime import datetime
 from typing import Dict, List, Optional, Set, Tuple
 
 from app.services.memory.memory_edge import MemoryEdge
+from app.services.memory.memory_log import MemoryRetrievalLog, MemoryWriteLog
+from app.services.memory.memory_metrics import MemoryMetrics
 from app.services.memory.memory_node import MemoryNode
+
+logger = logging.getLogger(__name__)
 
 _STOPWORDS = frozenset({
     "the", "a", "an", "is", "are", "was", "were", "what", "where", "who",
@@ -19,10 +25,31 @@ class MemoryMap:
         """Initialize an empty memory map."""
         self.nodes: Dict[str, MemoryNode] = {}
         self.edges: List[MemoryEdge] = []
+        self.last_retrieval_log: Optional[MemoryRetrievalLog] = None
+        self.retrieval_history: List[MemoryRetrievalLog] = []
+        self.write_history: List[MemoryWriteLog] = []
+        self.metrics = MemoryMetrics()
 
     def add_node(self, node: MemoryNode) -> None:
-        """Add a memory node to the map, indexed by its id."""
+        """Add a memory node to the map, indexed by its id.
+
+        If a node with the same id already exists, the add is rejected and
+        a dedup warning is logged.
+        """
+        if node.id in self.nodes:
+            log = MemoryWriteLog(
+                operation="add_node", node_id=node.id,
+                dedup_detected=True, success=False, reason="duplicate node ID",
+            )
+            self.write_history.append(log)
+            self.metrics.record_write(log)
+            logger.warning(f"Memory write rejected: {log}")
+            return
         self.nodes[node.id] = node
+        log = MemoryWriteLog(operation="add_node", node_id=node.id, success=True)
+        self.write_history.append(log)
+        self.metrics.record_write(log)
+        logger.info(f"Memory write: {log}")
 
     def add_edge(self, edge: MemoryEdge) -> None:
         """Add a directed edge between two existing nodes.
@@ -34,6 +61,13 @@ class MemoryMap:
         if edge.target_id not in self.nodes:
             raise ValueError(f"Target node '{edge.target_id}' not found")
         self.edges.append(edge)
+        log = MemoryWriteLog(
+            operation="add_edge", node_id=edge.source_id,
+            target_id=edge.target_id, edge_type=edge.edge_type, success=True,
+        )
+        self.write_history.append(log)
+        self.metrics.record_write(log)
+        logger.info(f"Memory write: {log}")
 
     def get_node(self, node_id: str) -> Optional[MemoryNode]:
         """Return the node with the given id, or None if not found."""
@@ -69,9 +103,25 @@ class MemoryMap:
             edge for edge in self.edges
             if edge.source_id != node_id and edge.target_id != node_id
         ]
+        log = MemoryWriteLog(operation="remove_node", node_id=node_id, success=True)
+        self.write_history.append(log)
+        self.metrics.record_write(log)
+        logger.info(f"Memory write: {log}")
 
     def __repr__(self) -> str:
         return f"MemoryMap({self.node_count} nodes, {self.edge_count} edges)"
+
+    def get_retrieval_history(self, last_n: Optional[int] = None) -> List[MemoryRetrievalLog]:
+        """Return retrieval history, optionally limited to the last N entries."""
+        if last_n is None:
+            return list(self.retrieval_history)
+        return self.retrieval_history[-last_n:]
+
+    def get_write_history(self, last_n: Optional[int] = None) -> List[MemoryWriteLog]:
+        """Return write history, optionally limited to the last N entries."""
+        if last_n is None:
+            return list(self.write_history)
+        return self.write_history[-last_n:]
 
     def build_local_slice(self, start_node_id: str, token_budget: int) -> 'MemoryMap':
         """Extract a subgraph around start_node_id within a token budget.
@@ -170,8 +220,19 @@ class MemoryMap:
 
         Scoring: 0.5 * (keyword_match_ratio) + 0.5 * node.calculate_weight()
         Accessed nodes get their access_count incremented and last_accessed updated.
+        Emits a MemoryRetrievalLog stored in self.last_retrieval_log.
         """
+        start_time = time.time()
+
         if not self.nodes:
+            self.last_retrieval_log = MemoryRetrievalLog(
+                query=query, nodes_scored=0, nodes_returned=0, nodes_dropped=0,
+                dropped_node_ids=[], top_scores=[], token_budget=token_budget,
+                tokens_used=0, elapsed_ms=(time.time() - start_time) * 1000,
+            )
+            self.retrieval_history.append(self.last_retrieval_log)
+            self.metrics.record_retrieval(self.last_retrieval_log)
+            logger.info(f"Memory retrieval: {self.last_retrieval_log}")
             return ""
 
         query_lower = query.lower()
@@ -190,6 +251,7 @@ class MemoryMap:
             scored.append((node, combined))
 
         scored.sort(key=lambda item: item[1], reverse=True)
+        nodes_scored = len(scored)
 
         # Pick seed nodes: top 3 with combined > 0, or fallback to top 3 by weight
         seeds = [node for node, score in scored[:3] if score > 0]
@@ -210,14 +272,36 @@ class MemoryMap:
             extra_slice = self.build_local_slice(seed.id, token_budget)
             for node in extra_slice.nodes.values():
                 if node.id not in merged.nodes:
-                    token_cost = len(node.content) // 4
                     merged.add_node(node)
             for edge in extra_slice.edges:
                 if edge.source_id in merged.nodes and edge.target_id in merged.nodes:
                     if edge not in merged.edges:
                         merged.edges.append(edge)
 
-        return merged.to_prompt_context(max_tokens=token_budget)
+        result = merged.to_prompt_context(max_tokens=token_budget)
+
+        # Build retrieval log
+        returned_ids: Set[str] = set(merged.nodes.keys())
+        all_scored_ids = {node.id for node, _ in scored}
+        dropped_ids = sorted(all_scored_ids - returned_ids)
+        top_scores = [(node.id, score) for node, score in scored if node.id in returned_ids]
+
+        self.last_retrieval_log = MemoryRetrievalLog(
+            query=query,
+            nodes_scored=nodes_scored,
+            nodes_returned=len(returned_ids),
+            nodes_dropped=len(dropped_ids),
+            dropped_node_ids=dropped_ids,
+            top_scores=top_scores,
+            token_budget=token_budget,
+            tokens_used=len(result) // 4,
+            elapsed_ms=(time.time() - start_time) * 1000,
+        )
+        self.retrieval_history.append(self.last_retrieval_log)
+        self.metrics.record_retrieval(self.last_retrieval_log)
+        logger.info(f"Memory retrieval: {self.last_retrieval_log}")
+
+        return result
 
     def find_related(self, node_id: str, max_results: Optional[int] = None) -> List[Tuple[MemoryNode, float]]:
         """Find nodes connected to node_id via any edge direction, sorted by weight descending.

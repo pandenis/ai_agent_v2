@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
+from app.api.debug_routes import debug_router
 from app.api.routes import router
 from app.core.config import settings
 from app.core.database import init_db
@@ -46,6 +47,7 @@ app.add_middleware(
 
 # Include routes
 app.include_router(router, prefix="/api/v1", tags=["api"])
+app.include_router(debug_router, prefix="/api/v1", tags=["debug"])
 
 
 @app.get("/")
