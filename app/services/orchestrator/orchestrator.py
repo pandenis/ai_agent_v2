@@ -9,9 +9,12 @@ This is the "brain" that coordinates:
 5. Memory Update - saves new facts
 """
 
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, TYPE_CHECKING
 import time
 import logging
+
+if TYPE_CHECKING:
+    from app.services.memory.memory_map import MemoryMap
 
 # These will import the components we already built
 from app.services.orchestrator.query_analyzer import QueryAnalyzer, QueryAnalysis
@@ -45,7 +48,8 @@ class IntelligentOrchestrator:
             fact_extractor=None,  # Extracts facts from conversations
             web_search_service=None,  # Web search for external info
             response_cache=None,  # Cache for responses
-            ab_testing_service=None  # A/B testing service
+            ab_testing_service=None,  # A/B testing service
+            memory_map: Optional['MemoryMap'] = None  # Graph-based memory map
     ):
         """
         Initialize the orchestrator with required services.
@@ -63,6 +67,7 @@ class IntelligentOrchestrator:
         self.web_search_service = web_search_service
         self.response_cache = response_cache or ResponseCache()
         self.ab_testing_service = ab_testing_service
+        self.memory_map = memory_map
 
         # Create instances of our components
         self.query_analyzer = QueryAnalyzer()
@@ -384,8 +389,8 @@ class IntelligentOrchestrator:
         This is BALANCED - uses AI but with memory context to be more relevant.
         Uses ResponseFormatter to format the response with context.
         """
-        # Build context from memory (sorted by importance)
-        context = self._build_context(memory_facts, max_facts=5)
+        # Build context from memory (graph-enriched if available, else sorted by importance)
+        context = self._build_context_with_map(query, memory_facts, token_budget=500)
 
         # Create enhanced prompt
         enhanced_prompt = f"""Context from previous conversations:
@@ -453,7 +458,7 @@ class IntelligentOrchestrator:
         context_parts = []
         # Add memory context (sorted by importance)
         if memory_eval.relevant_facts:
-            facts_text = self._build_context(memory_eval.relevant_facts, max_facts=10)
+            facts_text = self._build_context_with_map(query, memory_eval.relevant_facts, token_budget=500)
             context_parts.append(f"Known information:\n{facts_text}")
 
         # Add information gaps
@@ -525,6 +530,22 @@ class IntelligentOrchestrator:
 
             # Fallback to default agent
         return self.agent_factory.create_agent("mistral")
+
+    def _build_context_with_map(self, query: str, facts: List[Dict[str, Any]], token_budget: int = 500) -> str:
+        """Build context using the graph-based MemoryMap when available, with fallback.
+
+        Attempts to use self.memory_map.build_context_for_query() for richer,
+        graph-enriched context. Falls back to self._build_context() if the
+        memory map is unavailable, empty, or raises an error.
+        """
+        if self.memory_map is not None:
+            try:
+                result = self.memory_map.build_context_for_query(query, token_budget)
+                if result:
+                    return result
+            except Exception:
+                logger.warning("MemoryMap context retrieval failed, falling back to flat facts", exc_info=True)
+        return self._build_context(facts, max_facts=max(token_budget // 50, 1))
 
     def _build_context(self, facts: List[Dict[str, Any]], max_facts: int = 5) -> str:
         """
