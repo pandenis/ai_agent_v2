@@ -180,7 +180,7 @@ MISTRAL_CONFIG = OllamaAgentConfig(
     name="Mistral",
     description="Fast, instruction-following general purpose model",
     base_url="http://localhost:11434",
-    model_name="mistral:7b-instruct",
+    model_name="mistral:latest",
     capabilities=[
         AgentCapability("general_chat", 0.9, "Excellent for general conversation"),
         AgentCapability("document_analysis", 0.7, "Good at document understanding"),
@@ -212,7 +212,7 @@ LLAMA3_CONFIG = OllamaAgentConfig(
     name="Llama3",
     description="Balanced model with strong reasoning capabilities",
     base_url="http://localhost:11434",
-    model_name="llama3:8b",
+    model_name="llama3.1:8b-instruct-q4_k_m",
     capabilities=[
         AgentCapability("general_chat", 0.85, "Strong general conversation"),
         AgentCapability("document_analysis", 0.85, "Excellent document understanding"),
@@ -249,7 +249,7 @@ MEDICAL_CONFIG = OllamaAgentConfig(
     name="Medical",
     description="Specialized medical AI with health knowledge (educational only)",
     base_url="http://localhost:11434",
-    model_name="medllama2",
+    model_name="thewindmom/llama3-med42-8b:latest",
     capabilities=[
         AgentCapability("medical_query", 1.0, "Specialized medical knowledge"),
         AgentCapability("general_chat", 0.5, "Limited general conversation"),

@@ -105,7 +105,7 @@ def mock_agent_response():
         "status": "success",
         "response": "This is a mocked AI response for testing purposes.",
         "agent_name": "mistral",
-        "model": "mistral:7b-instruct",
+        "model": "mistral:latest",
         "tokens": 25
     }
 

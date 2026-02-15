@@ -78,7 +78,7 @@ async def test_ollama_agent_health_check():
     with patch.object(agent.client, "get") as mock_get:
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {"models": [{"name": "mistral:7b-instruct"}]}
+        mock_response.json.return_value = {"models": [{"name": "mistral:latest"}]}
         mock_get.return_value = mock_response
 
         is_healthy = await agent.health_check()
