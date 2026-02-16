@@ -30,6 +30,7 @@ Task 4.3 - tier-based access:
 
 import pytest
 from datetime import datetime, timedelta
+from unittest.mock import patch
 from app.services.orchestrator.relevance_scorer import RelevanceScorer
 
 
@@ -59,20 +60,19 @@ class TestTextSimilarity:
         assert result == 0.0
 
     def test_text_similarity_partial_overlap_returns_ratio(self):
-        """Test: Partial word overlap returns Jaccard ratio"""
+        """Test: Partial word overlap returns intermediate score.
+
+        Note: TF-IDF cosine similarity replaced Jaccard (was exactly 0.2).
+        TF-IDF yields ~0.20 for this pair; we assert a reasonable range.
+        """
         # Arrange
         scorer = RelevanceScorer()
 
-        # Act - "cats" is shared, 4 unique words total
-        # query: {i, love, cats} = 3 words
-        # text: {cats, are, great} = 3 words
-        # intersection: {cats} = 1 word
-        # union: {i, love, cats, are, great} = 5 words
-        # Jaccard = 1/5 = 0.2
+        # Act - "cats" is shared between query and text
         result = scorer.text_similarity("I love cats", "cats are great")
 
-        # Assert
-        assert result == 0.2
+        # Assert - TF-IDF cosine ≈ 0.20 (similar to old Jaccard 0.2)
+        assert 0.1 < result < 0.4
 
     def test_text_similarity_case_insensitive(self):
         """Test: Comparison should be case-insensitive"""
@@ -95,6 +95,57 @@ class TestTextSimilarity:
 
         # Assert
         assert result == 0.0
+
+    def test_tfidf_replaces_word_overlap(self):
+        """Test: TF-IDF is used as the primary similarity method."""
+        # Arrange
+        scorer = RelevanceScorer()
+
+        # Act
+        result = scorer.text_similarity(
+            "diabetes treatment",
+            "User takes metformin for diabetes management"
+        )
+
+        # Assert - result is a valid float in [0.0, 1.0]
+        assert isinstance(result, float)
+        assert 0.0 <= result <= 1.0
+
+        # Verify TfidfSimilarity.calculate was actually called
+        with patch("app.services.orchestrator.relevance_scorer._tfidf") as mock_tfidf:
+            mock_tfidf.calculate.return_value = [0.5]
+            result2 = scorer.text_similarity(
+                "diabetes treatment",
+                "User takes metformin for diabetes management"
+            )
+            mock_tfidf.calculate.assert_called_once_with(
+                "diabetes treatment",
+                ["User takes metformin for diabetes management"]
+            )
+            assert result2 == 0.5
+
+    def test_fallback_to_word_overlap_on_error(self):
+        """Test: Falls back to Jaccard word overlap when TF-IDF errors."""
+        # Arrange
+        scorer = RelevanceScorer()
+
+        # Act - patch TF-IDF to raise an exception
+        with patch("app.services.orchestrator.relevance_scorer._tfidf") as mock_tfidf:
+            mock_tfidf.calculate.side_effect = Exception("TF-IDF failed")
+            result = scorer.text_similarity("weather forecast", "sunny weather today")
+
+        # Assert - still returns a positive float (Jaccard fallback works)
+        assert isinstance(result, float)
+        assert result > 0.0
+
+    def test_tfidf_empty_strings_handled(self):
+        """Test: Empty strings return 0.0 without crashing."""
+        # Arrange
+        scorer = RelevanceScorer()
+
+        # Act & Assert
+        assert scorer.text_similarity("", "") == 0.0
+        assert scorer.text_similarity("hello", "") == 0.0
 
 
 class TestRecencyScore:

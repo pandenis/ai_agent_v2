@@ -115,7 +115,7 @@ node_modules/
 # 🎯 Project Specific
 # ========================================
 # Ollama models (large files)
-models/
+/models/
 *.gguf
 
 # DeepSeek compiled binaries

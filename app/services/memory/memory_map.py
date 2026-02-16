@@ -9,6 +9,13 @@ from app.services.memory.memory_log import MemoryRetrievalLog, MemoryWriteLog
 from app.services.memory.memory_metrics import MemoryMetrics
 from app.services.memory.memory_node import MemoryNode
 
+try:
+    from app.services.memory.tfidf_similarity import TfidfSimilarity
+    _tfidf = TfidfSimilarity()
+    _HAS_TFIDF = True
+except ImportError:
+    _HAS_TFIDF = False
+
 logger = logging.getLogger(__name__)
 
 _STOPWORDS = frozenset({
@@ -214,11 +221,13 @@ class MemoryMap:
     def build_context_for_query(self, query: str, token_budget: int = 500) -> str:
         """Main entry point for query-time context retrieval.
 
-        Scores each node against the query using keyword matching combined with
-        the node's calculate_weight(). Picks up to 3 seed nodes, builds local
-        slices around them, merges slices, and returns a prompt-ready string.
+        Scores each node against the query using TF-IDF cosine similarity
+        combined with the node's calculate_weight(). Falls back to keyword
+        matching if TF-IDF is unavailable or errors.
 
-        Scoring: 0.5 * (keyword_match_ratio) + 0.5 * node.calculate_weight()
+        Scoring: 0.5 * tfidf_score + 0.5 * node.calculate_weight()
+        Picks up to 3 seed nodes, builds local slices around them, merges
+        slices, and returns a prompt-ready string.
         Accessed nodes get their access_count incremented and last_accessed updated.
         Emits a MemoryRetrievalLog stored in self.last_retrieval_log.
         """
@@ -238,17 +247,31 @@ class MemoryMap:
         query_lower = query.lower()
         query_words = [w for w in query_lower.split() if w not in _STOPWORDS]
 
-        # Score each node
+        # Score each node — try TF-IDF first, fall back to keyword matching
         scored: List[Tuple[MemoryNode, float]] = []
-        for node in self.nodes.values():
-            content_lower = node.content.lower()
-            if query_words:
-                matches = sum(1 for w in query_words if w in content_lower)
-                query_score = matches / len(query_words)
-            else:
-                query_score = 0.0
-            combined = 0.5 * query_score + 0.5 * node.calculate_weight()
-            scored.append((node, combined))
+
+        if _HAS_TFIDF:
+            try:
+                node_list = list(self.nodes.values())
+                documents = [node.content for node in node_list]
+                tfidf_scores = _tfidf.calculate(query, documents)
+                for i, node in enumerate(node_list):
+                    combined = 0.5 * tfidf_scores[i] + 0.5 * node.calculate_weight()
+                    scored.append((node, combined))
+            except Exception:
+                scored = []  # Reset and fall through to keyword fallback
+
+        if not scored:
+            # Fallback: keyword counting (original logic)
+            for node in self.nodes.values():
+                content_lower = node.content.lower()
+                if query_words:
+                    matches = sum(1 for w in query_words if w in content_lower)
+                    query_score = matches / len(query_words)
+                else:
+                    query_score = 0.0
+                combined = 0.5 * query_score + 0.5 * node.calculate_weight()
+                scored.append((node, combined))
 
         scored.sort(key=lambda item: item[1], reverse=True)
         nodes_scored = len(scored)

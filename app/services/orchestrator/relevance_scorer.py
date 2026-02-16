@@ -5,7 +5,7 @@ Scoring Formula:
     relevance = 0.5 * text_similarity + 0.2 * recency + 0.3 * importance
 
 Components:
-- text_similarity: Word overlap ratio (0.0-1.0)
+- text_similarity: TF-IDF cosine similarity (0.0-1.0), with Jaccard word overlap fallback
 - recency: Linear decay over 90 days (0.0-1.0)
 - importance: Pre-assigned fact importance (0.0-1.0)
 
@@ -13,13 +13,17 @@ Usage:
     >>> scorer = RelevanceScorer()
     >>> score = scorer.text_similarity("hello world", "hello there")
     >>> print(score)  # ~0.33
-
-Note:
-    v2.1 uses simple word overlap. v2.2 will upgrade to TF-IDF.
 """
 
 from datetime import datetime
 from typing import List, Dict, Any
+
+try:
+    from app.services.memory.tfidf_similarity import TfidfSimilarity
+    _tfidf = TfidfSimilarity()
+    _HAS_TFIDF = True
+except ImportError:
+    _HAS_TFIDF = False
 
 
 class RelevanceScorer:
@@ -37,7 +41,10 @@ class RelevanceScorer:
     }
 
     def text_similarity(self, query: str, text: str) -> float:
-        """Calculate word overlap similarity between query and text.
+        """Calculate similarity between query and text.
+
+        Uses TF-IDF cosine similarity as primary method, with Jaccard
+        word overlap as fallback if TF-IDF is unavailable or errors.
 
         Args:
             query: Search query string
@@ -46,6 +53,17 @@ class RelevanceScorer:
         Returns:
             Similarity score from 0.0 (no overlap) to 1.0 (identical)
         """
+        if not query or not text:
+            return 0.0
+
+        if _HAS_TFIDF:
+            try:
+                scores = _tfidf.calculate(query, [text])
+                return scores[0]
+            except Exception:
+                pass
+
+        # Fallback: Jaccard word overlap
         query_words = set(query.lower().split())
         text_words = set(text.lower().split())
 
