@@ -3,6 +3,7 @@ Database models
 """
 from app.models.memory import ConversationMessage, UserFact
 from app.models.memory_v2 import AuditHistoryModel, ContextMapModel, FactModel
+from app.models.memory_graph import MemoryEdgeModel, MemoryNodeModel
 from app.models.session import Session
 
 __all__ = [
@@ -11,5 +12,7 @@ __all__ = [
     "UserFact",
     "FactModel",
     "ContextMapModel",
-    "AuditHistoryModel"
+    "AuditHistoryModel",
+    "MemoryNodeModel",
+    "MemoryEdgeModel",
 ]

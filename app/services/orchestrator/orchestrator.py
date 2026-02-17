@@ -82,6 +82,29 @@ class IntelligentOrchestrator:
 
         logger.info("IntelligentOrchestrator initialized successfully")
 
+    def _load_memory_map(self, session_id: str) -> None:
+        """Load a persistent MemoryMap for this session from the database.
+
+        On failure, falls back to a plain in-memory MemoryMap so the
+        orchestrator never crashes due to persistence issues.
+        """
+        try:
+            from app.core.database import SyncSessionFactory
+            from app.services.memory.memory_map import MemoryMap
+            from app.services.memory.memory_map_repository import MemoryMapRepository
+
+            sync_session = SyncSessionFactory()
+            repo = MemoryMapRepository(sync_session)
+            self.memory_map = MemoryMap.from_repository(repo, session_id)
+            logger.info(f"Loaded persistent MemoryMap for session {session_id}")
+        except Exception:
+            from app.services.memory.memory_map import MemoryMap
+            logger.warning(
+                "Failed to load persistent MemoryMap, using in-memory fallback",
+                exc_info=True,
+            )
+            self.memory_map = MemoryMap()
+
     async def process_query(
             self,
             query: str,
@@ -119,6 +142,12 @@ class IntelligentOrchestrator:
 
         try:
             logger.info(f"Processing query for session {session_id}: {query[:50]}...")
+
+            # ==========================================
+            # LOAD PERSISTENT MEMORY MAP (if not already set)
+            # ==========================================
+            if self.memory_map is None:
+                self._load_memory_map(session_id)
 
             # ==========================================
             # A/B TESTING: Get variant if experiment active
