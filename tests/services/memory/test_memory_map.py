@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from unittest.mock import patch
 
 import pytest
 
@@ -828,3 +829,79 @@ class TestMemoryMap:
         assert memory_map.metrics.total_writes == 3
         assert memory_map.metrics.total_retrievals == 1
         assert memory_map.metrics.total_nodes_scored >= 1
+
+    def test_tfidf_scoring_improves_retrieval(self):
+        """TF-IDF scores distinctive words higher, improving retrieval of relevant nodes."""
+        # Arrange
+        now = datetime.utcnow()
+        memory_map = MemoryMap()
+        node_a = MemoryNode(
+            id="a", content="User has health problems including diabetes",
+            node_type="fact", importance=0.5, last_accessed=now,
+        )
+        node_b = MemoryNode(
+            id="b", content="User likes healthy food and cooking",
+            node_type="fact", importance=0.5, last_accessed=now,
+        )
+        node_c = MemoryNode(
+            id="c", content="User enjoys morning exercise routines",
+            node_type="fact", importance=0.5, last_accessed=now,
+        )
+        for node in [node_a, node_b, node_c]:
+            memory_map.add_node(node)
+
+        # Act
+        result = memory_map.build_context_for_query(
+            "health problems and medical conditions", token_budget=500
+        )
+
+        # Assert — Node A (health problems + diabetes) should appear
+        assert "diabetes" in result
+
+        # Node A should score higher than Node C (exercise, no keyword overlap)
+        log = memory_map.last_retrieval_log
+        score_a = next((s for nid, s in log.top_scores if nid == "a"), None)
+        score_c = next((s for nid, s in log.top_scores if nid == "c"), None)
+        if score_a is not None and score_c is not None:
+            assert score_a > score_c
+
+    def test_common_words_dont_dominate(self):
+        """TF-IDF downweights common words, so repetition of 'user' doesn't dominate."""
+        # Arrange
+        now = datetime.utcnow()
+        memory_map = MemoryMap()
+        node_a = MemoryNode(
+            id="a", content="User lives in Berlin Germany",
+            node_type="fact", importance=0.5, last_accessed=now,
+        )
+        node_b = MemoryNode(
+            id="b", content="User user user user user",
+            node_type="fact", importance=0.5, last_accessed=now,
+        )
+        for node in [node_a, node_b]:
+            memory_map.add_node(node)
+
+        # Act
+        result = memory_map.build_context_for_query("user information", token_budget=500)
+
+        # Assert — Node A still appears in context (not zero score)
+        assert "Berlin" in result
+
+    def test_fallback_to_keyword_matching(self):
+        """Falls back to keyword matching when TF-IDF raises an error."""
+        # Arrange
+        memory_map = MemoryMap()
+        memory_map.add_node(MemoryNode(
+            id="n1", content="User likes Python programming",
+            node_type="fact", importance=0.8,
+        ))
+
+        # Act — patch TF-IDF to fail
+        with patch("app.services.memory.memory_map._tfidf") as mock_tfidf:
+            mock_tfidf.calculate.side_effect = Exception("TF-IDF crashed")
+            result = memory_map.build_context_for_query("Python", token_budget=500)
+
+        # Assert — keyword fallback still returns context, no crash
+        assert isinstance(result, str)
+        assert len(result) > 0
+        assert "Python" in result
