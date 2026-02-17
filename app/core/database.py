@@ -2,8 +2,9 @@
 Database setup with SQLAlchemy async support
 """
 
+from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from app.core.config import settings
 
@@ -12,6 +13,12 @@ engine = create_async_engine(settings.database_url, echo=settings.debug, future=
 
 # Create async session factory
 async_session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+# Sync engine/session for components that require synchronous DB access
+# (e.g., MemoryMapRepository). Derived from the same DB URL.
+_sync_url = settings.database_url.replace("+aiosqlite", "")
+sync_engine = create_engine(_sync_url, echo=False)
+SyncSessionFactory = sessionmaker(bind=sync_engine, class_=Session)
 
 # Base class for models
 Base = declarative_base()

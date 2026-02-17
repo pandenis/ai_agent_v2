@@ -1,11 +1,26 @@
 from datetime import datetime, timedelta
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
+from app.core.database import Base
 from app.services.memory.memory_edge import MemoryEdge
 from app.services.memory.memory_map import MemoryMap
+from app.services.memory.memory_map_repository import MemoryMapRepository
 from app.services.memory.memory_node import MemoryNode
+
+
+@pytest.fixture
+def db_session():
+    """Create a synchronous in-memory SQLite database with all tables."""
+    engine = create_engine("sqlite:///:memory:", echo=False)
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        yield session
+    Base.metadata.drop_all(engine)
+    engine.dispose()
 
 
 class TestMemoryMap:
@@ -905,3 +920,110 @@ class TestMemoryMap:
         assert isinstance(result, str)
         assert len(result) > 0
         assert "Python" in result
+
+    def test_add_node_persists_when_repository_set(self):
+        """Adding a node calls repository.save_node when a repository is set."""
+        # Arrange
+        mock_repo = MagicMock()
+        memory_map = MemoryMap(repository=mock_repo, session_id="sess-1")
+        node = MemoryNode(id="n1", content="User lives in Paris", node_type="fact")
+
+        # Act
+        memory_map.add_node(node)
+
+        # Assert
+        mock_repo.save_node.assert_called_once_with(node, "sess-1")
+
+    def test_add_node_works_without_repository(self):
+        """Adding a node without a repository works exactly as before (backward compatible)."""
+        # Arrange
+        memory_map = MemoryMap()
+        node = MemoryNode(id="n1", content="User lives in Paris", node_type="fact")
+
+        # Act
+        memory_map.add_node(node)
+
+        # Assert
+        assert memory_map.get_node("n1") is node
+        assert memory_map.node_count == 1
+
+    def test_remove_node_persists_deletion(self):
+        """Removing a node calls repository.delete_node when a repository is set."""
+        # Arrange
+        mock_repo = MagicMock()
+        memory_map = MemoryMap(repository=mock_repo, session_id="sess-1")
+        node = MemoryNode(id="n1", content="User lives in Paris", node_type="fact")
+        memory_map.add_node(node)
+
+        # Act
+        memory_map.remove_node("n1")
+
+        # Assert
+        mock_repo.delete_node.assert_called_once_with("n1")
+
+    def test_add_edge_persists(self):
+        """Adding an edge calls repository.save_edge when a repository is set."""
+        # Arrange
+        mock_repo = MagicMock()
+        memory_map = MemoryMap(repository=mock_repo, session_id="sess-1")
+        n1 = MemoryNode(id="n1", content="User lives in Paris", node_type="fact")
+        n2 = MemoryNode(id="n2", content="User speaks French", node_type="fact")
+        memory_map.add_node(n1)
+        memory_map.add_node(n2)
+        edge = MemoryEdge(source_id="n1", target_id="n2", edge_type="related_to", weight=0.8)
+
+        # Act
+        memory_map.add_edge(edge)
+
+        # Assert
+        mock_repo.save_edge.assert_called_once_with(edge)
+
+    def test_from_repository_loads_graph(self, db_session):
+        """from_repository loads persisted nodes and edges into a MemoryMap."""
+        # Arrange — save data directly via repository
+        repo = MemoryMapRepository(db_session)
+        n1 = MemoryNode(id="n1", content="User lives in Paris", node_type="fact", importance=0.8)
+        n2 = MemoryNode(id="n2", content="User speaks French", node_type="fact", importance=0.7)
+        edge = MemoryEdge(source_id="n1", target_id="n2", edge_type="related_to", weight=0.9)
+        repo.save_node(n1, session_id="sess-1")
+        repo.save_node(n2, session_id="sess-1")
+        repo.save_edge(edge)
+
+        # Act
+        loaded_map = MemoryMap.from_repository(repo, session_id="sess-1")
+
+        # Assert
+        assert loaded_map.node_count == 2
+        assert loaded_map.edge_count == 1
+        assert loaded_map.get_node("n1").content == "User lives in Paris"
+        assert loaded_map.get_node("n2").content == "User speaks French"
+        assert loaded_map.edges[0].source_id == "n1"
+        assert loaded_map.edges[0].target_id == "n2"
+
+    def test_from_repository_empty_session(self, db_session):
+        """from_repository on an empty session returns an empty MemoryMap with repository set."""
+        # Arrange
+        repo = MemoryMapRepository(db_session)
+
+        # Act
+        loaded_map = MemoryMap.from_repository(repo, session_id="empty-sess")
+
+        # Assert
+        assert loaded_map.node_count == 0
+        assert loaded_map.edge_count == 0
+        assert loaded_map._repository is repo
+
+    def test_loaded_map_auto_persists_new_writes(self, db_session):
+        """A map loaded via from_repository auto-persists new writes to the DB."""
+        # Arrange — load from empty session
+        repo = MemoryMapRepository(db_session)
+        loaded_map = MemoryMap.from_repository(repo, session_id="sess-1")
+
+        # Act — add a new node via the loaded map
+        new_node = MemoryNode(id="n1", content="User lives in Berlin", node_type="fact")
+        loaded_map.add_node(new_node)
+
+        # Assert — re-load from DB to verify persistence
+        reloaded = repo.load_map(session_id="sess-1")
+        assert reloaded.node_count == 1
+        assert reloaded.get_node("n1").content == "User lives in Berlin"

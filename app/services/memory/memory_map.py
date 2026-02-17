@@ -2,9 +2,12 @@ import logging
 import time
 from collections import deque
 from datetime import datetime
-from typing import Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
 from app.services.memory.memory_edge import MemoryEdge
+
+if TYPE_CHECKING:
+    from app.services.memory.memory_map_repository import MemoryMapRepository
 from app.services.memory.memory_log import MemoryRetrievalLog, MemoryWriteLog
 from app.services.memory.memory_metrics import MemoryMetrics
 from app.services.memory.memory_node import MemoryNode
@@ -28,7 +31,7 @@ _STOPWORDS = frozenset({
 class MemoryMap:
     """A graph-based memory map storing nodes and directed edges between them."""
 
-    def __init__(self):
+    def __init__(self, repository: Optional["MemoryMapRepository"] = None, session_id: str = ""):
         """Initialize an empty memory map."""
         self.nodes: Dict[str, MemoryNode] = {}
         self.edges: List[MemoryEdge] = []
@@ -36,6 +39,21 @@ class MemoryMap:
         self.retrieval_history: List[MemoryRetrievalLog] = []
         self.write_history: List[MemoryWriteLog] = []
         self.metrics = MemoryMetrics()
+        self._repository = repository
+        self._session_id = session_id
+
+    @classmethod
+    def from_repository(cls, repository: "MemoryMapRepository", session_id: str) -> "MemoryMap":
+        """Load a MemoryMap from the database via the repository.
+
+        Returns a MemoryMap instance with the repository set,
+        so any future add_node/add_edge/remove_node calls will
+        auto-persist to the database.
+        """
+        loaded_map = repository.load_map(session_id)
+        loaded_map._repository = repository
+        loaded_map._session_id = session_id
+        return loaded_map
 
     def add_node(self, node: MemoryNode) -> None:
         """Add a memory node to the map, indexed by its id.
@@ -53,6 +71,8 @@ class MemoryMap:
             logger.warning(f"Memory write rejected: {log}")
             return
         self.nodes[node.id] = node
+        if self._repository:
+            self._repository.save_node(node, self._session_id)
         log = MemoryWriteLog(operation="add_node", node_id=node.id, success=True)
         self.write_history.append(log)
         self.metrics.record_write(log)
@@ -68,6 +88,8 @@ class MemoryMap:
         if edge.target_id not in self.nodes:
             raise ValueError(f"Target node '{edge.target_id}' not found")
         self.edges.append(edge)
+        if self._repository:
+            self._repository.save_edge(edge)
         log = MemoryWriteLog(
             operation="add_edge", node_id=edge.source_id,
             target_id=edge.target_id, edge_type=edge.edge_type, success=True,
@@ -110,6 +132,8 @@ class MemoryMap:
             edge for edge in self.edges
             if edge.source_id != node_id and edge.target_id != node_id
         ]
+        if self._repository:
+            self._repository.delete_node(node_id)
         log = MemoryWriteLog(operation="remove_node", node_id=node_id, success=True)
         self.write_history.append(log)
         self.metrics.record_write(log)
