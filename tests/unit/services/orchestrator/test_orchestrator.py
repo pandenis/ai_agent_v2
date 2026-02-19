@@ -242,13 +242,15 @@ async def test_memory_update_after_response(
     mock_memory_service.search_facts.return_value = []
 
     # Setup: Fact extractor finds new fact
+    from app.models.memory_v2 import Fact
     mock_fact_extractor.extract_facts.return_value = [
-        {
-            "text": "User lives in Tel Aviv",
-            "importance": 0.85,
-            "confidence": 0.9,
-            "fact_type": "location"
-        }
+        Fact(
+            fact_id="test-fact-001",
+            text="User lives in Tel Aviv",
+            importance=0.85,
+            confidence=0.9,
+            fact_type="location",
+        )
     ]
 
     # Execute: Process the query

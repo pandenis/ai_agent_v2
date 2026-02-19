@@ -635,7 +635,8 @@ class IntelligentOrchestrator:
             if facts:
                 logger.info(f"Extracted {len(facts)} new facts")
                 for fact in facts:
-                    await self.memory_service.add_fact(fact, session_id)
+                    fact.thread_id = session_id
+                    await self.memory_service.add_fact(fact, thread_id=session_id)
 
         except Exception as e:
             # Don't fail the whole request if memory update fails
