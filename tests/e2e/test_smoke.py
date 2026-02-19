@@ -41,3 +41,19 @@ def test_orchestrate_response_contains_strategy_field():
     assert "metadata" in data
     assert "strategy" in data["metadata"]
     assert data["metadata"]["strategy"] in ["direct", "enhanced", "deep_reasoning"]
+
+
+@pytest.mark.smoke
+def test_agents_status_lists_all_models():
+    """Verify the agent registry reports all configured models.
+    If this fails, a model was silently dropped from the registry."""
+    response = httpx.get(f"{BASE_URL}/api/v1/agents/status")
+    assert response.status_code == 200
+    data = response.json()
+    assert "agents" in data
+    agents = data["agents"]
+    assert isinstance(agents, dict)
+    expected_models = {"mistral", "deepseek", "llama3", "groq", "medical", "gpt-oss"}
+    assert expected_models.issubset(set(agents.keys())), (
+        f"Missing models: {expected_models - set(agents.keys())}"
+    )
