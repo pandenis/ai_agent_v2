@@ -625,7 +625,7 @@ class IntelligentOrchestrator:
 
         try:
             # Extract facts from the conversation
-            conversation_text = f"User: {query}\nAssistant: {response}"
+            conversation_text = query
             facts = await self.fact_extractor.extract_facts(
                 conversation_text=conversation_text,
                 session_id=session_id
