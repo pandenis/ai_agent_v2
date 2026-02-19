@@ -1,4 +1,4 @@
-# AI Agent System v2
+# AI Agent System v2.3.2
 
 A full-stack AI assistant platform with:
 - **FastAPI backend** for sessions, chat, memory, document search, web search, and orchestration.
@@ -41,6 +41,11 @@ This repository contains two main applications:
   - circuit breaker,
   - rate limiter,
   - formatting/metrics/feedback modules.
+- **Six production AI models**: mistral, deepseek, llama3, groq,
+  medical, gpt-oss — routed automatically by the decision engine.
+- **Fact extraction**: Automatically extracts and persists facts
+  from conversations via FactExtractor (requires Ollama running
+  locally with at least one model available).
 
 ---
 
@@ -124,6 +129,31 @@ UI URL: `http://localhost:3000`
 
 ---
 
+## Production Deployment
+
+The system runs in two isolated environments on the same machine:
+
+| Environment | Directory | Backend Port | Frontend Port | Service |
+|-------------|-----------|-------------|---------------|---------|
+| Production  | `/srv/ai_agent` | 8000 | 3000 | `ai-agent.service` |
+| Development | `/srv/ai_agent_dev_git` | 8001 | 3001 | `ai-agent-dev.service` |
+
+### Post-Deployment Smoke Check (Mandatory)
+After every production deployment, run the smoke suite to verify
+the live server is healthy:
+```bash
+cd /srv/ai_agent_dev_git
+./venv/bin/python -m pytest tests/e2e/test_smoke.py -v
+# Expected: 4 passed
+```
+
+### Deployment Principle
+> "If you can't curl it, it doesn't work."
+> Unit tests passing is necessary but not sufficient.
+> Always verify with a real HTTP request after deployment.
+
+---
+
 ## Key API Endpoints
 
 ### System
@@ -153,7 +183,6 @@ UI URL: `http://localhost:3000`
 - `POST /api/v1/search/web`
 
 ### Memory
-- `POST /api/v1/memory/facts`
 - `POST /api/v1/memory/facts/search`
 - `DELETE /api/v1/memory/facts/{fact_id}`
 - `GET /api/v1/memory/stats`
@@ -164,13 +193,20 @@ UI URL: `http://localhost:3000`
 
 ### Backend
 ```bash
-# run full backend test suite
-pytest
+# Activate venv first
+source venv/bin/activate   # or: ./venv/bin/python -m pytest
 
-# examples
-pytest tests/unit -v
-pytest tests/integration -v
-pytest tests/api -v
+# Run full backend test suite (961 tests)
+./venv/bin/python -m pytest tests/ -v
+
+# Run by category
+./venv/bin/python -m pytest tests/unit -v
+./venv/bin/python -m pytest tests/integration -v
+./venv/bin/python -m pytest tests/api -v
+
+# Run smoke tests (requires live prod server on port 8000)
+./venv/bin/python -m pytest tests/e2e/test_smoke.py -v
+# Note: smoke tests are skipped automatically in CI
 ```
 
 ### Frontend
@@ -186,6 +222,27 @@ npm test
 - Default DB URL is SQLite at `./data/agent.db` (configurable via env).
 - Some AI providers/models require external services or API keys (e.g., Groq, Ollama).
 - There is a legacy UI backup in `ui/ai-agent-ui-backup-20260114/`; active UI is `ui/ai-agent-ui/`.
+
+---
+
+## Architectural Notes
+
+### Dependency Injection (deps.py)
+All major services are wired in `app/api/deps.py`. If a service
+exists and is tested but not producing results in production,
+check that it is injected in `get_orchestrator()`. Historical
+examples of this pattern:
+- Orchestrator bypass (7 weeks, fixed v2.3.1)
+- FactExtractor not injected (fixed v2.3.2)
+
+### Memory Write Architecture
+All fact writes must go through `MemoryWriteGate` via the
+Orchestrator. Direct writes to `MemoryService` outside the
+Orchestrator violate the single-owner principle.
+
+### Thread Isolation
+Facts are scoped to `session_id` / `thread_id`. Facts from
+Session A are never visible in Session B queries.
 
 ---
 

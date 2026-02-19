@@ -223,7 +223,7 @@ curl http://localhost:8000/api/v1/health
 ### 1. Navigate to Frontend
 
 ```bash
-cd /home/agent/ai_agent_v2/ui/ai-agent-ui
+cd /srv/ai_agent/ui/ai-agent-ui
 ```
 
 ### 2. Install Dependencies
@@ -279,15 +279,19 @@ After=network.target
 [Service]
 Type=simple
 User=agent
-WorkingDirectory=/home/agent/ai_agent_v2
-Environment="PATH=/home/agent/ai_agent_v2/venv/bin"
-ExecStart=/home/agent/ai_agent_v2/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+WorkingDirectory=/srv/ai_agent
+Environment="PATH=/srv/ai_agent/venv/bin"
+ExecStart=/srv/ai_agent/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
 Restart=always
 RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
 ```
+
+> **Note:** Development environment uses `/srv/ai_agent_dev_git`
+> on port 8001 with service name `ai-agent-dev.service`.
+> Production always runs from `/srv/ai_agent` on port 8000.
 
 **Enable & Start:**
 ```bash
@@ -315,7 +319,7 @@ After=network.target
 [Service]
 Type=simple
 User=agent
-WorkingDirectory=/home/agent/ai_agent_v2/ui/ai-agent-ui
+WorkingDirectory=/srv/ai_agent/ui/ai-agent-ui
 Environment="PATH=/usr/bin:/usr/local/bin"
 Environment="NODE_ENV=production"
 ExecStart=/usr/bin/npm start
@@ -565,7 +569,7 @@ cp data/agent.db data/agent.db.backup
 
 ```bash
 # As agent user
-cd /home/agent/ai_agent_v2
+cd /srv/ai_agent
 
 # Backup database
 cp data/agent.db data/agent.db.backup.$(date +%Y%m%d)
@@ -596,18 +600,18 @@ curl http://localhost:8000/api/v1/health
 
 ```bash
 # Create backup script
-cat > /home/agent/backup.sh << 'EOF'
+cat > /srv/ai_agent/scripts/backup.sh << 'EOF'
 #!/bin/bash
-BACKUP_DIR="/home/agent/backups"
+BACKUP_DIR="/srv/ai_agent/backups"
 DATE=$(date +%Y%m%d_%H%M%S)
 
 mkdir -p $BACKUP_DIR
 
 # Backup database
-cp /home/agent/ai_agent_v2/data/agent.db $BACKUP_DIR/agent.db.$DATE
+cp /srv/ai_agent/data/agent.db $BACKUP_DIR/agent.db.$DATE
 
 # Backup .env
-cp /home/agent/ai_agent_v2/.env $BACKUP_DIR/.env.$DATE
+cp /srv/ai_agent/.env $BACKUP_DIR/.env.$DATE
 
 # Keep only last 7 days
 find $BACKUP_DIR -name "agent.db.*" -mtime +7 -delete
@@ -615,11 +619,11 @@ find $BACKUP_DIR -name "agent.db.*" -mtime +7 -delete
 echo "Backup completed: $DATE"
 EOF
 
-chmod +x /home/agent/backup.sh
+chmod +x /srv/ai_agent/scripts/backup.sh
 
 # Add to crontab (daily at 2 AM)
 crontab -e
-# Add: 0 2 * * * /home/agent/backup.sh
+# Add: 0 2 * * * /srv/ai_agent/scripts/backup.sh
 ```
 
 ---
