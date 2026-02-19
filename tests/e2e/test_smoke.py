@@ -44,6 +44,19 @@ def test_orchestrate_response_contains_strategy_field():
 
 
 @pytest.mark.smoke
+def test_orchestrate_rejects_missing_query_with_422():
+    """Verify FastAPI input validation rejects requests missing the required
+    query field. Guards against Pydantic validation being accidentally bypassed."""
+    payload = {"session_id": "smoke-test-001"}
+    response = httpx.post(
+        f"{BASE_URL}/api/v1/orchestrate",
+        json=payload,
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.smoke
 def test_agents_status_lists_all_models():
     """Verify the agent registry reports all configured models.
     If this fails, a model was silently dropped from the registry."""
