@@ -30,5 +30,6 @@ async def test_extract_facts_called_with_user_query_only():
 
     fact_extractor.extract_facts.assert_called_once()
     call_kwargs = fact_extractor.extract_facts.call_args.kwargs
-    assert "Assistant" not in call_kwargs["conversation_text"]
-    assert "Ramat Gan" in call_kwargs["conversation_text"]
+    user_content = call_kwargs["messages"][0]["content"]
+    assert "Assistant" not in user_content
+    assert "Ramat Gan" in user_content

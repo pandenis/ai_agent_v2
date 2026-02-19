@@ -627,8 +627,8 @@ class IntelligentOrchestrator:
             # Extract facts from the conversation
             conversation_text = query
             facts = await self.fact_extractor.extract_facts(
-                conversation_text=conversation_text,
-                session_id=session_id
+                messages=[{"role": "user", "content": conversation_text}],
+                context={"session_id": session_id}
             )
 
             # Save facts to memory
