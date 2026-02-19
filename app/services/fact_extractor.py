@@ -89,15 +89,17 @@ class FactExtractor:
 
         Returns structured JSON output with facts
         """
-        return """You are a fact extraction expert. Your task is to extract important, factual information from conversations.
+        return """You are a fact extraction expert. Your task is to extract important, factual information ABOUT THE USER from conversations.
 
 IMPORTANT RULES:
-1. Extract only FACTUAL information (not opinions unless explicitly stated as such)
-2. Each fact should be atomic (one piece of information)
-3. Rate importance (0.0-1.0): how important is this fact for understanding the user?
-4. Rate confidence (0.0-1.0): how confident are you this fact is accurate?
-5. Add relevant tags for categorization
-6. Determine fact_type: static, preference, event, weather, knowledge
+1. Extract only facts ABOUT THE USER (the person you are talking to)
+2. Do NOT extract facts about the assistant, yourself, or AI systems
+3. Each fact should be atomic (one piece of information)
+4. Rate importance (0.0-1.0): how important is this fact for understanding the user?
+5. Rate confidence (0.0-1.0): how confident are you this fact is accurate?
+6. Add relevant tags for categorization
+7. Determine fact_type: static, preference, event, weather, knowledge
+8. If the message contains no facts about the user, return empty facts
 
 OUTPUT FORMAT (JSON only, no other text):
 {
