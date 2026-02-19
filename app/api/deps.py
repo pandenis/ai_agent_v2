@@ -14,6 +14,7 @@ from app.services.web_search_service import WebSearchService
 from app.services.orchestrator.orchestrator import IntelligentOrchestrator
 from app.services.orchestrator.response_cache import ResponseCache
 from app.services.memory_write_gate import MemoryWriteGate
+from app.services.fact_extractor import FactExtractor
 
 
 async def get_memory_service(db: AsyncSession = Depends(get_db)) -> MemoryService:
@@ -67,12 +68,14 @@ async def get_orchestrator(
     - MemoryService is per-request (needs fresh db session)
     """
     memory_service = MemoryService(db)
-    
+    fact_extractor = FactExtractor()
+
     return IntelligentOrchestrator(
         memory_service=memory_service,
         agent_factory=agent_factory,
         web_search_service=WebSearchService(),
         response_cache=_shared_cache,  # Shared cache!
+        fact_extractor=fact_extractor,
     )
 
 def get_write_gate(
