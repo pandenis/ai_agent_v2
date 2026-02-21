@@ -215,20 +215,24 @@ If no facts with importance >= 0.5 are found, return: {"facts": []}"""
             List of Fact objects
         """
         try:
-            # Strip markdown code blocks if present
-            response = response.strip()
-            if response.startswith("```json"):
-                response = response[7:]
-            if response.startswith("```"):
-                response = response[3:]
-            if response.endswith("```"):
-                response = response[:-3]
-            response = response.strip()
+            # Accept a pre-parsed dict (e.g. from tests) or a raw JSON string
+            if isinstance(response, dict):
+                data = response
+            else:
+                # Strip markdown code blocks if present
+                response = response.strip()
+                if response.startswith("```json"):
+                    response = response[7:]
+                if response.startswith("```"):
+                    response = response[3:]
+                if response.endswith("```"):
+                    response = response[:-3]
+                response = response.strip()
 
-            logger.info(f"Raw AI response (first 500 chars): {response[:500]}")  # DEBUG
+                logger.info(f"Raw AI response (first 500 chars): {response[:500]}")  # DEBUG
 
-            # Parse JSON
-            data = json.loads(response)
+                # Parse JSON
+                data = json.loads(response)
 
             # Validate structure
             if "facts" not in data:
@@ -280,6 +284,7 @@ If no facts with importance >= 0.5 are found, return: {"facts": []}"""
                 confidence=self._validate_score(fact_data.get("confidence", 0.8)),
                 tags=fact_data.get("tags", []),
                 fact_type=fact_data.get("fact_type", "static"),
+                subject=fact_data.get("subject", "user"),
                 source="conversation",
                 created=datetime.utcnow(),
                 updated=datetime.utcnow(),

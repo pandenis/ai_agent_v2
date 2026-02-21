@@ -1,4 +1,4 @@
-"""Tests for FactExtractor._get_system_prompt() universal extraction prompt (MEM-002-02, step 6 of 13)."""
+"""Tests for FactExtractor._get_system_prompt() universal extraction prompt (MEM-002-02, steps 6-7 of 13)."""
 import re
 
 from app.services.fact_extractor import FactExtractor
@@ -40,3 +40,39 @@ def test_system_prompt_requires_subject_field():
 
     # Assert — "assistant" is not presented as an allowed subject value in the schema
     assert '"assistant"' not in prompt
+
+
+def test_parse_extraction_maps_subject():
+    """
+    Verifies that _parse_extraction_result() correctly maps the 'subject'
+    field from the JSON dict onto each returned Fact object.
+    """
+    # Arrange
+    raw = {
+        "facts": [
+            {
+                "text": "FastAPI uses Python asyncio for async handling",
+                "importance": 0.75,
+                "confidence": 0.9,
+                "fact_type": "technical_explanation",
+                "tags": ["fastapi", "async", "python"],
+                "subject": "technology"
+            },
+            {
+                "text": "User prefers dark mode",
+                "importance": 0.8,
+                "confidence": 0.95,
+                "fact_type": "preference",
+                "tags": ["ui", "preference"],
+                "subject": "user"
+            }
+        ]
+    }
+
+    # Act
+    result = FactExtractor()._parse_extraction_result(raw)
+
+    # Assert
+    assert len(result) == 2
+    assert result[0].subject == 'technology'
+    assert result[1].subject == 'user'
