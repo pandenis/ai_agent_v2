@@ -118,12 +118,16 @@ sudo usermod -aG sudo agent
 ### 1. Clone Repository
 
 ```bash
+# Create the production directory and set ownership
+sudo mkdir -p /srv/ai_agent
+sudo chown agent:agent /srv/ai_agent
+
 # Switch to agent user
 sudo su - agent
 
-# Clone repo
-git clone https://github.com/pandenis/ai_agent_v2.git
-cd ai_agent_v2
+# Clone repo directly into /srv/ai_agent
+git clone https://github.com/pandenis/ai_agent_v2.git /srv/ai_agent
+cd /srv/ai_agent
 
 # Or pull if already exists
 git pull
