@@ -44,8 +44,8 @@ Ubuntu 22.04 LTS or later
 Python 3.11+
 
 # Node.js
-Node.js 18+
-npm 9+
+Node.js 20.9.0+
+npm 10+
 
 # Database
 SQLite (included) or PostgreSQL (optional)
@@ -71,7 +71,7 @@ sudo apt update && sudo apt upgrade -y
 sudo apt install python3.11 python3.11-venv python3-pip -y
 
 # Node.js & npm
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install nodejs -y
 
 # Git
