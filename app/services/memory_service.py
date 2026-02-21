@@ -221,6 +221,7 @@ class MemoryService:
                 fact_model = FactModel(
                     fact_id=fact.fact_id,
                     text=fact.text,
+                    subject=fact.subject,
                     importance=fact.importance,
                     confidence=fact.confidence,
                     tags=fact.tags,
