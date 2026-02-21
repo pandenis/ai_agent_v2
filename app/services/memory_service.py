@@ -103,6 +103,7 @@ class MemoryService:
             min_importance: float = 0.3,
             limit: int = 10,
             thread_id: Optional[str] = None,
+            subject: Optional[str] = None,
     ) -> List[FactModel]:
         """
         Search facts by text query with thread isolation (Memorisator v2)
@@ -113,20 +114,24 @@ class MemoryService:
             limit: Maximum number of results (default 10)
             thread_id: Thread/session ID for isolation. Only facts with matching
                        thread_id are returned. None returns only global facts.
+            subject: Optional subject filter. When provided, only facts whose
+                     subject column matches are returned. None returns all subjects.
 
         Returns:
-            List of matching FactModel objects filtered by thread_id
+            List of matching FactModel objects filtered by thread_id and optionally subject
         """
-        # Build query with thread isolation
+        # Build WHERE conditions
+        conditions = [
+            FactModel.text.contains(query),
+            FactModel.importance >= min_importance,
+            FactModel.thread_id == thread_id,
+        ]
+        if subject is not None:
+            conditions.append(FactModel.subject == subject)
+
         result = await self.db.execute(
             select(FactModel)
-            .where(
-                and_(
-                    FactModel.text.contains(query),
-                    FactModel.importance >= min_importance,
-                    FactModel.thread_id == thread_id  # NEW: Thread isolation!
-                )
-            )
+            .where(and_(*conditions))
             .order_by(FactModel.importance.desc())
             .limit(limit)
         )
