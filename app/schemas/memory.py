@@ -23,6 +23,7 @@ class FactResponse(BaseModel):
     last_accessed: Optional[datetime] = Field(None, description="Last accessed timestamp")
     usage_count: int = Field(default=0, description="Number of times fact was used")
     needs_update: bool = Field(default=False, description="Whether fact needs updating")
+    subject: str = Field(default='user', description="Subject category of the fact")
 
     class Config:
         from_attributes = True

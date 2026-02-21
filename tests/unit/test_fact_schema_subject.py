@@ -1,5 +1,8 @@
-"""Tests for Fact dataclass subject field (MEM-002-01, steps 1-3 of 13)."""
+"""Tests for Fact dataclass subject field (MEM-002-01, steps 1-5 of 13)."""
+from datetime import datetime
+
 from app.models.memory_v2 import Fact, FactModel
+from app.schemas.memory import FactResponse
 
 
 def test_fact_schema_has_subject_field():
@@ -49,3 +52,28 @@ def test_fact_model_to_dataclass_includes_subject():
 
     # Assert
     assert fact.subject == 'medical'
+
+
+def test_fact_response_schema_has_subject_field():
+    """
+    Verifies that FactResponse Pydantic schema has a 'subject' field that
+    accepts an explicit value and defaults to 'user' when omitted.
+    """
+    _now = datetime.now()
+    _required = dict(
+        fact_id="f4", text="Paris is in France",
+        importance=0.9, confidence=0.95,
+        fact_type="knowledge", created=_now, updated=_now,
+    )
+
+    # Arrange / Act — explicit subject
+    response = FactResponse(**_required, subject='geography')
+
+    # Assert — explicit value
+    assert response.subject == 'geography'
+
+    # Arrange / Act — default subject
+    response_default = FactResponse(**_required)
+
+    # Assert — default value
+    assert response_default.subject == 'user'
