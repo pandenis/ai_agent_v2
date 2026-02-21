@@ -40,7 +40,8 @@ def mock_fact_extractor():
 
 
 class TestMemoryMapIntegration:
-    def test_orchestrator_build_context_with_memory_map(self, mock_memory_service):
+    @pytest.mark.asyncio
+    async def test_orchestrator_build_context_with_memory_map(self, mock_memory_service):
         # Arrange
         memory_map = MemoryMap()
         n1 = MemoryNode(id="n1", content="User lives in Berlin", node_type="fact", importance=0.9)
@@ -57,7 +58,7 @@ class TestMemoryMapIntegration:
         )
 
         # Act
-        result = orchestrator._build_context_with_map(
+        result = await orchestrator._build_context_with_map(
             query="Where does user live?", facts=[], token_budget=500
         )
 
@@ -79,7 +80,8 @@ class TestMemoryMapIntegration:
         # Assert
         assert "User lives in Paris" in result
 
-    def test_orchestrator_map_enriches_flat_facts(self, mock_memory_service):
+    @pytest.mark.asyncio
+    async def test_orchestrator_map_enriches_flat_facts(self, mock_memory_service):
         # Arrange
         memory_map = MemoryMap()
         n1 = MemoryNode(id="n1", content="User has diabetes", node_type="fact", importance=0.9)
@@ -98,7 +100,7 @@ class TestMemoryMapIntegration:
         )
 
         # Act
-        result = orchestrator._build_context_with_map(
+        result = await orchestrator._build_context_with_map(
             query="health info", facts=flat_facts, token_budget=500
         )
 
@@ -106,7 +108,8 @@ class TestMemoryMapIntegration:
         assert "diabetes" in result
         assert "insulin" in result
 
-    def test_memory_map_failure_does_not_break_orchestrator(self, mock_memory_service):
+    @pytest.mark.asyncio
+    async def test_memory_map_failure_does_not_break_orchestrator(self, mock_memory_service):
         # Arrange
         broken_map = MagicMock()
         broken_map.build_context_for_query = MagicMock(side_effect=Exception("map crashed"))
@@ -118,7 +121,7 @@ class TestMemoryMapIntegration:
         flat_facts = [{"text": "User likes cooking", "importance": 0.7}]
 
         # Act
-        result = orchestrator._build_context_with_map(
+        result = await orchestrator._build_context_with_map(
             query="hobbies", facts=flat_facts, token_budget=500
         )
 
