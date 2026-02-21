@@ -185,7 +185,8 @@ class IntelligentOrchestrator:
             logger.debug("Stage 2: Evaluating memory coverage")
             memory_eval = await self.memory_evaluator.evaluate(
                 query_analysis=query_analysis,
-                session_id=session_id
+                thread_id=session_id,
+                subject_hint=self._infer_subject_hint(query),
             )
             logger.debug(f"Memory coverage: {memory_eval.coverage_score:.2f}")
 
