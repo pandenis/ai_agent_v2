@@ -604,6 +604,19 @@ class IntelligentOrchestrator:
         context_lines = [f"- {fact.get('text', '')}" for fact in top_facts]
         return "\n".join(context_lines)
 
+    def _infer_subject_hint(self, query: str) -> Optional[str]:
+        q = query.lower()
+        personal_kw = ['my ', 'i am', 'i live', 'i work', 'i prefer', 'my name']
+        if any(kw in q for kw in personal_kw):
+            return 'user'
+        tech_kw = ['python', 'fastapi', 'api', 'code', 'function', 'async', 'database']
+        if any(kw in q for kw in tech_kw):
+            return 'technology'
+        medical_kw = ['diagnosis', 'medication', 'symptom', 'treatment', 'dose']
+        if any(kw in q for kw in medical_kw):
+            return 'medical'
+        return None
+
     async def _extract_and_save_facts(
             self,
             session_id: str,
