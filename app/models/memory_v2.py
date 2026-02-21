@@ -31,6 +31,7 @@ class Fact:
     # TTL & Lifecycle (Epic 3 - Task 3.1)
     ttl_days: Optional[int] = None  # Time-to-live in days (None = never expires)
     expires_at: Optional[datetime] = None  # Expiration timestamp
+    subject: str = 'user'
 
     # Metadata (renamed from metadata to avoid SQLAlchemy conflict)
 
@@ -90,6 +91,10 @@ class FactModel(Base):
         index=True,
         comment="Expiration timestamp for cleanup queries"
     )
+    subject: Mapped[str] = mapped_column(String, server_default='user', index=True)
+
+    def __init__(self, subject: str = 'user', **kwargs):
+        super().__init__(subject=subject, **kwargs)
 
     # Metadata (renamed to avoid SQLAlchemy conflict)
 
@@ -156,7 +161,8 @@ class FactModel(Base):
             related_fact_ids=self.related_fact_ids or [],
             context_maps=self.context_maps or [],
             meta_data=self.meta_data or {},
-            usage_count=self.usage_count
+            usage_count=self.usage_count,
+            subject=self.subject
         )
 
 
