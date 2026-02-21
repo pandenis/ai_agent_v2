@@ -91,6 +91,10 @@ class FactModel(Base):
         index=True,
         comment="Expiration timestamp for cleanup queries"
     )
+    subject: Mapped[str] = mapped_column(String, server_default='user', index=True)
+
+    def __init__(self, subject: str = 'user', **kwargs):
+        super().__init__(subject=subject, **kwargs)
 
     # Metadata (renamed to avoid SQLAlchemy conflict)
 

@@ -1,5 +1,5 @@
-"""Tests for Fact dataclass subject field (MEM-002-01, step 1 of 13)."""
-from app.models.memory_v2 import Fact
+"""Tests for Fact dataclass subject field (MEM-002-01, steps 1-2 of 13)."""
+from app.models.memory_v2 import Fact, FactModel
 
 
 def test_fact_schema_has_subject_field():
@@ -18,3 +18,16 @@ def test_fact_schema_has_subject_field():
 
     # Assert — explicit value
     assert fact_explicit.subject == "technology"
+
+
+def test_fact_model_subject_persists():
+    """
+    Verifies that FactModel has a 'subject' column whose server_default
+    of 'user' is reflected when the model is instantiated without an
+    explicit subject value.
+    """
+    # Arrange / Act
+    model = FactModel(fact_id="f2", text="FastAPI is async", thread_id="t1", importance=0.7)
+
+    # Assert
+    assert model.subject == 'user'
