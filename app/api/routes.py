@@ -554,6 +554,7 @@ async def get_facts(
             last_accessed=f.last_accessed,
             usage_count=f.usage_count,
             needs_update=f.needs_update,
+            subject=f.subject,
         )
         for f in facts
     ]
@@ -590,6 +591,7 @@ async def get_fact_by_id(
         last_accessed=fact.last_accessed,
         usage_count=fact.usage_count,
         needs_update=fact.needs_update,
+        subject=fact.subject,
     )
 
 

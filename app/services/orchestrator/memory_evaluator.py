@@ -54,7 +54,9 @@ class MemoryEvaluator:
         self.memory_service = memory_service
         self.relevance_scorer = relevance_scorer or RelevanceScorer()
 
-    async def evaluate(self, query_analysis, session_id: str) -> MemoryEvaluation:
+    async def evaluate(
+        self, query_analysis, session_id: str, subject_hint: Optional[str] = None
+    ) -> MemoryEvaluation:
         """Evaluate memory coverage for a query"""
         # Build search query from topics and entities
         search_terms = query_analysis.topics + query_analysis.entities
@@ -62,7 +64,7 @@ class MemoryEvaluator:
 
         # Search for relevant facts
         relevant_facts = await self._search_relevant_facts(
-            query_analysis, session_id, search_query
+            query_analysis, session_id, search_query, subject_hint=subject_hint
         )
 
         # Calculate coverage score
@@ -83,7 +85,10 @@ class MemoryEvaluator:
             confidence=evaluation_confidence
         )
 
-    async def _search_relevant_facts(self, query_analysis, session_id: str, search_query: str) -> List[dict]:
+    async def _search_relevant_facts(
+        self, query_analysis, session_id: str, search_query: str,
+        subject_hint: Optional[str] = None,
+    ) -> List[dict]:
         """Search memory for facts related to query"""
         # If no memory service provided (tests), return empty
         if not self.memory_service:
@@ -99,7 +104,8 @@ class MemoryEvaluator:
             facts = await self.memory_service.search_facts(
                 query=search_query,
                 min_importance=0.3,
-                limit=10
+                limit=10,
+                subject=subject_hint,
             )
 
             # Convert SQLAlchemy models to dicts for consistent handling

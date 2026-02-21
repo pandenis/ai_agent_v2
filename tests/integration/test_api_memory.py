@@ -149,7 +149,8 @@ class TestGetFactById:
         mock_fact.last_accessed = "2025-01-01T00:00:00"
         mock_fact.usage_count = 5
         mock_fact.needs_update = False
-        
+        mock_fact.subject = "user"
+
         client_with_mock_memory.mock_memory_service.get_fact_by_id = AsyncMock(return_value=mock_fact)
         
         # Act
