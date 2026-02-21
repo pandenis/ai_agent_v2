@@ -1,4 +1,4 @@
-"""Tests for Fact dataclass subject field (MEM-002-01, steps 1-2 of 13)."""
+"""Tests for Fact dataclass subject field (MEM-002-01, steps 1-3 of 13)."""
 from app.models.memory_v2 import Fact, FactModel
 
 
@@ -31,3 +31,21 @@ def test_fact_model_subject_persists():
 
     # Assert
     assert model.subject == 'user'
+
+
+def test_fact_model_to_dataclass_includes_subject():
+    """
+    Verifies that FactModel.to_dataclass() correctly maps the 'subject'
+    column onto the resulting Fact dataclass instance.
+    """
+    # Arrange
+    model = FactModel(
+        fact_id="f3", text="Metformin treats T2D",
+        thread_id="t1", importance=0.8, subject='medical'
+    )
+
+    # Act
+    fact = model.to_dataclass()
+
+    # Assert
+    assert fact.subject == 'medical'

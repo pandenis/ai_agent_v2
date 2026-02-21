@@ -161,7 +161,8 @@ class FactModel(Base):
             related_fact_ids=self.related_fact_ids or [],
             context_maps=self.context_maps or [],
             meta_data=self.meta_data or {},
-            usage_count=self.usage_count
+            usage_count=self.usage_count,
+            subject=self.subject
         )
 
 
