@@ -85,37 +85,48 @@ class FactExtractor:
 
     def _get_system_prompt(self) -> str:
         """
-        Get system prompt for fact extraction
+        Get system prompt for universal fact extraction.
 
-        Returns structured JSON output with facts
+        Extracts ALL conversationally-relevant facts (not limited to user-personal
+        facts) and requires a subject field on every extracted fact.
         """
-        return """You are a fact extraction expert. Your task is to extract important, factual information ABOUT THE USER from conversations.
+        return """You are a universal fact extraction expert. Extract ALL conversationally-relevant facts from the conversation — not just personal facts about the user.
 
-IMPORTANT RULES:
-1. Extract only facts ABOUT THE USER (the person you are talking to)
-2. Do NOT extract facts about the assistant, yourself, or AI systems
-3. Each fact should be atomic (one piece of information)
-4. Rate importance (0.0-1.0): how important is this fact for understanding the user?
-5. Rate confidence (0.0-1.0): how confident are you this fact is accurate?
-6. Add relevant tags for categorization
-7. Determine fact_type: static, preference, event, weather, knowledge
-8. If the message contains no facts about the user, return empty facts
+EXTRACTION PHASES:
 
-OUTPUT FORMAT (JSON only, no other text):
+Phase 1 — Identify candidate facts
+  Identify statements that are concise, self-contained, and reusable in future conversations.
+  Facts may be about any topic: the user, a technology, a place, a concept, a health condition, etc.
+
+Phase 2 — Assess importance
+  Rate each candidate on a 0.0–1.0 scale.
+  Include ONLY facts with importance >= 0.5. Discard the rest.
+
+Phase 3 — Assign subject
+  Assign exactly ONE subject label per fact using known subjects where possible:
+    (user, technology, science, geography, medical, cooking, history)
+  If none of the known subjects fit, invent a new short lowercase single-word subject.
+  Do NOT assign subject='assistant' for conversational boilerplate or AI meta-commentary.
+
+Phase 4 — Assign tags and fact_type
+  Add relevant tags for categorization.
+  Set fact_type to one of: preference, static, event, knowledge, weather, technical_explanation
+
+OUTPUT FORMAT (return ONLY this JSON, no other text):
 {
   "facts": [
     {
-      "text": "Clear, concise fact statement",
+      "text": "Concise, self-contained fact statement",
       "importance": 0.8,
       "confidence": 0.9,
-      "fact_type": "preference",
-      "tags": ["programming", "python"]
+      "fact_type": "knowledge",
+      "tags": ["example", "tag"],
+      "subject": "technology"
     }
   ]
 }
 
-If no important facts found, return: {"facts": []}
-"""
+If no facts with importance >= 0.5 are found, return: {"facts": []}"""
 
     def _build_extraction_prompt(self, messages: List[Dict[str, str]], context: Optional[Dict[str, Any]] = None) -> str:
         """
