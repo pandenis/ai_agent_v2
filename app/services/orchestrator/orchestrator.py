@@ -419,7 +419,7 @@ class IntelligentOrchestrator:
         Uses ResponseFormatter to format the response with context.
         """
         # Build context from memory (graph-enriched if available, else sorted by importance)
-        context = self._build_context_with_map(query, memory_facts, token_budget=500)
+        context = await self._build_context_with_map(query, memory_facts, token_budget=500)
 
         # Create enhanced prompt
         enhanced_prompt = f"""Context from previous conversations:
@@ -487,7 +487,7 @@ class IntelligentOrchestrator:
         context_parts = []
         # Add memory context (sorted by importance)
         if memory_eval.relevant_facts:
-            facts_text = self._build_context_with_map(query, memory_eval.relevant_facts, token_budget=500)
+            facts_text = await self._build_context_with_map(query, memory_eval.relevant_facts, token_budget=500)
             context_parts.append(f"Known information:\n{facts_text}")
 
         # Add information gaps
@@ -560,13 +560,40 @@ class IntelligentOrchestrator:
             # Fallback to default agent
         return self.agent_factory.create_agent("mistral")
 
-    def _build_context_with_map(self, query: str, facts: List[Dict[str, Any]], token_budget: int = 500) -> str:
+    async def _build_context_with_map(
+            self,
+            query: str,
+            facts: List[Dict[str, Any]] = None,
+            token_budget: int = 500,
+            thread_id: Optional[str] = None,
+    ) -> str:
         """Build context using the graph-based MemoryMap when available, with fallback.
+
+        Infers a subject hint from the query and fetches subject-filtered facts
+        from the memory service before building context. Falls back to the
+        provided facts list when the subject-filtered search returns nothing.
 
         Attempts to use self.memory_map.build_context_for_query() for richer,
         graph-enriched context. Falls back to self._build_context() if the
         memory map is unavailable, empty, or raises an error.
         """
+        subject_hint = self._infer_subject_hint(query)
+        try:
+            subject_facts_raw = await self.memory_service.search_facts(
+                query=query, thread_id=thread_id, subject=subject_hint
+            )
+        except TypeError:
+            # memory_service.search_facts is not async (e.g. MagicMock in unit tests)
+            subject_facts_raw = []
+        subject_facts = [
+            {
+                'text': f.get('text', '') if isinstance(f, dict) else getattr(f, 'text', ''),
+                'importance': f.get('importance', 0.5) if isinstance(f, dict) else getattr(f, 'importance', 0.5),
+            }
+            for f in subject_facts_raw
+        ]
+        effective_facts = subject_facts if subject_facts else (facts or [])
+
         if self.memory_map is not None:
             try:
                 result = self.memory_map.build_context_for_query(query, token_budget)
@@ -574,7 +601,7 @@ class IntelligentOrchestrator:
                     return result
             except Exception:
                 logger.warning("MemoryMap context retrieval failed, falling back to flat facts", exc_info=True)
-        return self._build_context(facts, max_facts=max(token_budget // 50, 1))
+        return self._build_context(effective_facts, max_facts=max(token_budget // 50, 1))
 
     def _build_context(self, facts: List[Dict[str, Any]], max_facts: int = 5) -> str:
         """

@@ -14,7 +14,8 @@ from app.services.memory.memory_node import MemoryNode
 from app.services.orchestrator.orchestrator import IntelligentOrchestrator
 
 
-def test_build_context_with_map_returns_enriched_context_from_real_nodes():
+@pytest.mark.asyncio
+async def test_build_context_with_map_returns_enriched_context_from_real_nodes():
     """Verify _build_context_with_map produces non-empty context from a real
     MemoryMap with real nodes. All existing tests mock one or both components —
     this test exercises the real graph path."""
@@ -34,7 +35,7 @@ def test_build_context_with_map_returns_enriched_context_from_real_nodes():
         {"text": "User enjoys cycling", "importance": 0.8, "confidence": 0.8},
     ]
 
-    result = orchestrator._build_context_with_map(
+    result = await orchestrator._build_context_with_map(
         query="Tell me about the user",
         facts=facts,
         token_budget=500,
