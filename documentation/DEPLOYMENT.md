@@ -261,7 +261,13 @@ npm run build
 npm start
 
 # Visit http://localhost:3000
+# Verify the UI loads correctly, then STOP the server:
+# Press Ctrl+C to stop npm start before proceeding
 ```
+
+> ⚠️ **Important:** Stop the test server (Ctrl+C) before continuing.
+> The systemd service will also run on port 3000 — if the manual server
+> is still running, the service will fail with `EADDRINUSE :::3000`.
 
 ---
 
@@ -336,6 +342,9 @@ WantedBy=multi-user.target
 
 **Enable & Start:**
 ```bash
+# Ensure no manual npm start is running on port 3000:
+lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+
 sudo systemctl daemon-reload
 sudo systemctl enable ai-agent-ui.service
 sudo systemctl start ai-agent-ui.service
