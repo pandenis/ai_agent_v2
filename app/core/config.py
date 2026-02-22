@@ -25,8 +25,10 @@ class Settings(BaseSettings):
 
     # Security
     secret_key: str = Field(default="changeme", description="Secret key for JWT and encryption")
-    allowed_origins: str = Field(default="http://localhost:3000,http://127.0.0.1:3000",
-                                 description="Comma-separated CORS origins")
+    allowed_origins: str = Field(
+        default="http://localhost:3000,http://127.0.0.1:3000,http://192.168.1.237:3000",
+        description="Comma-separated list of allowed CORS origins"
+    )
     api_key_groq: Optional[str] = None
 
     # Ollama (legacy single model)
