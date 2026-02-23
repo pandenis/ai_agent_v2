@@ -30,7 +30,7 @@ describe('API Client', () => {
       });
 
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/v1/orchestrate'),
+        expect.stringContaining('/orchestrate'),
         expect.objectContaining({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -68,7 +68,7 @@ describe('API Client', () => {
       const result = await api.getSessions();
 
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/v1/sessions'),
+        expect.stringContaining('/sessions'),
         expect.any(Object)
       );
       expect(result).toHaveLength(2);

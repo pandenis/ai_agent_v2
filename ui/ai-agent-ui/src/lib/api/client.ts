@@ -13,6 +13,10 @@ import type {
   HealthResponse,
 } from '@/types/api';
 
+/**
+ * Base URL already includes the /api/v1 prefix (set via NEXT_PUBLIC_API_URL).
+ * All endpoint paths below must be relative (e.g. '/sessions', not '/api/v1/sessions').
+ */
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -60,64 +64,68 @@ export interface SessionStats {
 
 export const api = {
   orchestrate: (req: OrchestrateRequest): Promise<OrchestrateResponse> => {
-    return request<OrchestrateResponse>('/api/v1/orchestrate', {
+    return request<OrchestrateResponse>('/orchestrate', {
       method: 'POST',
       body: JSON.stringify(req),
     });
   },
 
   getSessions: (): Promise<Session[]> => {
-    return request<Session[]>('/api/v1/sessions');
+    return request<Session[]>('/sessions');
   },
 
   getSession: (sessionId: string): Promise<Session> => {
-    return request<Session>(`/api/v1/sessions/${sessionId}`);
+    return request<Session>(`/sessions/${sessionId}`);
   },
 
   createSession: (req?: CreateSessionRequest): Promise<Session> => {
-    return request<Session>('/api/v1/sessions', {
+    return request<Session>('/sessions', {
       method: 'POST',
       body: JSON.stringify(req || {}),
     });
   },
 
   renameSession: (sessionId: string, newName: string): Promise<Session> => {
-    return request<Session>(`/api/v1/sessions/${sessionId}`, {
+    return request<Session>(`/sessions/${sessionId}`, {
       method: 'PATCH',
       body: JSON.stringify({ agent_name: newName }),
     });
   },
 
   deleteSession: (sessionId: string): Promise<void> => {
-    return request<void>(`/api/v1/sessions/${sessionId}`, {
+    return request<void>(`/sessions/${sessionId}`, {
       method: 'DELETE',
     });
   },
 
   getMessages: async (sessionId: string): Promise<Message[]> => {
-    const response = await request<MessagesResponse>(`/api/v1/sessions/${sessionId}/messages`);
+    const response = await request<MessagesResponse>(`/sessions/${sessionId}/messages`);
     return response.messages;
   },
 
   getFacts: async (sessionId?: string): Promise<Fact[]> => {
     const endpoint = sessionId
-      ? `/api/v1/memory/facts?session_id=${sessionId}`
-      : '/api/v1/memory/facts';
+      ? `/memory/facts?session_id=${sessionId}`
+      : '/memory/facts';
     const response = await request<FactsResponse>(endpoint);
     return response.facts;
   },
 
   health: (): Promise<HealthResponse> => {
-    return request<HealthResponse>('/api/v1/health');
+    return request<HealthResponse>('/health');
+  },
+
+  getHealth: (): Promise<HealthResponse> => {
+    return request<HealthResponse>('/health');
   },
 
   // New: Cache statistics
   getCacheStats: (): Promise<CacheStats> => {
-    return request<CacheStats>('/api/v1/system/cache-stats');
+    return request<CacheStats>('/system/cache-stats');
   },
 
   // New: Session statistics
   getSessionStats: (sessionId: string): Promise<SessionStats> => {
-    return request<SessionStats>(`/api/v1/sessions/${sessionId}/stats`);
+    return request<SessionStats>(`/sessions/${sessionId}/stats`);
   },
 };
