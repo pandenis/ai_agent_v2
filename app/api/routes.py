@@ -690,7 +690,20 @@ async def orchestrate_query(
 
     # Save messages to database
     from app.models.memory import ConversationMessage
+    from app.models.session import Session
     import json
+
+    # Upsert session (create if not exists, so FK constraint is satisfied)
+    existing = await db.execute(
+        select(Session).where(Session.session_id == request.session_id)
+    )
+    if not existing.scalar_one_or_none():
+        new_session = Session(
+            session_id=request.session_id,
+            agent_name="orchestrator",
+        )
+        db.add(new_session)
+        await db.flush()  # flush but don't commit yet
 
     # Save user message
     user_msg = ConversationMessage(

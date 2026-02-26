@@ -190,6 +190,16 @@ class IntelligentOrchestrator:
             )
             logger.debug(f"Memory coverage: {memory_eval.coverage_score:.2f}")
 
+            # Load conversation history for context injection
+            conversation_history = []
+            try:
+                conversation_history = await self.memory_service.get_conversation_history(
+                    session_id=session_id, limit=5
+                )
+            except Exception:
+                logger.warning("Failed to load conversation history, using empty list")
+                conversation_history = []
+
             # ==========================================
             # STAGE 3: Decide Response Strategy
             # ==========================================
@@ -273,7 +283,7 @@ class IntelligentOrchestrator:
 
             if strategy.strategy == "direct":
                 # Answer directly from memory (fast, free)
-                response_text = self._direct_answer(memory_eval.relevant_facts)
+                response_text = await self._direct_answer(memory_eval.relevant_facts, conversation_history, query)
                 sources = ["memory"]
 
             elif strategy.strategy == "enhanced":
@@ -281,7 +291,8 @@ class IntelligentOrchestrator:
                 response_text, sources = await self._enhanced_answer(
                     query=query,
                     memory_facts=memory_eval.relevant_facts,
-                    strategy=strategy
+                    strategy=strategy,
+                    conversation_history=conversation_history
                 )
 
             else:  # deep_reasoning
@@ -290,7 +301,8 @@ class IntelligentOrchestrator:
                     query=query,
                     query_analysis=query_analysis,
                     memory_eval=memory_eval,
-                    strategy=strategy
+                    strategy=strategy,
+                    conversation_history=conversation_history
                 )
 
             # ==========================================
@@ -395,24 +407,36 @@ class IntelligentOrchestrator:
                 }
             }
 
-    def _direct_answer(self, facts: List[Dict[str, Any]]) -> str:
+    async def _direct_answer(self, facts: List[Dict[str, Any]], conversation_history: list = None, query: str = None) -> str:
         """
         Generate a direct answer from memory facts.
-        This is FAST (no AI needed) and FREE.
-
-        Uses ResponseFormatter to format the response properly.
+        Falls back to an agent call with conversation history when no facts exist.
         """
-        if not facts:
-            return "I don't have that information in my memory yet."
+        if facts:
+            return self.response_formatter.format_direct(facts)
 
-        # Use ResponseFormatter to format facts nicely
-        return self.response_formatter.format_direct(facts)
+        if conversation_history and self.agent_factory and query:
+            try:
+                history_text = "\n".join(
+                    f"{m.role}: {m.content}"
+                    for m in (conversation_history or [])[-5:]
+                )
+                prompt = f"Recent conversation:\n{history_text}\n\nUser question: {query}"
+                agent = self._select_agent("balanced")
+                if agent:
+                    result = await agent.generate(prompt)
+                    return result.get("response", "I don't have that information in my memory yet.")
+            except Exception:
+                pass
+
+        return "I don't have that information in my memory yet."
 
     async def _enhanced_answer(
             self,
             query: str,
             memory_facts: List[Dict[str, Any]],
-            strategy: ResponseStrategy
+            strategy: ResponseStrategy,
+            conversation_history: list = None
     ) -> tuple[str, List[str]]:
         """
         Generate an enhanced answer using AI + memory.
@@ -422,8 +446,15 @@ class IntelligentOrchestrator:
         # Build context from memory (graph-enriched if available, else sorted by importance)
         context = await self._build_context_with_map(query, memory_facts, token_budget=500)
 
-        # Create enhanced prompt
-        enhanced_prompt = f"""Context from previous conversations:
+        # Build history block and create enhanced prompt
+        if conversation_history:
+            history_text = "\n".join(
+                f"{msg.role}: {msg.content}"
+                for msg in conversation_history[-5:]  # last 5 messages
+            )
+            enhanced_prompt = f"Recent conversation:\n{history_text}\n\nUser question: {query}"
+        else:
+            enhanced_prompt = f"""Context from previous conversations:
     {context}
 
     User question: {query}
@@ -454,13 +485,21 @@ class IntelligentOrchestrator:
             query: str,
             query_analysis: QueryAnalysis,
             memory_eval: MemoryEvaluation,
-            strategy: ResponseStrategy
+            strategy: ResponseStrategy,
+            conversation_history: list = None
     ) -> tuple[str, List[str], List[str], float]:
         """
         Generate a deep, thoughtful answer for complex queries.
         This is SLOW but THOROUGH - uses premium AI with multiple reasoning steps.
         Uses ResponseFormatter to preserve paragraph structure.
         """
+        if conversation_history:
+            history_text = "\n".join(
+                f"{m.role}: {m.content[:200]}"
+                for m in conversation_history[-5:]
+            )
+            query = f"Recent conversation:\n{history_text}\n\nUser question: {query}"
+
         # Create reasoning plan
         plan = self.reasoning_planner.create_plan(
             query=query,
@@ -677,7 +716,7 @@ class IntelligentOrchestrator:
                 logger.info(f"Extracted {len(facts)} new facts")
                 for fact in facts:
                     fact.thread_id = session_id
-                    await self.memory_service.add_fact(fact, thread_id=session_id)
+                    await self.memory_service.add_fact(fact, session_id=session_id)
 
         except Exception as e:
             # Don't fail the whole request if memory update fails
@@ -704,7 +743,7 @@ class IntelligentOrchestrator:
 
             if step.step_type == "direct":
                 sources.append("memory")
-                return self._direct_answer(memory_eval.relevant_facts)
+                return await self._direct_answer(memory_eval.relevant_facts)
             elif step.step_type == "memory":
                 sources.append("memory")
                 context_from_memory = self._build_context(memory_eval.relevant_facts, max_facts=5)
