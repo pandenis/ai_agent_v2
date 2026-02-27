@@ -1,6 +1,6 @@
 # 🔌 AI Agent System - API Documentation
 
-Complete API reference for the AI Agent System v2.0
+Complete API reference for the AI Agent System v2.3.3
 
 **Base URL:** `http://localhost:8000/api/v1`  
 **Interactive Docs:** `http://localhost:8000/docs` (Swagger UI)
@@ -379,7 +379,7 @@ session_id: "f7e9d0bc-..."
 ```json
 {
   "status": "healthy",
-  "version": "2.0",
+  "version": "2.3.3",
   "database": "connected",
   "ollama": "connected",
   "models": ["groq", "mistral", "llama3.1"],

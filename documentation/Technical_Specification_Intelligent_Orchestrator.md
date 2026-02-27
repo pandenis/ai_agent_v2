@@ -4,7 +4,7 @@
 **Version:** 1.0  
 **Date:** December 6, 2025  
 **Author:** Denis (QA Engineer)  
-**Project:** AI Agent System v2.0
+**Project:** AI Agent System v2.3.3
 
 ---
 

@@ -1,4 +1,4 @@
-# AI Agent System v2.3.2
+# AI Agent System v2.3.3
 
 A full-stack AI assistant platform with:
 - **FastAPI backend** for sessions, chat, memory, document search, web search, and orchestration.

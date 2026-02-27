@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.app_name,
     description="Multi-model AI Agent System with persistent memory",
-    version="2.0.0",
+    version="2.3.3",
     lifespan=lifespan,
 )
 
@@ -53,7 +53,7 @@ app.include_router(debug_router, prefix="/api/v1", tags=["debug"])
 @app.get("/")
 async def root():
     """Root endpoint"""
-    return {"message": "AI Agent System API", "version": "2.0.0", "docs": "/docs"}
+    return {"message": "AI Agent System API", "version": "2.3.3", "docs": "/docs"}
 
 
 if __name__ == "__main__":

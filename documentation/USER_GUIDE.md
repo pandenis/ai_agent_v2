@@ -1,6 +1,6 @@
 # 👤 AI Agent System - User Guide
 
-Simple guide to using the AI Agent System v2.0
+Simple guide to using the AI Agent System v2.3.3
 
 ---
 
@@ -316,7 +316,7 @@ If you're stuck:
 ---
 
 **Last Updated:** December 9, 2025  
-**Version:** 2.0  
+**Version:** 2.3.3
 **For:** End Users
 
 Happy chatting! 🎉

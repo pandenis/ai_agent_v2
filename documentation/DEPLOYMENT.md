@@ -1,6 +1,6 @@
 # 🚀 AI Agent System - Deployment Guide
 
-Production deployment guide for the AI Agent System v2.0
+Production deployment guide for the AI Agent System v2.3.3
 
 ---
 
@@ -677,5 +677,5 @@ If you encounter issues:
 ---
 
 **Last Updated:** December 9, 2025  
-**Deployment Version:** Production v2.0  
+**Deployment Version:** Production v2.3.3
 **Tested On:** Ubuntu 22.04 LTS
