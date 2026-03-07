@@ -100,3 +100,43 @@ async def test_create_model_sends_modelfile_to_ollama():
         "http://localhost:11434/api/create",
         json={"name": "medical-ai", "modelfile": modelfile, "stream": False},
     )
+
+
+@pytest.mark.asyncio
+async def test_create_model_returns_error_dict_on_ollama_failure():
+    mock_response = MagicMock()
+    mock_response.status_code = 500
+    mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "500 Internal Server Error", request=MagicMock(), response=mock_response
+    )
+
+    mock_client = AsyncMock()
+    mock_client.post = AsyncMock(return_value=mock_response)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+
+    with patch("httpx.AsyncClient", return_value=mock_client):
+        result = await ModelfileService().create_model("bad-model", "FROM nonexistent")
+
+    assert isinstance(result, dict)
+    assert result["success"] == False
+    assert isinstance(result["error"], str) and result["error"]
+
+
+@pytest.mark.asyncio
+async def test_delete_model_returns_true_on_success():
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+
+    mock_client = AsyncMock()
+    mock_client.request = AsyncMock(return_value=mock_response)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+
+    with patch("httpx.AsyncClient", return_value=mock_client):
+        result = await ModelfileService().delete_model("medical-ai")
+
+    assert result is True
+    mock_client.request.assert_called_once_with(
+        "DELETE", "http://localhost:11434/api/delete", json={"name": "medical-ai"}
+    )
