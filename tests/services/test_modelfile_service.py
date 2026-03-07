@@ -2,7 +2,7 @@ import httpx
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.services.modelfile_service import ModelfileService
+from app.services.modelfile_service import ModelfileService, ModelNotFoundError
 
 
 @pytest.mark.asyncio
@@ -59,3 +59,21 @@ async def test_get_model_returns_model_info_with_modelfile():
 
     assert isinstance(result, dict)
     assert result["modelfile"].startswith("FROM mistral")
+
+
+@pytest.mark.asyncio
+async def test_get_model_raises_model_not_found_error_for_unknown_model():
+    mock_response = MagicMock()
+    mock_response.status_code = 404
+    mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "404 Not Found", request=MagicMock(), response=mock_response
+    )
+
+    mock_client = AsyncMock()
+    mock_client.post = AsyncMock(return_value=mock_response)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+
+    with patch("httpx.AsyncClient", return_value=mock_client):
+        with pytest.raises(ModelNotFoundError):
+            await ModelfileService().get_model("nonexistent-model")
