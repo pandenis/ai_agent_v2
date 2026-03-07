@@ -32,3 +32,11 @@ class ModelfileService:
                     raise ModelNotFoundError(name)
                 raise
             return response.json()
+
+    async def create_model(self, name: str, modelfile: str) -> dict:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.ollama_url}/api/create",
+                json={"name": name, "modelfile": modelfile, "stream": False},
+            )
+            return {"success": True, "name": name, "output": response.json().get("status", "")}
