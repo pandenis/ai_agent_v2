@@ -17,3 +17,8 @@ class ModelfileService:
         except Exception as e:
             logger.warning("Ollama unavailable: %s", e)
             return []
+
+    async def get_model(self, name: str) -> dict:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(f"{self.ollama_url}/api/show", json={"name": name})
+            return response.json()

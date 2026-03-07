@@ -39,3 +39,23 @@ async def test_list_models_returns_empty_list_when_ollama_unavailable():
         result = await ModelfileService().list_models()
 
     assert result == []
+
+
+@pytest.mark.asyncio
+async def test_get_model_returns_model_info_with_modelfile():
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "modelfile": "FROM mistral\nSYSTEM \"You are an assistant\"",
+        "details": {},
+    }
+
+    mock_client = AsyncMock()
+    mock_client.post = AsyncMock(return_value=mock_response)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+
+    with patch("httpx.AsyncClient", return_value=mock_client):
+        result = await ModelfileService().get_model("mistral")
+
+    assert isinstance(result, dict)
+    assert result["modelfile"].startswith("FROM mistral")
