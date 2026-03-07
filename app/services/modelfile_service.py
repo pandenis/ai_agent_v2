@@ -47,5 +47,11 @@ class ModelfileService:
 
     async def delete_model(self, name: str) -> bool:
         async with httpx.AsyncClient() as client:
-            await client.request("DELETE", f"{self.ollama_url}/api/delete", json={"name": name})
+            response = await client.request("DELETE", f"{self.ollama_url}/api/delete", json={"name": name})
+            try:
+                response.raise_for_status()
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 404:
+                    raise ModelNotFoundError(name)
+                raise
             return True

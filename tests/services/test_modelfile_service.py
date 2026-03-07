@@ -140,3 +140,21 @@ async def test_delete_model_returns_true_on_success():
     mock_client.request.assert_called_once_with(
         "DELETE", "http://localhost:11434/api/delete", json={"name": "medical-ai"}
     )
+
+
+@pytest.mark.asyncio
+async def test_delete_model_raises_model_not_found_error_for_unknown_model():
+    mock_response = MagicMock()
+    mock_response.status_code = 404
+    mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "404 Not Found", request=MagicMock(), response=mock_response
+    )
+
+    mock_client = AsyncMock()
+    mock_client.request = AsyncMock(return_value=mock_response)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+
+    with patch("httpx.AsyncClient", return_value=mock_client):
+        with pytest.raises(ModelNotFoundError):
+            await ModelfileService().delete_model("nonexistent-model")
