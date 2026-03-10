@@ -61,3 +61,18 @@ def test_get_model_by_name_returns_404_for_unknown_model():
 
     assert response.status_code == 404
     assert "nonexistent" in response.json()["detail"]
+
+
+def test_post_models_creates_model_and_returns_201():
+    with patch(
+        "app.services.modelfile_service.ModelfileService.create_model",
+        new=AsyncMock(return_value={"success": True, "name": "medical-ai", "output": "success"}),
+    ):
+        response = client.post(
+            "/api/v1/models",
+            json={"name": "medical-ai", "modelfile": "FROM llama3.1\nSYSTEM \"You are a medical assistant\""},
+        )
+
+    assert response.status_code == 201
+    assert response.json()["success"] == True
+    assert response.json()["name"] == "medical-ai"

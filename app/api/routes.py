@@ -45,7 +45,7 @@ from app.services.memory_write_gate import MemoryWriteGate
 # Security module import
 from security.input_validation import SecurityValidator, validate_input
 
-from app.schemas.modelfile import ModelDetail, ModelList
+from app.schemas.modelfile import ModelCreateResponse, ModelDetail, ModelfileCreate, ModelList
 
 router = APIRouter()
 
@@ -60,6 +60,12 @@ async def get_models():
     from app.services.modelfile_service import ModelfileService
     result = await ModelfileService().list_models()
     return {"models": result}
+
+
+@router.post("/models", response_model=ModelCreateResponse, status_code=status.HTTP_201_CREATED, summary="Create a model from Modelfile")
+async def create_model(body: ModelfileCreate):
+    from app.services.modelfile_service import ModelfileService
+    return await ModelfileService().create_model(body.name, body.modelfile)
 
 
 @router.get("/models/{name}", response_model=ModelDetail, summary="Get model info with Modelfile")
