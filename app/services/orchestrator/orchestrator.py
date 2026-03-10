@@ -452,7 +452,7 @@ class IntelligentOrchestrator:
                 f"{msg.role}: {msg.content}"
                 for msg in conversation_history[-5:]  # last 5 messages
             )
-            enhanced_prompt = f"Recent conversation:\n{history_text}\n\nUser question: {query}"
+            enhanced_prompt = f"Recent conversation:\n{history_text}\n\nContext:\n{context}\n\nUser question: {query}"
         else:
             enhanced_prompt = f"""Context from previous conversations:
     {context}
@@ -478,7 +478,7 @@ class IntelligentOrchestrator:
             return formatted_response, ["memory", agent.name]
         else:
             # Fallback if no agent available
-            return self._direct_answer(memory_facts), ["memory"]
+            return await self._direct_answer(memory_facts), ["memory"]
 
     async def _deep_reasoning_answer(
             self,
@@ -716,7 +716,7 @@ class IntelligentOrchestrator:
                 logger.info(f"Extracted {len(facts)} new facts")
                 for fact in facts:
                     fact.thread_id = session_id
-                    await self.memory_service.add_fact(fact, session_id=session_id)
+                    await self.memory_service.add_fact(fact, session_id=session_id, thread_id=session_id)
 
         except Exception as e:
             # Don't fail the whole request if memory update fails

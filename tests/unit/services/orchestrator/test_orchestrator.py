@@ -651,7 +651,7 @@ async def test_direct_answer_method_with_empty_facts(
     Expected: Returns default 'no information' message
     """
     # Call _direct_answer directly with empty list
-    result = orchestrator._direct_answer([])
+    result = await orchestrator._direct_answer([])
 
     # Assert: Should return default message
     assert "don't have" in result.lower() or "information" in result.lower()

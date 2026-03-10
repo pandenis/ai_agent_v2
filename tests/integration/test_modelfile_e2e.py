@@ -1,8 +1,13 @@
 """E2E tests for Modelfile endpoints — requires Ollama running"""
 
+import os
+
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+
+IN_CI = os.getenv("CI") == "true" or os.getenv("GITHUB_ACTIONS") == "true"
 
 client = TestClient(app)
 
@@ -15,6 +20,7 @@ def test_get_models_returns_real_models_from_ollama():
     assert isinstance(response.json()["models"], list)
 
 
+@pytest.mark.skipif(IN_CI, reason="Requires Ollama running locally")
 def test_post_models_creates_real_model_and_appears_in_list():
     response = client.post(
         "/api/v1/models",
@@ -29,6 +35,7 @@ def test_post_models_creates_real_model_and_appears_in_list():
     assert any(n == "test-agent" or n.startswith("test-agent:") for n in names)
 
 
+@pytest.mark.skipif(IN_CI, reason="Requires Ollama running locally")
 def test_delete_model_removes_real_model_from_ollama():
     response = client.delete("/api/v1/models/test-agent:latest")
 
