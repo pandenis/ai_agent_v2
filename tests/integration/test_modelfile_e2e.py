@@ -27,3 +27,12 @@ def test_post_models_creates_real_model_and_appears_in_list():
     response = client.get("/api/v1/models")
     names = [m["name"] for m in response.json()["models"]]
     assert any(n == "test-agent" or n.startswith("test-agent:") for n in names)
+
+
+def test_delete_model_removes_real_model_from_ollama():
+    response = client.delete("/api/v1/models/test-agent:latest")
+
+    assert response.status_code == 204
+
+    response = client.get("/api/v1/models")
+    assert "test-agent:latest" not in [m["name"] for m in response.json()["models"]]

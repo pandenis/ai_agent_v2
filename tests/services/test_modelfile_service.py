@@ -45,8 +45,8 @@ async def test_list_models_returns_empty_list_when_ollama_unavailable():
 async def test_get_model_returns_model_info_with_modelfile():
     mock_response = MagicMock()
     mock_response.json.return_value = {
-        "modelfile": "FROM mistral\nSYSTEM \"You are an assistant\"",
-        "details": {},
+        "capabilities": ["completion"],
+        "modified_at": "2026-01-01T00:00:00Z",
     }
 
     mock_client = AsyncMock()
@@ -58,7 +58,8 @@ async def test_get_model_returns_model_info_with_modelfile():
         result = await ModelfileService().get_model("mistral")
 
     assert isinstance(result, dict)
-    assert result["modelfile"].startswith("FROM mistral")
+    assert result["name"] == "mistral"
+    assert result["modelfile"] == ""
 
 
 @pytest.mark.asyncio

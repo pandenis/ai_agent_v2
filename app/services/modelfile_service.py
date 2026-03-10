@@ -31,7 +31,13 @@ class ModelfileService:
                 if e.response.status_code == 404:
                     raise ModelNotFoundError(name)
                 raise
-            return response.json()
+            data = response.json()
+            return {
+                "name": name,
+                "modelfile": data.get("modelfile", ""),
+                "capabilities": data.get("capabilities", []),
+                "modified_at": data.get("modified_at", ""),
+            }
 
     @staticmethod
     def _modelfile_to_payload(name: str, modelfile: str) -> dict:
