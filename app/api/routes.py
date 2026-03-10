@@ -45,7 +45,7 @@ from app.services.memory_write_gate import MemoryWriteGate
 # Security module import
 from security.input_validation import SecurityValidator, validate_input
 
-from app.schemas.modelfile import ModelList
+from app.schemas.modelfile import ModelDetail, ModelList
 
 router = APIRouter()
 
@@ -60,6 +60,15 @@ async def get_models():
     from app.services.modelfile_service import ModelfileService
     result = await ModelfileService().list_models()
     return {"models": result}
+
+
+@router.get("/models/{name}", response_model=ModelDetail, summary="Get model info with Modelfile")
+async def get_model(name: str):
+    from app.services.modelfile_service import ModelfileService, ModelNotFoundError
+    try:
+        return await ModelfileService().get_model(name)
+    except ModelNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Model '{name}' not found")
 
 
 # ============================================================================

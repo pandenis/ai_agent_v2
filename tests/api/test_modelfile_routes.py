@@ -1,5 +1,7 @@
 from unittest.mock import AsyncMock, patch
 
+from app.services.modelfile_service import ModelNotFoundError
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -20,3 +22,42 @@ def test_get_models_returns_200_with_list():
     data = response.json()
     assert len(data["models"]) == 2
     assert data["models"][0]["name"] == "mistral:latest"
+
+
+def test_get_models_returns_empty_list_when_ollama_unavailable():
+    with patch(
+        "app.services.modelfile_service.ModelfileService.list_models",
+        new=AsyncMock(return_value=[]),
+    ):
+        response = client.get("/api/v1/models")
+
+    assert response.status_code == 200
+    assert response.json()["models"] == []
+
+
+def test_get_model_by_name_returns_200_with_modelfile():
+    mock_detail = {
+        "name": "mistral",
+        "modelfile": "FROM mistral\nSYSTEM \"You are an assistant\"",
+    }
+
+    with patch(
+        "app.services.modelfile_service.ModelfileService.get_model",
+        new=AsyncMock(return_value=mock_detail),
+    ):
+        response = client.get("/api/v1/models/mistral")
+
+    assert response.status_code == 200
+    assert response.json()["name"] == "mistral"
+    assert response.json()["modelfile"].startswith("FROM mistral")
+
+
+def test_get_model_by_name_returns_404_for_unknown_model():
+    with patch(
+        "app.services.modelfile_service.ModelfileService.get_model",
+        new=AsyncMock(side_effect=ModelNotFoundError("nonexistent")),
+    ):
+        response = client.get("/api/v1/models/nonexistent")
+
+    assert response.status_code == 404
+    assert "nonexistent" in response.json()["detail"]

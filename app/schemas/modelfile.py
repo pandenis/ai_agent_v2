@@ -9,3 +9,8 @@ class ModelInfo(BaseModel):
 
 class ModelList(BaseModel):
     models: List[ModelInfo]
+
+
+class ModelDetail(BaseModel):
+    name: str
+    modelfile: str
