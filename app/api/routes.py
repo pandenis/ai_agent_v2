@@ -79,8 +79,11 @@ async def get_model(name: str):
 
 @router.delete("/models/{name}", status_code=204, summary="Delete a model")
 async def delete_model(name: str):
-    from app.services.modelfile_service import ModelfileService
-    await ModelfileService().delete_model(name)
+    from app.services.modelfile_service import ModelfileService, ModelNotFoundError
+    try:
+        await ModelfileService().delete_model(name)
+    except ModelNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Model '{name}' not found")
     return Response(status_code=204)
 
 

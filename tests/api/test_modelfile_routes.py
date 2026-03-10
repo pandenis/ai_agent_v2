@@ -96,3 +96,14 @@ def test_delete_model_returns_204_on_success():
         response = client.delete("/api/v1/models/medical-ai")
 
     assert response.status_code == 204
+
+
+def test_delete_model_returns_404_for_unknown_model():
+    with patch(
+        "app.services.modelfile_service.ModelfileService.delete_model",
+        new=AsyncMock(side_effect=ModelNotFoundError("ghost-model")),
+    ):
+        response = client.delete("/api/v1/models/ghost-model")
+
+    assert response.status_code == 404
+    assert "ghost-model" in response.json()["detail"]
