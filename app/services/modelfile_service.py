@@ -33,11 +33,24 @@ class ModelfileService:
                 raise
             return response.json()
 
+    @staticmethod
+    def _modelfile_to_payload(name: str, modelfile: str) -> dict:
+        """Parse Modelfile syntax into Ollama 0.16+ structured API payload."""
+        payload: dict = {"name": name, "stream": False}
+        for line in modelfile.splitlines():
+            stripped = line.strip()
+            upper = stripped.upper()
+            if upper.startswith("FROM "):
+                payload["from"] = stripped[5:].strip()
+            elif upper.startswith("SYSTEM "):
+                payload["system"] = stripped[7:].strip().strip('"')
+        return payload
+
     async def create_model(self, name: str, modelfile: str) -> dict:
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{self.ollama_url}/api/create",
-                json={"name": name, "modelfile": modelfile, "stream": False},
+                json=self._modelfile_to_payload(name, modelfile),
             )
             try:
                 response.raise_for_status()

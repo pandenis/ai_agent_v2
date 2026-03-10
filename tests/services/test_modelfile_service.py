@@ -98,7 +98,7 @@ async def test_create_model_sends_modelfile_to_ollama():
     assert result["success"] == True
     mock_client.post.assert_called_once_with(
         "http://localhost:11434/api/create",
-        json={"name": "medical-ai", "modelfile": modelfile, "stream": False},
+        json={"name": "medical-ai", "from": "llama3.1", "system": "You are a medical assistant", "stream": False},
     )
 
 
