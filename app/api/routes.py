@@ -45,7 +45,21 @@ from app.services.memory_write_gate import MemoryWriteGate
 # Security module import
 from security.input_validation import SecurityValidator, validate_input
 
+from app.schemas.modelfile import ModelList
+
 router = APIRouter()
+
+
+# ============================================================================
+# MODELFILE ENDPOINTS
+# ============================================================================
+
+
+@router.get("/models", response_model=ModelList, summary="List available Ollama models")
+async def get_models():
+    from app.services.modelfile_service import ModelfileService
+    result = await ModelfileService().list_models()
+    return {"models": result}
 
 
 # ============================================================================
