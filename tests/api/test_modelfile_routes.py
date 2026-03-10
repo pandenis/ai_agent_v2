@@ -76,3 +76,13 @@ def test_post_models_creates_model_and_returns_201():
     assert response.status_code == 201
     assert response.json()["success"] == True
     assert response.json()["name"] == "medical-ai"
+
+
+def test_post_models_returns_422_when_name_missing():
+    response = client.post("/api/v1/models", json={})
+    assert response.status_code == 422
+
+
+def test_post_models_returns_422_when_modelfile_missing():
+    response = client.post("/api/v1/models", json={"name": "medical-ai"})
+    assert response.status_code == 422
