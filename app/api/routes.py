@@ -5,7 +5,7 @@ API routes for AI Agent System with multi-model support
 import uuid
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_orchestrator
@@ -75,6 +75,13 @@ async def get_model(name: str):
         return await ModelfileService().get_model(name)
     except ModelNotFoundError:
         raise HTTPException(status_code=404, detail=f"Model '{name}' not found")
+
+
+@router.delete("/models/{name}", status_code=204, summary="Delete a model")
+async def delete_model(name: str):
+    from app.services.modelfile_service import ModelfileService
+    await ModelfileService().delete_model(name)
+    return Response(status_code=204)
 
 
 # ============================================================================

@@ -86,3 +86,13 @@ def test_post_models_returns_422_when_name_missing():
 def test_post_models_returns_422_when_modelfile_missing():
     response = client.post("/api/v1/models", json={"name": "medical-ai"})
     assert response.status_code == 422
+
+
+def test_delete_model_returns_204_on_success():
+    with patch(
+        "app.services.modelfile_service.ModelfileService.delete_model",
+        new=AsyncMock(return_value=True),
+    ):
+        response = client.delete("/api/v1/models/medical-ai")
+
+    assert response.status_code == 204
