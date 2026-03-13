@@ -8,7 +8,11 @@ import { api } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 import { generateUUID } from '@/lib/utils/uuid';
 
-export function SessionList() {
+interface SessionListProps {
+  onModelsOpen?: () => void;
+}
+
+export function SessionList({ onModelsOpen }: SessionListProps = {}) {
   const queryClient = useQueryClient();
   const { activeSessionId, setActiveSession, setSessions } = useSessionStore();
   const { setSession, setMessages, setLoading, clearMessages } = useChatStore();
@@ -244,6 +248,15 @@ export function SessionList() {
             ))}
           </div>
         )}
+      </div>
+      {/* Models Button */}
+      <div className="p-3 border-t border-border">
+        <button
+          onClick={onModelsOpen}
+          className="w-full px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-md text-sm font-medium transition-colors"
+        >
+          🤖 Models
+        </button>
       </div>
     </div>
   );
