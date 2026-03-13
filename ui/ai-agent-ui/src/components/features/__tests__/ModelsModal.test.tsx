@@ -1,6 +1,12 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ModelsModal } from '../ModelsModal';
 
+vi.mock('@uiw/react-codemirror', () => ({
+  default: ({ value }: { value: string }) => (
+    <textarea data-testid="codemirror-editor" defaultValue={value} />
+  ),
+}));
+
 const EMPTY_FETCH = vi.fn().mockResolvedValue({
   json: () => Promise.resolve({ models: [] }),
 });
@@ -67,8 +73,8 @@ describe('ModelsModal', () => {
     vi.stubGlobal('fetch', MODEL_FETCH);
     render(<ModelsModal isOpen={true} onClose={vi.fn()} />);
     await waitFor(() => expect(screen.getByText('mistral')).toBeTruthy());
-    fireEvent.click(screen.getByText('mistral'));
-    expect(screen.getByText('mistral').className).toContain('bg-slate-600');
+    fireEvent.click(screen.getAllByText('mistral')[0]);
+    expect(screen.getAllByText('mistral')[0].className).toContain('bg-slate-600');
   });
 
   it('test_right_panel_shows_prompt_when_nothing_selected', async () => {
@@ -76,5 +82,72 @@ describe('ModelsModal', () => {
     render(<ModelsModal isOpen={true} onClose={vi.fn()} />);
     await waitFor(() => expect(screen.getByText('mistral')).toBeTruthy());
     expect(screen.getByText('Select a model to view its Modelfile')).toBeTruthy();
+  });
+
+  it('test_fetches_modelfile_when_model_selected', async () => {
+    vi.stubGlobal('fetch', vi.fn((url: string) => {
+      if (url === '/api/v1/models') {
+        return Promise.resolve({
+          json: () => Promise.resolve({ models: [{ name: 'mistral:latest' }] }),
+        });
+      }
+      return Promise.resolve({
+        json: () => Promise.resolve({ modelfile: 'FROM mistral\nSYSTEM Be helpful' }),
+      });
+    }));
+
+    render(<ModelsModal isOpen={true} onClose={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText('mistral')).toBeTruthy());
+    fireEvent.click(screen.getByText('mistral'));
+
+    await waitFor(() => {
+      const editor = screen.getByTestId('codemirror-editor') as HTMLTextAreaElement;
+      expect(editor.defaultValue).toContain('FROM mistral');
+    });
+  });
+
+  it('test_shows_loading_while_fetching_modelfile', async () => {
+    vi.stubGlobal('fetch', vi.fn((url: string) => {
+      if (url === '/api/v1/models') {
+        return Promise.resolve({
+          json: () => Promise.resolve({ models: [{ name: 'mistral:latest' }] }),
+        });
+      }
+      // model detail fetch never resolves → loading stays
+      return new Promise(() => {});
+    }));
+
+    render(<ModelsModal isOpen={true} onClose={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText('mistral')).toBeTruthy());
+    fireEvent.click(screen.getByText('mistral'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Loading Modelfile...')).toBeTruthy();
+    });
+  });
+
+  it('test_editor_updates_on_content_change', async () => {
+    vi.stubGlobal('fetch', vi.fn((url: string) => {
+      if (url === '/api/v1/models') {
+        return Promise.resolve({
+          json: () => Promise.resolve({ models: [{ name: 'mistral:latest' }] }),
+        });
+      }
+      return Promise.resolve({
+        json: () => Promise.resolve({ modelfile: 'FROM mistral' }),
+      });
+    }));
+
+    render(<ModelsModal isOpen={true} onClose={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText('mistral')).toBeTruthy());
+    fireEvent.click(screen.getByText('mistral'));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('codemirror-editor')).toBeTruthy()
+    );
+
+    const editor = screen.getByTestId('codemirror-editor') as HTMLTextAreaElement;
+    fireEvent.change(editor, { target: { value: 'FROM mistral\nSYSTEM Updated' } });
+    expect(editor.value).toBe('FROM mistral\nSYSTEM Updated');
   });
 });

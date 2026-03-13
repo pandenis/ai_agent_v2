@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import CodeMirror from '@uiw/react-codemirror';
+import { markdown } from '@codemirror/lang-markdown';
 
 interface Model {
   name: string;
@@ -18,6 +20,8 @@ export function ModelsModal({ isOpen, onClose }: ModelsModalProps) {
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [modelfileContent, setModelfileContent] = useState('');
+  const [modelfileLoading, setModelfileLoading] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -34,6 +38,22 @@ export function ModelsModal({ isOpen, onClose }: ModelsModalProps) {
         setLoading(false);
       });
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!selectedModel) return;
+    setModelfileLoading(true);
+    setModelfileContent('');
+    fetch(`/api/v1/models/${selectedModel}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setModelfileContent(data.modelfile || '');
+        setModelfileLoading(false);
+      })
+      .catch(() => {
+        setModelfileContent('# Failed to load Modelfile');
+        setModelfileLoading(false);
+      });
+  }, [selectedModel]);
 
   if (!isOpen) return null;
 
@@ -88,11 +108,27 @@ export function ModelsModal({ isOpen, onClose }: ModelsModalProps) {
           </div>
 
           {/* Right panel */}
-          <div className="flex-1 p-4 text-slate-400">
+          <div className="flex flex-col flex-1 p-4 overflow-hidden">
             {!selectedModel ? (
-              <p>Select a model to view its Modelfile</p>
+              <p className="text-slate-400">Select a model to view its Modelfile</p>
             ) : (
-              <h3 className="text-white font-semibold">{selectedModel}</h3>
+              <>
+                <h3 className="text-white font-semibold mb-3">
+                  {displayName(selectedModel)}
+                </h3>
+                {modelfileLoading ? (
+                  <p className="text-slate-400">Loading Modelfile...</p>
+                ) : (
+                  <CodeMirror
+                    value={modelfileContent}
+                    onChange={(val) => setModelfileContent(val)}
+                    extensions={[markdown()]}
+                    theme="dark"
+                    height="100%"
+                    style={{ flex: 1 }}
+                  />
+                )}
+              </>
             )}
           </div>
         </div>
