@@ -22,6 +22,8 @@ export function ModelsModal({ isOpen, onClose }: ModelsModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [modelfileContent, setModelfileContent] = useState('');
   const [modelfileLoading, setModelfileLoading] = useState(false);
+  const [deployOutput, setDeployOutput] = useState('');
+  const [deployLoading, setDeployLoading] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -54,6 +56,25 @@ export function ModelsModal({ isOpen, onClose }: ModelsModalProps) {
         setModelfileLoading(false);
       });
   }, [selectedModel]);
+
+  const handleDeploy = async () => {
+    if (!selectedModel) return;
+    setDeployLoading(true);
+    setDeployOutput('Deploying...');
+    try {
+      const res = await fetch('/api/v1/models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: selectedModel, modelfile: modelfileContent }),
+      });
+      const data = await res.json();
+      setDeployOutput(`✅ Success: ${data.output || data.name}`);
+    } catch (e: unknown) {
+      setDeployOutput(`❌ Error: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setDeployLoading(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -128,6 +149,19 @@ export function ModelsModal({ isOpen, onClose }: ModelsModalProps) {
                     style={{ flex: 1 }}
                   />
                 )}
+                <button
+                  onClick={handleDeploy}
+                  disabled={deployLoading}
+                  className={`px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded mt-2 ${deployLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {deployLoading ? 'Deploying...' : '🚀 Deploy'}
+                </button>
+                <div
+                  data-testid="deploy-output"
+                  className="bg-black text-green-400 font-mono text-sm p-3 rounded mt-2 min-h-[60px]"
+                >
+                  {deployOutput || '// Deploy output will appear here'}
+                </div>
               </>
             )}
           </div>

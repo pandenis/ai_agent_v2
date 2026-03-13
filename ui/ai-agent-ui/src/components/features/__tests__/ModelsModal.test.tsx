@@ -126,6 +126,140 @@ describe('ModelsModal', () => {
     });
   });
 
+  it('test_deploy_button_visible_when_model_selected', async () => {
+    vi.stubGlobal('fetch', vi.fn((url: string) => {
+      if (url === '/api/v1/models') {
+        return Promise.resolve({
+          json: () => Promise.resolve({ models: [{ name: 'mistral:latest' }] }),
+        });
+      }
+      return Promise.resolve({
+        json: () => Promise.resolve({ modelfile: 'FROM mistral' }),
+      });
+    }));
+
+    render(<ModelsModal isOpen={true} onClose={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText('mistral')).toBeTruthy());
+    fireEvent.click(screen.getAllByText('mistral')[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText('🚀 Deploy')).toBeTruthy();
+    });
+  });
+
+  it('test_deploy_button_calls_post_api', async () => {
+    const mockFetch = vi.fn((url: string, options?: RequestInit) => {
+      if (options?.method === 'POST') {
+        return Promise.resolve({
+          json: () => Promise.resolve({ success: true, output: 'model created', name: 'mistral:latest' }),
+        });
+      }
+      if (url === '/api/v1/models') {
+        return Promise.resolve({
+          json: () => Promise.resolve({ models: [{ name: 'mistral:latest' }] }),
+        });
+      }
+      return Promise.resolve({
+        json: () => Promise.resolve({ modelfile: 'FROM mistral' }),
+      });
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    render(<ModelsModal isOpen={true} onClose={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText('mistral')).toBeTruthy());
+    fireEvent.click(screen.getAllByText('mistral')[0]);
+    await waitFor(() => expect(screen.getByText('🚀 Deploy')).toBeTruthy());
+    fireEvent.click(screen.getByText('🚀 Deploy'));
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith('/api/v1/models', expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ name: 'mistral:latest', modelfile: 'FROM mistral' }),
+      }));
+    });
+  });
+
+  it('test_deploy_success_shows_output', async () => {
+    vi.stubGlobal('fetch', vi.fn((url: string, options?: RequestInit) => {
+      if (options?.method === 'POST') {
+        return Promise.resolve({
+          json: () => Promise.resolve({ success: true, output: 'model created', name: 'mistral:latest' }),
+        });
+      }
+      if (url === '/api/v1/models') {
+        return Promise.resolve({
+          json: () => Promise.resolve({ models: [{ name: 'mistral:latest' }] }),
+        });
+      }
+      return Promise.resolve({
+        json: () => Promise.resolve({ modelfile: 'FROM mistral' }),
+      });
+    }));
+
+    render(<ModelsModal isOpen={true} onClose={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText('mistral')).toBeTruthy());
+    fireEvent.click(screen.getAllByText('mistral')[0]);
+    await waitFor(() => expect(screen.getByText('🚀 Deploy')).toBeTruthy());
+    fireEvent.click(screen.getByText('🚀 Deploy'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deploy-output').textContent).toContain('✅ Success');
+    });
+  });
+
+  it('test_deploy_error_shows_error_message', async () => {
+    vi.stubGlobal('fetch', vi.fn((url: string, options?: RequestInit) => {
+      if (options?.method === 'POST') {
+        return Promise.reject(new Error('connection refused'));
+      }
+      if (url === '/api/v1/models') {
+        return Promise.resolve({
+          json: () => Promise.resolve({ models: [{ name: 'mistral:latest' }] }),
+        });
+      }
+      return Promise.resolve({
+        json: () => Promise.resolve({ modelfile: 'FROM mistral' }),
+      });
+    }));
+
+    render(<ModelsModal isOpen={true} onClose={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText('mistral')).toBeTruthy());
+    fireEvent.click(screen.getAllByText('mistral')[0]);
+    await waitFor(() => expect(screen.getByText('🚀 Deploy')).toBeTruthy());
+    fireEvent.click(screen.getByText('🚀 Deploy'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deploy-output').textContent).toContain('❌ Error');
+    });
+  });
+
+  it('test_deploy_button_disabled_while_deploying', async () => {
+    vi.stubGlobal('fetch', vi.fn((url: string, options?: RequestInit) => {
+      if (options?.method === 'POST') {
+        return new Promise(() => {}); // never resolves
+      }
+      if (url === '/api/v1/models') {
+        return Promise.resolve({
+          json: () => Promise.resolve({ models: [{ name: 'mistral:latest' }] }),
+        });
+      }
+      return Promise.resolve({
+        json: () => Promise.resolve({ modelfile: 'FROM mistral' }),
+      });
+    }));
+
+    render(<ModelsModal isOpen={true} onClose={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText('mistral')).toBeTruthy());
+    fireEvent.click(screen.getAllByText('mistral')[0]);
+    await waitFor(() => expect(screen.getByText('🚀 Deploy')).toBeTruthy());
+    fireEvent.click(screen.getByText('🚀 Deploy'));
+
+    await waitFor(() => {
+      const btn = screen.getByRole('button', { name: 'Deploying...' });
+      expect(btn).toBeDisabled();
+    });
+  });
+
   it('test_editor_updates_on_content_change', async () => {
     vi.stubGlobal('fetch', vi.fn((url: string) => {
       if (url === '/api/v1/models') {
